@@ -1,0 +1,55 @@
+import { NextRequest, NextResponse } from "next/server";
+import { storage } from "@/server/storage";
+import { getSessionUser } from "@/server/auth";
+import { api } from "@shared/routes";
+import { z } from "zod";
+
+export async function POST(request: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const input = api.escrow.create.input.parse(body);
+
+    const order = await storage.getOrder(input.orderId);
+    if (!order) {
+      return NextResponse.json({ message: "Order not found" }, { status: 400 });
+    }
+
+    if (order.buyerId !== user.id) {
+      return NextResponse.json({ message: "Only the buyer can create an escrow" }, { status: 403 });
+    }
+
+    const service = await storage.getService(order.serviceId);
+    if (!service) {
+      return NextResponse.json({ message: "Service not found" }, { status: 400 });
+    }
+
+    if (user.id === service.creatorId) {
+      return NextResponse.json({ message: "Cannot create escrow for your own service" }, { status: 400 });
+    }
+
+    const existingEscrow = await storage.getEscrowByOrder(input.orderId);
+    if (existingEscrow) {
+      return NextResponse.json({ message: "Escrow already exists for this order" }, { status: 400 });
+    }
+
+    const escrow = await storage.createEscrow({
+      ...input,
+      depositorId: user.id,
+    });
+
+    return NextResponse.json(escrow, { status: 201 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({
+        message: err.errors[0].message,
+        field: err.errors[0].path.join("."),
+      }, { status: 400 });
+    }
+    throw err;
+  }
+}

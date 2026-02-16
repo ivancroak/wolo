@@ -1,0 +1,9 @@
+/Users/matveidanisheuski/Woland/target/debug/deps/solana_loader_v3_interface-7536eccbc79569dc.d: /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/lib.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/instruction.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/state.rs
+
+/Users/matveidanisheuski/Woland/target/debug/deps/libsolana_loader_v3_interface-7536eccbc79569dc.rlib: /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/lib.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/instruction.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/state.rs
+
+/Users/matveidanisheuski/Woland/target/debug/deps/libsolana_loader_v3_interface-7536eccbc79569dc.rmeta: /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/lib.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/instruction.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/state.rs
+
+/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/lib.rs:
+/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/instruction.rs:
+/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-loader-v3-interface-3.0.0/src/state.rs:

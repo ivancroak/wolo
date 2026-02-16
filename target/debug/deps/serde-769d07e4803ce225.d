@@ -1,0 +1,14 @@
+/Users/matveidanisheuski/Woland/target/debug/deps/serde-769d07e4803ce225.d: /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/matveidanisheuski/Woland/target/debug/build/serde-1d84d94038952bdb/out/private.rs
+
+/Users/matveidanisheuski/Woland/target/debug/deps/libserde-769d07e4803ce225.rlib: /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/matveidanisheuski/Woland/target/debug/build/serde-1d84d94038952bdb/out/private.rs
+
+/Users/matveidanisheuski/Woland/target/debug/deps/libserde-769d07e4803ce225.rmeta: /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/matveidanisheuski/Woland/target/debug/build/serde-1d84d94038952bdb/out/private.rs
+
+/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/matveidanisheuski/Woland/target/debug/build/serde-1d84d94038952bdb/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/matveidanisheuski/Woland/target/debug/build/serde-1d84d94038952bdb/out

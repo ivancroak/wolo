@@ -1,0 +1,42 @@
+import { NextRequest, NextResponse } from "next/server";
+import { storage } from "@/server/storage";
+import { getSessionUser } from "@/server/auth";
+import { api } from "@shared/routes";
+import { z } from "zod";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const escrow = await storage.getEscrow(Number(params.id));
+  if (!escrow) {
+    return NextResponse.json({ message: "Escrow not found" }, { status: 404 });
+  }
+
+  if (escrow.depositorId !== user.id) {
+    return NextResponse.json({ message: "Only the depositor can add milestones" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const input = api.escrow.addMilestone.input.parse(body);
+    const milestone = await storage.addMilestone({
+      ...input,
+      escrowId: escrow.id,
+    });
+    return NextResponse.json(milestone, { status: 201 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({
+        message: err.errors[0].message,
+        field: err.errors[0].path.join("."),
+      }, { status: 400 });
+    }
+    throw err;
+  }
+}

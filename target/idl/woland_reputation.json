@@ -1,0 +1,550 @@
+{
+  "address": "42PrQGNH4pCqyGwxrLMXnfkDzz5CTCFx71y2HjuHK9Vg",
+  "metadata": {
+    "name": "woland_reputation",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "initialize_reputation",
+      "discriminator": [
+        150,
+        240,
+        109,
+        53,
+        147,
+        42,
+        152,
+        162
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  117,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "record_completion",
+      "discriminator": [
+        209,
+        113,
+        91,
+        75,
+        66,
+        137,
+        244,
+        157
+      ],
+      "accounts": [
+        {
+          "name": "escrow_program",
+          "signer": true
+        },
+        {
+          "name": "reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  117,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "reputation.user",
+                "account": "ReputationAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "escrow_id",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "is_buyer",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "record_dispute",
+      "discriminator": [
+        190,
+        94,
+        198,
+        130,
+        215,
+        36,
+        43,
+        143
+      ],
+      "accounts": [
+        {
+          "name": "escrow_program",
+          "signer": true
+        },
+        {
+          "name": "reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  117,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "reputation.user",
+                "account": "ReputationAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "escrow_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "submit_rating",
+      "discriminator": [
+        238,
+        207,
+        253,
+        243,
+        170,
+        69,
+        73,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "rater",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "target_reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  117,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "target_reputation.user",
+                "account": "ReputationAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rating",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  116,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "rater"
+              },
+              {
+                "kind": "arg",
+                "path": "escrow_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_account"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "escrow_id",
+          "type": "u64"
+        },
+        {
+          "name": "score",
+          "type": "u8"
+        },
+        {
+          "name": "comment_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "RatingRecord",
+      "discriminator": [
+        54,
+        124,
+        2,
+        199,
+        106,
+        108,
+        236,
+        58
+      ]
+    },
+    {
+      "name": "ReputationAccount",
+      "discriminator": [
+        19,
+        185,
+        177,
+        157,
+        34,
+        87,
+        67,
+        233
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "CompletionRecorded",
+      "discriminator": [
+        250,
+        75,
+        79,
+        194,
+        127,
+        57,
+        128,
+        174
+      ]
+    },
+    {
+      "name": "DisputeRecorded",
+      "discriminator": [
+        139,
+        17,
+        122,
+        22,
+        203,
+        18,
+        108,
+        84
+      ]
+    },
+    {
+      "name": "RatingSubmitted",
+      "discriminator": [
+        129,
+        135,
+        238,
+        21,
+        26,
+        150,
+        24,
+        219
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidScore",
+      "msg": "Rating score must be between 1 and 5"
+    },
+    {
+      "code": 6002,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6003,
+      "name": "CannotSelfRate",
+      "msg": "Cannot rate yourself"
+    },
+    {
+      "code": 6004,
+      "name": "NotParticipant",
+      "msg": "Not a participant of this escrow"
+    },
+    {
+      "code": 6005,
+      "name": "EscrowNotReleased",
+      "msg": "Escrow must be in Released state to rate"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidEscrow",
+      "msg": "Invalid escrow account data"
+    }
+  ],
+  "types": [
+    {
+      "name": "CompletionRecorded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow_id",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "is_buyer",
+            "type": "bool"
+          },
+          {
+            "name": "orders_completed",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DisputeRecorded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow_id",
+            "type": "u64"
+          },
+          {
+            "name": "orders_disputed",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RatingRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "escrow_id",
+            "type": "u64"
+          },
+          {
+            "name": "rater",
+            "type": "pubkey"
+          },
+          {
+            "name": "target",
+            "type": "pubkey"
+          },
+          {
+            "name": "score",
+            "type": "u8"
+          },
+          {
+            "name": "comment_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RatingSubmitted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "escrow_id",
+            "type": "u64"
+          },
+          {
+            "name": "rater",
+            "type": "pubkey"
+          },
+          {
+            "name": "target",
+            "type": "pubkey"
+          },
+          {
+            "name": "score",
+            "type": "u8"
+          },
+          {
+            "name": "avg_rating_x100",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReputationAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "orders_completed",
+            "type": "u64"
+          },
+          {
+            "name": "orders_disputed",
+            "type": "u64"
+          },
+          {
+            "name": "total_earned",
+            "type": "u64"
+          },
+          {
+            "name": "total_spent",
+            "type": "u64"
+          },
+          {
+            "name": "rating_sum",
+            "type": "u64"
+          },
+          {
+            "name": "rating_count",
+            "type": "u64"
+          },
+          {
+            "name": "badge_flags",
+            "type": "u8"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}
