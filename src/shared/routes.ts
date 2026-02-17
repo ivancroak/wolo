@@ -297,6 +297,25 @@ export const api = {
       },
     },
   },
+  verify: {
+    milestone: {
+      method: 'GET' as const,
+      path: '/api/verify/milestone/:milestoneId' as const,
+      input: z.object({
+        tweetUrl: z.string().optional(),
+        targetHandle: z.string().optional(),
+      }).optional(),
+      responses: {
+        200: z.object({
+          status: z.enum(["verified", "not_found", "manual_only", "error"]),
+          message: z.string(),
+          details: z.record(z.any()).optional(),
+        }),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
+  },
   notifications: {
     list: {
       method: 'GET' as const,

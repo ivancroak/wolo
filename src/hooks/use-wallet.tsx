@@ -2,17 +2,16 @@
 
 import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useAuth } from "./use-auth";
-import { useSolanaReputation } from "./use-solana-reputation";
+
+let prevConnected = false;
+let loginInProgress = false;
 
 export function useWallet() {
   const { publicKey, connected, connecting, disconnect: solanaDisconnect, signMessage } = useSolanaWallet();
   const { setVisible } = useWalletModal();
   const { login, logout } = useAuth();
-  const { ensureReputation, isReady: repReady } = useSolanaReputation();
-  const prevConnected = useRef(false);
-  const repInitialized = useRef(false);
 
   const address = publicKey?.toBase58() ?? null;
   const shortAddress = address
@@ -20,22 +19,19 @@ export function useWallet() {
     : null;
 
   useEffect(() => {
-    if (connected && address && signMessage && !prevConnected.current) {
-      login({ walletAddress: address, signMessage });
+    if (connected && address && signMessage && !prevConnected && !loginInProgress) {
+      loginInProgress = true;
+      login(
+        { walletAddress: address, signMessage },
+        { onSettled: () => { loginInProgress = false; } },
+      );
     }
-    if (!connected && prevConnected.current) {
+    if (!connected && prevConnected) {
       logout();
-      repInitialized.current = false;
+      loginInProgress = false;
     }
-    prevConnected.current = connected;
+    prevConnected = connected;
   }, [connected, address, signMessage, login, logout]);
-
-  useEffect(() => {
-    if (repReady && address && !repInitialized.current) {
-      repInitialized.current = true;
-      ensureReputation(address).catch(() => {});
-    }
-  }, [repReady, address, ensureReputation]);
 
   const connect = useCallback(async () => {
     setVisible(true);

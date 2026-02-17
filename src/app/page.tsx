@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import { ArrowRight, Zap, Shield, Globe, Repeat, Heart, UserPlus, Handshake, Sparkles } from "lucide-react";
 import { SiX } from "react-icons/si";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { TransparentLogo } from "@/components/TransparentLogo";
 import { ConnectWallet } from "@/components/ConnectWallet";
 
@@ -122,11 +122,17 @@ export default function LandingPage() {
     { icon: Sparkles, label: "Custom Work", desc: "Tailored promotional campaigns" },
   ];
 
-  const particles = Array.from({ length: 20 }, (_, i) => ({
-    delay: i * 0.3,
-    x: `${Math.random() * 100}%`,
-    y: `${Math.random() * 100}%`,
-  }));
+  const [particles, setParticles] = useState<{ delay: number; x: string; y: string }[]>([]);
+
+  useEffect(() => {
+    setParticles(
+      Array.from({ length: 20 }, (_, i) => ({
+        delay: i * 0.3,
+        x: `${Math.random() * 100}%`,
+        y: `${Math.random() * 100}%`,
+      }))
+    );
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

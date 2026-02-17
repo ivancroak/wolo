@@ -52,6 +52,16 @@ export default function OrderDetailPage() {
 
   const { data: escrowData, isLoading: escrowLoading } = useEscrowByOrder(orderId);
 
+  const { data: service } = useQuery({
+    queryKey: ["/api/services", order?.serviceId],
+    queryFn: async () => {
+      const res = await fetch(`/api/services/${order.serviceId}`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!order?.serviceId,
+  });
+
   const isLoading = orderLoading || escrowLoading;
   const escrow = escrowData?.escrow;
   const milestones = escrowData?.milestones ?? [];
@@ -297,6 +307,7 @@ export default function OrderDetailPage() {
                 escrow={escrow}
                 milestones={milestones}
                 isDepositor={isDepositor}
+                serviceCategory={service?.category}
               />
             )}
           </div>
