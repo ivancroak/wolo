@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { deriveChannelKeysFromWallet } from "@/lib/solana/wallet-cipher";
 
-const CHANNEL_KEY_MESSAGE = "Woland: Authorize encrypted messaging channel";
+const CHANNEL_KEY_MESSAGE = "Wolo: Authorize encrypted messaging channel";
 
 export function useChannelKeys() {
   const { signMessage, publicKey } = useSolanaWallet();

@@ -356,7 +356,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3 flex-wrap">
             <TransparentLogo className="h-7 w-auto opacity-50" />
           </div>
-          <p className="text-xs text-muted-foreground" data-testid="text-copyright">2025 Woland. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground" data-testid="text-copyright">2026 Wolo. All rights reserved.</p>
         </div>
       </footer>
     </div>

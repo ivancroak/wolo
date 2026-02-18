@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const wolandLogoSrc = "/assets/Screenshot_2026-02-14_at_16.55.42_1771088148190.png";
+const woloLogoSrc = "/assets/wolo-logo.png";
 
 interface TransparentLogoProps {
   className?: string;
   alt?: string;
 }
 
-export function TransparentLogo({ className = "", alt = "Woland" }: TransparentLogoProps) {
+export function TransparentLogo({ className = "", alt = "Wolo" }: TransparentLogoProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
@@ -40,7 +40,7 @@ export function TransparentLogo({ className = "", alt = "Woland" }: TransparentL
       ctx.putImageData(imageData, 0, 0);
       setDataUrl(canvas.toDataURL("image/png"));
     };
-    img.src = wolandLogoSrc;
+    img.src = woloLogoSrc;
   }, []);
 
   return (
@@ -49,7 +49,7 @@ export function TransparentLogo({ className = "", alt = "Woland" }: TransparentL
       {dataUrl ? (
         <img src={dataUrl} alt={alt} className={`dark:invert ${className}`} />
       ) : (
-        <img src={wolandLogoSrc} alt={alt} className={`dark:invert ${className}`} />
+        <img src={woloLogoSrc} alt={alt} className={`dark:invert ${className}`} />
       )}
     </>
   );

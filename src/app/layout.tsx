@@ -3,7 +3,7 @@ import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Woland - On-Chain Social Marketplace",
+  title: "Wolo - On-Chain Social Marketplace",
   description: "The trustless marketplace for social influence on Solana",
   icons: {
     icon: "/favicon.png",

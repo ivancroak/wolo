@@ -1,5 +1,5 @@
 -- ===========================================
--- Woland Seed Data
+-- Wolo Seed Data
 -- Run this in Supabase Dashboard > SQL Editor AFTER migration.sql
 -- ===========================================
 

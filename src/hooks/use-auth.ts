@@ -28,7 +28,7 @@ export function useAuth() {
       const nonceRes = await apiRequest("POST", "/api/auth/nonce", { walletAddress });
       const { nonce } = await nonceRes.json();
 
-      const message = `Sign in to Woland\nWallet: ${walletAddress}\nNonce: ${nonce}`;
+      const message = `Sign in to Wolo\nWallet: ${walletAddress}\nNonce: ${nonce}`;
       const messageBytes = new TextEncoder().encode(message);
       const signatureBytes = await signMessage(messageBytes);
       const signature = Buffer.from(signatureBytes).toString("base64");

@@ -1,5 +1,5 @@
 -- ===========================================
--- Woland Supabase Migration
+-- Wolo Supabase Migration
 -- Run this in Supabase Dashboard > SQL Editor
 -- ===========================================
 

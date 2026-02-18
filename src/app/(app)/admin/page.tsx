@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Shield, Gavel, AlertTriangle } from "lucide-react";
+import { Loader2, Shield, Gavel, AlertTriangle, CheckCircle2, Settings2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -33,6 +33,37 @@ export default function AdminDisputesPage() {
   const { data: disputes, isLoading: disputesLoading } = useQuery<Escrow[]>({
     queryKey: ["/api/admin/disputes"],
     enabled: !!user && user.id === ADMIN_WALLET,
+  });
+
+  const { data: configStatus, isLoading: configLoading } = useQuery<{
+    initialized: boolean;
+    configPDA: string;
+  }>({
+    queryKey: ["/api/admin/init-config"],
+    enabled: !!user && user.id === ADMIN_WALLET,
+  });
+
+  const initConfigMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/init-config");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/init-config"] });
+      toast({
+        title: "Config Initialized",
+        description: data.signature
+          ? `Tx: ${data.signature.slice(0, 16)}...`
+          : data.message,
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Error",
+        description: err?.message ?? "Failed to initialize config.",
+        variant: "destructive",
+      });
+    },
   });
 
   const resolveMutation = useMutation({
@@ -63,6 +94,48 @@ export default function AdminDisputesPage() {
           Admin &mdash; Dispute Resolution
         </h1>
       </motion.div>
+
+      <Card className="mb-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Settings2 className="h-4 w-4" />
+            Platform Config (On-Chain)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {configLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking on-chain config...
+            </div>
+          ) : configStatus?.initialized ? (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircle2 className="h-4 w-4" />
+              Initialized
+              <span className="text-xs text-muted-foreground font-mono ml-2">
+                PDA: {configStatus.configPDA}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-yellow-600">Not initialized</span>
+              <Button
+                size="sm"
+                className="rounded-full text-xs"
+                disabled={initConfigMutation.isPending}
+                onClick={() => initConfigMutation.mutate()}
+              >
+                {initConfigMutation.isPending ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Settings2 className="mr-1 h-3 w-3" />
+                )}
+                Initialize Config
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {disputesLoading ? (
         <div className="flex justify-center py-16">

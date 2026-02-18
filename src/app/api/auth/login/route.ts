@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Nonce expired or not found. Request a new nonce." }, { status: 401 });
   }
 
-  const message = `Sign in to Woland\nWallet: ${walletAddress}\nNonce: ${nonce}`;
+  const message = `Sign in to Wolo\nWallet: ${walletAddress}\nNonce: ${nonce}`;
   const messageBytes = new TextEncoder().encode(message);
   const signatureBytes = Uint8Array.from(Buffer.from(signature, "base64"));
   const publicKeyBytes = base58Decode(walletAddress);
