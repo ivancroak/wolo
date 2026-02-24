@@ -2,11 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
+import { apiRequest } from "@/lib/queryClient";
 import { z } from "zod";
+import type { InsertService } from "@shared/schema";
 
 type CreateServiceInput = z.infer<typeof api.services.create.input>;
 
-export function useServices(filters?: { category?: string; search?: string; listingType?: string }) {
+export function useServices(filters?: { category?: string; search?: string; listingType?: string; creatorId?: string }) {
   const validCategory = filters?.category &&
     ["repost", "like", "follow", "ambassador", "custom"].includes(filters.category)
     ? (filters.category as "repost" | "like" | "follow" | "ambassador" | "custom")
@@ -17,18 +19,19 @@ export function useServices(filters?: { category?: string; search?: string; list
     ? filters.listingType
     : undefined;
 
-  const queryKey = [api.services.list.path, filters?.category, filters?.search, filters?.listingType];
+  const queryKey = [api.services.list.path, filters?.category, filters?.search, filters?.listingType, filters?.creatorId];
 
   return useQuery({
     queryKey,
     queryFn: async () => {
-      const url = filters
-        ? `${api.services.list.path}?${new URLSearchParams({
-            ...(validCategory ? { category: validCategory } : {}),
-            ...(validListingType ? { listingType: validListingType } : {}),
-            ...(filters.search ? { search: filters.search } : {}),
-          }).toString()}`
-        : api.services.list.path;
+      const params = new URLSearchParams();
+      if (validCategory) params.set("category", validCategory);
+      if (validListingType) params.set("listingType", validListingType);
+      if (filters?.search) params.set("search", filters.search);
+      if (filters?.creatorId) params.set("creatorId", filters.creatorId);
+
+      const qs = params.toString();
+      const url = qs ? `${api.services.list.path}?${qs}` : api.services.list.path;
 
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch services");
@@ -87,6 +90,34 @@ export function useCreateService() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
+    },
+  });
+}
+
+export function useUpdateService() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: number } & Partial<InsertService>) => {
+      const res = await apiRequest("PUT", `/api/services/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.services.myServices.path] });
+    },
+  });
+}
+
+export function useDeleteService() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/services/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.services.myServices.path] });
     },
   });
 }

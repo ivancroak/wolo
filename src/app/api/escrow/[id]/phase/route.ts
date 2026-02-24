@@ -4,6 +4,7 @@ import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import type { EscrowPhase } from "@shared/schema";
+import { notify } from "@/server/notifications";
 
 const VALID_TRANSITIONS: Record<string, { phases: EscrowPhase[]; by: "depositor" | "receiver" | "both" }[]> = {
   awaiting_deposit: [{ phases: ["funded"], by: "depositor" }],
@@ -35,14 +36,15 @@ const VALID_TRANSITIONS: Record<string, { phases: EscrowPhase[]; by: "depositor"
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const escrow = await storage.getEscrow(Number(params.id));
+  const { id } = await params;
+  const escrow = await storage.getEscrow(Number(id));
   if (!escrow) {
     return NextResponse.json({ message: "Escrow not found" }, { status: 404 });
   }
@@ -74,6 +76,18 @@ export async function PATCH(
     }
 
     const updated = await storage.updateEscrowPhase(escrow.id, input.phase, input.txHash);
+
+    const targetId = user.id === escrow.depositorId ? escrow.receiverId : escrow.depositorId;
+    const phaseNotifications: Partial<Record<EscrowPhase, { type: "escrow_funded" | "escrow_released" | "escrow_disputed"; body: string }>> = {
+      funded: { type: "escrow_funded", body: "Escrow has been funded" },
+      released: { type: "escrow_released", body: "Escrow funds have been released" },
+      disputed: { type: "escrow_disputed", body: "Escrow has been disputed" },
+    };
+    const info = phaseNotifications[input.phase];
+    if (info) {
+      await notify(targetId, info.type, "Escrow Update", info.body, "/dashboard");
+    }
+
     return NextResponse.json(updated);
   } catch (err) {
     if (err instanceof z.ZodError) {

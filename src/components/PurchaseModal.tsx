@@ -32,12 +32,14 @@ import { useState } from "react";
 const MINT = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT || "";
 const TOKEN_DECIMALS = 6;
 
+import { type Service } from "@shared/schema";
+
 const formSchema = z.object({
   requirements: z.string().min(10, "Please provide detailed requirements"),
 });
 
 interface PurchaseModalProps {
-  service: any;
+  service: Service | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

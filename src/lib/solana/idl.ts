@@ -24,6 +24,8 @@ export const ESCROW_IDL = {
       args: [
         { name: "newArbiter", type: { option: "publicKey" } },
         { name: "newFeeBps", type: { option: "u16" } },
+        { name: "newAuthority", type: { option: "publicKey" } },
+        { name: "newFeeVault", type: { option: "publicKey" } },
       ],
     },
     {
@@ -352,6 +354,8 @@ export const ESCROW_IDL = {
     { code: 6016, name: "MilestoneExpired", msg: "Milestone deadline has passed" },
     { code: 6017, name: "EscrowNotSettled", msg: "Escrow must be released or refunded to close" },
     { code: 6018, name: "InvalidShareBps", msg: "Invalid share basis points" },
+    { code: 6019, name: "MintMismatch", msg: "Token mint does not match escrow mint" },
+    { code: 6020, name: "InvalidReceiver", msg: "Invalid receiver address" },
   ],
 } as const;
 
@@ -359,6 +363,23 @@ export const REPUTATION_IDL = {
   version: "0.1.0",
   name: "woland_reputation",
   instructions: [
+    {
+      name: "initializeRepConfig",
+      accounts: [
+        { name: "authority", isMut: true, isSigner: true },
+        { name: "config", isMut: true, isSigner: false },
+        { name: "systemProgram", isMut: false, isSigner: false },
+      ],
+      args: [],
+    },
+    {
+      name: "updateRepConfig",
+      accounts: [
+        { name: "authority", isMut: false, isSigner: true },
+        { name: "config", isMut: true, isSigner: false },
+      ],
+      args: [{ name: "newAuthority", type: { option: "publicKey" } }],
+    },
     {
       name: "initializeReputation",
       accounts: [
@@ -372,6 +393,7 @@ export const REPUTATION_IDL = {
       name: "recordCompletion",
       accounts: [
         { name: "authority", isMut: false, isSigner: true },
+        { name: "config", isMut: false, isSigner: false },
         { name: "reputation", isMut: true, isSigner: false },
       ],
       args: [
@@ -384,6 +406,7 @@ export const REPUTATION_IDL = {
       name: "recordDispute",
       accounts: [
         { name: "authority", isMut: false, isSigner: true },
+        { name: "config", isMut: false, isSigner: false },
         { name: "reputation", isMut: true, isSigner: false },
       ],
       args: [{ name: "escrowId", type: "u64" }],
@@ -394,6 +417,7 @@ export const REPUTATION_IDL = {
         { name: "rater", isMut: true, isSigner: true },
         { name: "targetReputation", isMut: true, isSigner: false },
         { name: "rating", isMut: true, isSigner: false },
+        { name: "escrowAccount", isMut: false, isSigner: false },
         { name: "systemProgram", isMut: false, isSigner: false },
       ],
       args: [
@@ -404,6 +428,16 @@ export const REPUTATION_IDL = {
     },
   ],
   accounts: [
+    {
+      name: "ReputationConfig",
+      type: {
+        kind: "struct",
+        fields: [
+          { name: "authority", type: "publicKey" },
+          { name: "bump", type: "u8" },
+        ],
+      },
+    },
     {
       name: "ReputationAccount",
       type: {
@@ -472,5 +506,9 @@ export const REPUTATION_IDL = {
     { code: 6000, name: "Overflow", msg: "Arithmetic overflow" },
     { code: 6001, name: "InvalidScore", msg: "Rating score must be between 1 and 5" },
     { code: 6002, name: "Unauthorized", msg: "Unauthorized" },
+    { code: 6003, name: "CannotSelfRate", msg: "Cannot rate yourself" },
+    { code: 6004, name: "NotParticipant", msg: "Not a participant of this escrow" },
+    { code: 6005, name: "EscrowNotReleased", msg: "Escrow must be in Released state to rate" },
+    { code: 6006, name: "InvalidEscrow", msg: "Invalid escrow account data" },
   ],
 } as const;

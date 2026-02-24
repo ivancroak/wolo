@@ -3,8 +3,14 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { notify } from "@/server/notifications";
+import { checkRateLimit } from "@/server/with-rate-limit";
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimitResponse = checkRateLimit(ip, "create-order", 30, 60000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -27,6 +33,15 @@ export async function POST(request: NextRequest) {
       ...input,
       buyerId: user.id,
     });
+
+    await notify(
+      service.creatorId,
+      "order_created",
+      "New Order",
+      `You have a new order for "${service.title}"`,
+      `/orders/${order.id}`,
+    );
+
     return NextResponse.json(order, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) {

@@ -7,6 +7,54 @@
   },
   "instructions": [
     {
+      "name": "initialize_rep_config",
+      "discriminator": [
+        18,
+        253,
+        144,
+        239,
+        0,
+        22,
+        130,
+        15
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize_reputation",
       "discriminator": [
         150,
@@ -72,8 +120,30 @@
       ],
       "accounts": [
         {
-          "name": "escrow_program",
+          "name": "authority",
           "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "reputation",
@@ -133,8 +203,30 @@
       ],
       "accounts": [
         {
-          "name": "escrow_program",
+          "name": "authority",
           "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "reputation",
@@ -272,6 +364,56 @@
           }
         }
       ]
+    },
+    {
+      "name": "update_rep_config",
+      "discriminator": [
+        168,
+        225,
+        41,
+        105,
+        55,
+        233,
+        207,
+        220
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -299,6 +441,19 @@
         87,
         67,
         233
+      ]
+    },
+    {
+      "name": "ReputationConfig",
+      "discriminator": [
+        46,
+        222,
+        226,
+        114,
+        243,
+        60,
+        242,
+        75
       ]
     }
   ],
@@ -538,6 +693,22 @@
           {
             "name": "created_at",
             "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReputationConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
           },
           {
             "name": "bump",

@@ -3,6 +3,7 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { checkRateLimit } from "@/server/with-rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +11,8 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category") || undefined;
     const listingType = searchParams.get("listingType") || undefined;
     const search = searchParams.get("search") || undefined;
-    const services = await storage.getServices({ category, listingType, search });
+    const creatorId = searchParams.get("creatorId") || undefined;
+    const services = await storage.getServices({ category, listingType, search, creatorId });
     return NextResponse.json(services);
   } catch {
     return NextResponse.json(await storage.getServices());
@@ -18,6 +20,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimitResponse = checkRateLimit(ip, "create-service", 30, 60000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

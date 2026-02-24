@@ -6,14 +6,15 @@ import type { ServiceCategory } from "@shared/schema";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { milestoneId: string } },
+  { params }: { params: Promise<{ milestoneId: string }> },
 ) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const milestone = await storage.getMilestone(Number(params.milestoneId));
+  const { milestoneId } = await params;
+  const milestone = await storage.getMilestone(Number(milestoneId));
   if (!milestone) {
     return NextResponse.json({ message: "Milestone not found" }, { status: 404 });
   }

@@ -326,6 +326,54 @@ export class WolandEscrowClient {
     });
   }
 
+  async buildUpdateConfigIx(
+    newArbiter: PublicKey | null,
+    newFeeBps: number | null,
+    newAuthority: PublicKey | null,
+    newFeeVault: PublicKey | null,
+  ): Promise<TransactionInstruction> {
+    const [configPDA] = findConfigPDA();
+    const disc = await getDiscriminator("update_config");
+
+    const parts: Buffer[] = [disc];
+    // Option<Pubkey>: 1 byte tag + 32 bytes if Some
+    if (newArbiter) {
+      parts.push(Buffer.from([1]), newArbiter.toBuffer());
+    } else {
+      parts.push(Buffer.from([0]));
+    }
+    // Option<u16>
+    if (newFeeBps !== null) {
+      const buf = Buffer.alloc(3);
+      buf[0] = 1;
+      buf.writeUInt16LE(newFeeBps, 1);
+      parts.push(buf);
+    } else {
+      parts.push(Buffer.from([0]));
+    }
+    // Option<Pubkey>
+    if (newAuthority) {
+      parts.push(Buffer.from([1]), newAuthority.toBuffer());
+    } else {
+      parts.push(Buffer.from([0]));
+    }
+    // Option<Pubkey>
+    if (newFeeVault) {
+      parts.push(Buffer.from([1]), newFeeVault.toBuffer());
+    } else {
+      parts.push(Buffer.from([0]));
+    }
+
+    return new TransactionInstruction({
+      keys: [
+        { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
+        { pubkey: configPDA, isSigner: false, isWritable: true },
+      ],
+      programId,
+      data: Buffer.concat(parts),
+    });
+  }
+
   async buildCloseEscrowIx(
     escrowId: number,
   ): Promise<TransactionInstruction> {

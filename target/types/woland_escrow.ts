@@ -1036,6 +1036,18 @@ export type WolandEscrow = {
           "type": {
             "option": "u16"
           }
+        },
+        {
+          "name": "newAuthority",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "newFeeVault",
+          "type": {
+            "option": "pubkey"
+          }
         }
       ]
     }

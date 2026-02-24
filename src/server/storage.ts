@@ -29,10 +29,12 @@ export interface IStorage {
   getProfile(userId: string): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(userId: string, profile: Partial<InsertProfile>): Promise<Profile>;
-  getServices(filters?: { category?: string; search?: string; listingType?: string }): Promise<Service[]>;
+  getServices(filters?: { category?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]>;
   getServicesByCreator(creatorId: string): Promise<Service[]>;
   getService(id: number): Promise<Service | undefined>;
   createService(service: InsertService): Promise<Service>;
+  updateService(id: number, creatorId: string, updates: Partial<InsertService>): Promise<Service>;
+  deleteService(id: number, creatorId: string): Promise<void>;
   createOrder(order: InsertOrder): Promise<Order>;
   getOrder(id: number): Promise<Order | undefined>;
   getOrdersByBuyer(userId: string): Promise<Order[]>;
@@ -59,6 +61,8 @@ export interface IStorage {
   getRatings(userId: string): Promise<OrderRating[]>;
   setChannelPublicKey(userId: string, publicKey: string): Promise<void>;
   getChannelPublicKey(userId: string): Promise<string | null>;
+  getNotifications(userId: string): Promise<any[]>;
+  markNotificationsRead(userId: string, ids?: number[]): Promise<void>;
 }
 
 function toUser(row: any): User {
@@ -270,11 +274,15 @@ class SupabaseStorage implements IStorage {
     return toProfile(data);
   }
 
-  async getServices(filters?: { category?: string; search?: string; listingType?: string }): Promise<Service[]> {
+  async getServices(filters?: { category?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]> {
     let query = supabaseAdmin.from("services").select("*").eq("active", true);
     if (filters?.category) query = query.eq("category", filters.category);
     if (filters?.listingType) query = query.eq("listing_type", filters.listingType);
-    if (filters?.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    if (filters?.creatorId) query = query.eq("creator_id", filters.creatorId);
+    if (filters?.search) {
+      const sanitized = filters.search.replace(/[%,.()\[\]]/g, '');
+      query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+    }
     query = query.order("created_at", { ascending: false });
     const { data, error } = await query;
     if (error) throw new Error(error.message);
@@ -322,6 +330,40 @@ class SupabaseStorage implements IStorage {
       .single();
     if (error) throw new Error(error.message);
     return toService(data);
+  }
+
+  async updateService(id: number, creatorId: string, updates: Partial<InsertService>): Promise<Service> {
+    const updateObj: any = {};
+    if (updates.title !== undefined) updateObj.title = updates.title;
+    if (updates.description !== undefined) updateObj.description = updates.description;
+    if (updates.price !== undefined) updateObj.price = updates.price;
+    if (updates.category !== undefined) updateObj.category = updates.category;
+    if (updates.pricingCategory !== undefined) updateObj.pricing_category = updates.pricingCategory;
+    if (updates.payrollBasis !== undefined) updateObj.payroll_basis = updates.payrollBasis;
+    if (updates.maxActions !== undefined) updateObj.max_actions = updates.maxActions;
+    if (updates.budgetCap !== undefined) updateObj.budget_cap = updates.budgetCap;
+    if (updates.deadlineDays !== undefined) updateObj.deadline_days = updates.deadlineDays;
+    if (updates.imageUrl !== undefined) updateObj.image_url = updates.imageUrl;
+    if (updates.active !== undefined) updateObj.active = updates.active;
+
+    const { data, error } = await supabaseAdmin
+      .from("services")
+      .update(updateObj)
+      .eq("id", id)
+      .eq("creator_id", creatorId)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return toService(data);
+  }
+
+  async deleteService(id: number, creatorId: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from("services")
+      .update({ active: false })
+      .eq("id", id)
+      .eq("creator_id", creatorId);
+    if (error) throw new Error(error.message);
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
@@ -397,25 +439,25 @@ class SupabaseStorage implements IStorage {
     if (error) throw new Error(error.message);
     if (!entries || entries.length === 0) return [];
 
-    const results = [];
-    for (const entry of entries) {
-      const { data: user } = await supabaseAdmin
-        .from("users")
-        .select("*")
-        .eq("id", entry.watched_user_id)
-        .single();
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("*")
-        .eq("user_id", entry.watched_user_id)
-        .single();
-      const { count } = await supabaseAdmin
-        .from("services")
-        .select("*", { count: "exact", head: true })
-        .eq("creator_id", entry.watched_user_id)
-        .eq("active", true);
+    const watchedIds = entries.map((e: any) => e.watched_user_id);
 
-      results.push({
+    const [usersResult, profilesResult, servicesResult] = await Promise.all([
+      supabaseAdmin.from("users").select("*").in("id", watchedIds),
+      supabaseAdmin.from("profiles").select("*").in("user_id", watchedIds),
+      supabaseAdmin.from("services").select("creator_id").eq("active", true).in("creator_id", watchedIds),
+    ]);
+
+    const usersMap = new Map((usersResult.data ?? []).map((u: any) => [u.id, u]));
+    const profilesMap = new Map((profilesResult.data ?? []).map((p: any) => [p.user_id, p]));
+    const serviceCountMap = new Map<string, number>();
+    for (const s of (servicesResult.data ?? [])) {
+      serviceCountMap.set(s.creator_id, (serviceCountMap.get(s.creator_id) || 0) + 1);
+    }
+
+    return entries.map((entry: any) => {
+      const user = usersMap.get(entry.watched_user_id);
+      const profile = profilesMap.get(entry.watched_user_id);
+      return {
         watchlistEntry: toWatchlist(entry),
         user: user ? {
           id: user.id,
@@ -425,10 +467,9 @@ class SupabaseStorage implements IStorage {
           profileImageUrl: user.profile_image_url,
         } : null,
         profile: profile ? toProfile(profile) : null,
-        serviceCount: count ?? 0,
-      });
-    }
-    return results;
+        serviceCount: serviceCountMap.get(entry.watched_user_id) ?? 0,
+      };
+    });
   }
 
   async addToWatchlist(userId: string, watchedUserId: string): Promise<Watchlist> {
@@ -665,14 +706,14 @@ class SupabaseStorage implements IStorage {
       .single();
     if (error) throw new Error(error.message);
 
-    const { data: allRatings } = await supabaseAdmin
+    const { count, data: sumData } = await supabaseAdmin
       .from("ratings")
-      .select("score")
+      .select("score", { count: "exact" })
       .eq("target_id", ratingData.targetId);
-    const ratings = allRatings ?? [];
-    const avgRating = ratings.length > 0
-      ? ratings.reduce((sum: number, r: any) => sum + r.score, 0) / ratings.length
-      : null;
+    const ratings = sumData ?? [];
+    const totalCount = count ?? ratings.length;
+    const totalSum = ratings.reduce((sum: number, r: any) => sum + r.score, 0);
+    const avgRating = totalCount > 0 ? totalSum / totalCount : null;
     const positiveCount = ratings.filter((r: any) => r.score >= 3).length;
     const badges: string[] = [];
     if (positiveCount >= 1) badges.push("first_deal");
@@ -716,6 +757,40 @@ class SupabaseStorage implements IStorage {
       .eq("user_id", userId)
       .single();
     return data?.public_key ?? null;
+  }
+
+  // --- Notifications ---
+
+  async getNotifications(userId: string): Promise<any[]> {
+    const { data, error } = await supabaseAdmin
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((n: any) => ({
+      id: n.id,
+      userId: n.user_id,
+      type: n.type,
+      title: n.title,
+      body: n.body,
+      linkUrl: n.link_url,
+      read: n.read,
+      createdAt: n.created_at ? new Date(n.created_at) : null,
+    }));
+  }
+
+  async markNotificationsRead(userId: string, ids?: number[]): Promise<void> {
+    let query = supabaseAdmin
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", userId);
+    if (ids && ids.length > 0) {
+      query = query.in("id", ids);
+    }
+    const { error } = await query;
+    if (error) throw new Error(error.message);
   }
 }
 

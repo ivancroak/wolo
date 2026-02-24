@@ -3,6 +3,7 @@ import { storage } from "@/server/storage";
 import { createSession } from "@/server/auth";
 import nacl from "tweetnacl";
 import { consumeNonce } from "@/server/nonce-store";
+import { checkRateLimit } from "@/server/with-rate-limit";
 
 function base58Decode(str: string): Uint8Array {
   const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -30,6 +31,10 @@ function base58Decode(str: string): Uint8Array {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimitResponse = checkRateLimit(ip, "auth-login", 10, 60000);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const body = await request.json();
   const { walletAddress, signature } = body;
 

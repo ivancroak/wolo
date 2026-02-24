@@ -4,9 +4,31 @@ declare_id!("42PrQGNH4pCqyGwxrLMXnfkDzz5CTCFx71y2HjuHK9Vg");
 
 const ESCROW_PROGRAM_ID: &str = "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9";
 
+fn escrow_program_pubkey() -> Pubkey {
+    ESCROW_PROGRAM_ID.parse::<Pubkey>().unwrap()
+}
+
 #[program]
 pub mod woland_reputation {
     use super::*;
+
+    pub fn initialize_rep_config(ctx: Context<InitializeRepConfig>) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+        config.authority = ctx.accounts.authority.key();
+        config.bump = ctx.bumps.config;
+        Ok(())
+    }
+
+    pub fn update_rep_config(
+        ctx: Context<UpdateRepConfig>,
+        new_authority: Option<Pubkey>,
+    ) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+        if let Some(authority) = new_authority {
+            config.authority = authority;
+        }
+        Ok(())
+    }
 
     pub fn initialize_reputation(ctx: Context<InitializeReputation>) -> Result<()> {
         let rep = &mut ctx.accounts.reputation;
@@ -181,6 +203,33 @@ fn update_badges(rep: &mut ReputationAccount) {
 // --- Accounts ---
 
 #[derive(Accounts)]
+pub struct InitializeRepConfig<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + ReputationConfig::INIT_SPACE,
+        seeds = [b"rep_config"],
+        bump,
+    )]
+    pub config: Account<'info, ReputationConfig>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateRepConfig<'info> {
+    #[account(constraint = authority.key() == config.authority @ WolandRepError::Unauthorized)]
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"rep_config"],
+        bump = config.bump,
+    )]
+    pub config: Account<'info, ReputationConfig>,
+}
+
+#[derive(Accounts)]
 pub struct InitializeReputation<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
@@ -198,10 +247,14 @@ pub struct InitializeReputation<'info> {
 #[derive(Accounts)]
 pub struct RecordCompletion<'info> {
     #[account(
-        constraint = escrow_program.key() == ESCROW_PROGRAM_ID.parse::<Pubkey>().unwrap() @ WolandRepError::Unauthorized
+        constraint = authority.key() == config.authority @ WolandRepError::Unauthorized
     )]
-    /// CHECK: Must be the escrow program signing via CPI
-    pub escrow_program: Signer<'info>,
+    pub authority: Signer<'info>,
+    #[account(
+        seeds = [b"rep_config"],
+        bump = config.bump,
+    )]
+    pub config: Account<'info, ReputationConfig>,
     #[account(
         mut,
         seeds = [b"reputation", reputation.user.as_ref()],
@@ -213,10 +266,14 @@ pub struct RecordCompletion<'info> {
 #[derive(Accounts)]
 pub struct RecordDispute<'info> {
     #[account(
-        constraint = escrow_program.key() == ESCROW_PROGRAM_ID.parse::<Pubkey>().unwrap() @ WolandRepError::Unauthorized
+        constraint = authority.key() == config.authority @ WolandRepError::Unauthorized
     )]
-    /// CHECK: Must be the escrow program signing via CPI
-    pub escrow_program: Signer<'info>,
+    pub authority: Signer<'info>,
+    #[account(
+        seeds = [b"rep_config"],
+        bump = config.bump,
+    )]
+    pub config: Account<'info, ReputationConfig>,
     #[account(
         mut,
         seeds = [b"reputation", reputation.user.as_ref()],
@@ -244,12 +301,22 @@ pub struct SubmitRating<'info> {
         bump,
     )]
     pub rating: Account<'info, RatingRecord>,
-    /// CHECK: Escrow account from the escrow program, validated by reading data
+    /// CHECK: Escrow account - must be owned by the escrow program
+    #[account(
+        constraint = escrow_account.owner == &escrow_program_pubkey() @ WolandRepError::InvalidEscrow
+    )]
     pub escrow_account: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 
 // --- State ---
+
+#[account]
+#[derive(InitSpace)]
+pub struct ReputationConfig {
+    pub authority: Pubkey,
+    pub bump: u8,
+}
 
 #[account]
 #[derive(InitSpace)]

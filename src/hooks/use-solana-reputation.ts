@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { useConnection, useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { WolandReputationClient } from "@/lib/solana/reputation-client";
+import { WolandEscrowClient } from "@/lib/solana/escrow-client";
 
 export function useSolanaReputation() {
   const { connection } = useConnection();
@@ -82,11 +83,14 @@ export function useSolanaReputation() {
     escrowId: number,
     score: number,
     comment: string,
+    depositorAddress: string,
   ) => {
     if (!client || !publicKey) throw new Error("Wallet not connected");
 
     const target = new PublicKey(targetAddress);
-    const ix = await client.buildSubmitRatingIx(target, escrowId, score, comment);
+    const depositor = new PublicKey(depositorAddress);
+    const escrowPDA = WolandEscrowClient.getEscrowPDAForDepositor(depositor, escrowId);
+    const ix = await client.buildSubmitRatingIx(target, escrowId, score, comment, escrowPDA);
     const tx = await client.buildTransaction([ix]);
 
     const sig = await sendTransaction(tx, connection);

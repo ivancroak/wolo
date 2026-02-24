@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChatPanel } from "@/components/ChatPanel";
 import { MilestonePanel } from "@/components/MilestonePanel";
 import { RatingModal } from "@/components/RatingModal";
+import { type Order, type Service, type Escrow } from "@shared/schema";
 
 export default function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -36,7 +37,7 @@ export default function DashboardPage() {
   const solanaEscrow = useSolanaEscrow();
   const solanaRep = useSolanaReputation();
   const { toast } = useToast();
-  const [ratingTarget, setRatingTarget] = useState<{ orderId: number; escrowId?: number; targetId: string } | null>(null);
+  const [ratingTarget, setRatingTarget] = useState<{ orderId: number; escrowId?: number; targetId: string; depositorId?: string } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -62,7 +63,7 @@ export default function DashboardPage() {
 
   if (authLoading || !user) return null;
 
-  const OrderCard = ({ order, isSeller }: { order: any; isSeller?: boolean }) => (
+  const OrderCard = ({ order, isSeller }: { order: Order; isSeller?: boolean }) => (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -191,7 +192,7 @@ export default function DashboardPage() {
           ) : (
             <div className="grid gap-4">
               <AnimatePresence>
-                {myServices.map((service: any) => (
+                {myServices.map((service: Service) => (
                   <motion.div
                     key={service.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -244,7 +245,7 @@ export default function DashboardPage() {
           ) : (
             <div className="grid gap-4">
               <AnimatePresence>
-                {myEscrows.map((escrow: any) => {
+                {myEscrows.map((escrow: Escrow & { milestones?: any[] }) => {
                   const phaseColors: Record<string, string> = {
                     awaiting_deposit: "bg-yellow-500/10 text-yellow-600",
                     funded: "bg-blue-500/10 text-blue-600",
@@ -453,6 +454,7 @@ export default function DashboardPage() {
                                   orderId: escrow.orderId,
                                   escrowId: escrow.id,
                                   targetId: isDepositor ? escrow.receiverId : escrow.depositorId,
+                                  depositorId: escrow.depositorId,
                                 })}
                               >
                                 <Star className="mr-1 h-3 w-3" /> Rate
@@ -508,7 +510,7 @@ export default function DashboardPage() {
           ) : (
             <div className="grid gap-4">
               <AnimatePresence>
-                {orders?.map((order: any) => (
+                {orders?.map((order: Order) => (
                   <OrderCard key={order.id} order={order} />
                 ))}
               </AnimatePresence>
@@ -528,7 +530,7 @@ export default function DashboardPage() {
           ) : (
             <div className="grid gap-4">
               <AnimatePresence>
-                {sales?.map((order: any) => (
+                {sales?.map((order: Order) => (
                   <OrderCard key={order.id} order={order} isSeller />
                 ))}
               </AnimatePresence>
@@ -542,6 +544,7 @@ export default function DashboardPage() {
           orderId={ratingTarget.orderId}
           escrowId={ratingTarget.escrowId}
           targetId={ratingTarget.targetId}
+          depositorId={ratingTarget.depositorId}
           open={!!ratingTarget}
           onOpenChange={(open) => { if (!open) setRatingTarget(null); }}
         />

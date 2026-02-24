@@ -177,21 +177,12 @@ alter table ratings enable row level security;
 alter table sessions enable row level security;
 alter table channel_keys enable row level security;
 
--- RLS policies: allow service_role full access (our server-side client uses this)
--- The anon key is only used client-side for public reads; all writes go through API routes using service_role
+-- RLS policies: service_role bypasses RLS automatically.
+-- Only grant anon minimal public reads where needed; all other tables deny anon by default.
 
-create policy "Service role full access" on users for all using (true) with check (true);
-create policy "Service role full access" on profiles for all using (true) with check (true);
-create policy "Service role full access" on services for all using (true) with check (true);
-create policy "Service role full access" on orders for all using (true) with check (true);
-create policy "Service role full access" on watchlist for all using (true) with check (true);
-create policy "Service role full access" on escrows for all using (true) with check (true);
-create policy "Service role full access" on milestones for all using (true) with check (true);
-create policy "Service role full access" on secure_messages for all using (true) with check (true);
-create policy "Service role full access" on reputations for all using (true) with check (true);
-create policy "Service role full access" on ratings for all using (true) with check (true);
-create policy "Service role full access" on sessions for all using (true) with check (true);
-create policy "Service role full access" on channel_keys for all using (true) with check (true);
+create policy "Public read active services" on services for select using (active = true);
+create policy "Public read reputations" on reputations for select using (true);
+create policy "Public read ratings" on ratings for select using (true);
 
 -- Notifications
 create table if not exists notifications (
@@ -207,4 +198,3 @@ create table if not exists notifications (
 create index idx_notifications_user on notifications(user_id);
 create index idx_notifications_unread on notifications(user_id, read);
 alter table notifications enable row level security;
-create policy "Service role full access" on notifications for all using (true) with check (true);

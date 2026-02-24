@@ -12,10 +12,11 @@ import {
 import { Heart, Repeat, UserPlus, Users, Sparkles, ArrowUpRight, Eye, EyeOff, DollarSign, Briefcase, CalendarClock, ShieldCheck, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { type Service } from "@shared/schema";
 
 interface ServiceCardProps {
-  service: any;
-  onPurchase: (service: any) => void;
+  service: Service;
+  onPurchase: (service: Service) => void;
   isWatched?: boolean;
   onToggleWatch?: (creatorId: string, isCurrentlyWatched: boolean) => void;
   isOwnService?: boolean;

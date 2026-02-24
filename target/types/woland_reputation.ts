@@ -13,6 +13,54 @@ export type WolandReputation = {
   },
   "instructions": [
     {
+      "name": "initializeRepConfig",
+      "discriminator": [
+        18,
+        253,
+        144,
+        239,
+        0,
+        22,
+        130,
+        15
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initializeReputation",
       "discriminator": [
         150,
@@ -78,8 +126,30 @@ export type WolandReputation = {
       ],
       "accounts": [
         {
-          "name": "escrowProgram",
+          "name": "authority",
           "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "reputation",
@@ -139,8 +209,30 @@ export type WolandReputation = {
       ],
       "accounts": [
         {
-          "name": "escrowProgram",
+          "name": "authority",
           "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "reputation",
@@ -278,6 +370,56 @@ export type WolandReputation = {
           }
         }
       ]
+    },
+    {
+      "name": "updateRepConfig",
+      "discriminator": [
+        168,
+        225,
+        41,
+        105,
+        55,
+        233,
+        207,
+        220
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "newAuthority",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -305,6 +447,19 @@ export type WolandReputation = {
         87,
         67,
         233
+      ]
+    },
+    {
+      "name": "reputationConfig",
+      "discriminator": [
+        46,
+        222,
+        226,
+        114,
+        243,
+        60,
+        242,
+        75
       ]
     }
   ],
@@ -544,6 +699,22 @@ export type WolandReputation = {
           {
             "name": "createdAt",
             "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "reputationConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
           },
           {
             "name": "bump",

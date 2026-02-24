@@ -1,6 +1,6 @@
-/Users/matveidanisheuski/Woland/target/debug/deps/woland_escrow-d032b53733cf6c40.d: programs/woland_escrow/src/lib.rs
+/Users/matveidanisheuski/wolo/target/debug/deps/woland_escrow-d032b53733cf6c40.d: programs/woland_escrow/src/lib.rs
 
-/Users/matveidanisheuski/Woland/target/debug/deps/woland_escrow-d032b53733cf6c40: programs/woland_escrow/src/lib.rs
+/Users/matveidanisheuski/wolo/target/debug/deps/woland_escrow-d032b53733cf6c40: programs/woland_escrow/src/lib.rs
 
 programs/woland_escrow/src/lib.rs:
 

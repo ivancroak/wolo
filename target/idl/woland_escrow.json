@@ -1030,6 +1030,18 @@
           "type": {
             "option": "u16"
           }
+        },
+        {
+          "name": "new_authority",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "new_fee_vault",
+          "type": {
+            "option": "pubkey"
+          }
         }
       ]
     }

@@ -3,21 +3,23 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { notify } from "@/server/notifications";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await params;
   try {
     const body = await request.json();
     const input = api.escrow.updateMilestone.input.parse(body);
 
-    const milestone = await storage.getMilestone(Number(params.id));
+    const milestone = await storage.getMilestone(Number(id));
     if (!milestone) {
       return NextResponse.json({ message: "Milestone not found" }, { status: 404 });
     }
@@ -43,10 +45,21 @@ export async function PATCH(
     }
 
     const updated = await storage.updateMilestoneStatus(
-      Number(params.id),
+      Number(id),
       input.status,
       input.proofUrl,
     );
+
+    const targetId = user.id === escrow.depositorId ? escrow.receiverId : escrow.depositorId;
+    const statusNotifications: Record<string, { type: "milestone_submitted" | "milestone_approved"; body: string }> = {
+      submitted: { type: "milestone_submitted", body: "A milestone has been submitted for review" },
+      approved: { type: "milestone_approved", body: "Your milestone has been approved" },
+    };
+    const info = statusNotifications[input.status];
+    if (info) {
+      await notify(targetId, info.type, "Milestone Update", info.body, "/dashboard");
+    }
+
     return NextResponse.json(updated);
   } catch (err) {
     if (err instanceof z.ZodError) {

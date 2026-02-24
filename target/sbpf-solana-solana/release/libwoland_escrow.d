@@ -1,1 +1,1 @@
-/Users/matveidanisheuski/Woland/target/sbpf-solana-solana/release/libwoland_escrow.rlib: /Users/matveidanisheuski/Woland/programs/woland_escrow/src/lib.rs
+/Users/matveidanisheuski/wolo/target/sbpf-solana-solana/release/libwoland_escrow.rlib: /Users/matveidanisheuski/wolo/programs/woland_escrow/src/lib.rs

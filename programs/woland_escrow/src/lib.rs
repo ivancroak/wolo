@@ -31,6 +31,8 @@ pub mod woland_escrow {
         ctx: Context<UpdateConfig>,
         new_arbiter: Option<Pubkey>,
         new_fee_bps: Option<u16>,
+        new_authority: Option<Pubkey>,
+        new_fee_vault: Option<Pubkey>,
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
         if let Some(arbiter) = new_arbiter {
@@ -39,6 +41,12 @@ pub mod woland_escrow {
         if let Some(fee_bps) = new_fee_bps {
             require!(fee_bps <= MAX_FEE_BPS, WolandError::FeeTooHigh);
             config.fee_bps = fee_bps;
+        }
+        if let Some(authority) = new_authority {
+            config.authority = authority;
+        }
+        if let Some(fee_vault) = new_fee_vault {
+            config.fee_vault = fee_vault;
         }
         Ok(())
     }
@@ -431,7 +439,9 @@ pub mod woland_escrow {
                     && escrow.dispute_opened_at > 0
                     && clock.unix_timestamp > escrow.dispute_opened_at + DISPUTE_WINDOW_SECONDS
             }
-            EscrowPhase::Funded | EscrowPhase::InProgress => expired && caller == escrow.depositor,
+            EscrowPhase::Funded | EscrowPhase::InProgress | EscrowPhase::MilestoneCheck => {
+                expired && caller == escrow.depositor
+            }
             _ => false,
         };
         require!(can_refund, WolandError::RefundNotAllowed);

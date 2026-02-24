@@ -326,6 +326,7 @@ export default function OrderDetailPage() {
           orderId={orderId}
           escrowId={escrow.id}
           targetId={counterpartyId}
+          depositorId={escrow.depositorId}
           open={ratingOpen}
           onOpenChange={setRatingOpen}
         />

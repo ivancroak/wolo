@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { getSessionUser } from "@/server/auth";
 import { storage } from "@/server/storage";
+import { WolandEscrowClient } from "@/lib/solana/escrow-client";
+import { getDeployWalletKeypair } from "@/lib/solana/deploy-wallet";
 import { z } from "zod";
 
 const ADMIN_WALLET = "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
@@ -8,6 +11,12 @@ const ADMIN_WALLET = "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
 const resolveSchema = z.object({
   depositorShareBps: z.number().int().min(0).max(10000),
 });
+
+function getConnection(): Connection {
+  const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+  if (!rpcUrl) throw new Error("NEXT_PUBLIC_SOLANA_RPC_URL not set");
+  return new Connection(rpcUrl, "confirmed");
+}
 
 export async function POST(
   request: NextRequest,
@@ -44,9 +53,41 @@ export async function POST(
       );
     }
 
-    const updated = await storage.updateEscrowPhase(escrowId, "released");
+    const mintStr = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT;
+    const feeVaultStr = process.env.NEXT_PUBLIC_FEE_VAULT;
+    if (!mintStr || !feeVaultStr) {
+      return NextResponse.json(
+        { message: "SPL_TOKEN_MINT or FEE_VAULT env not set" },
+        { status: 500 },
+      );
+    }
 
-    return NextResponse.json({ ...updated, depositorShareBps });
+    const connection = getConnection();
+    const deployWallet = getDeployWalletKeypair();
+    const mint = new PublicKey(mintStr);
+    const feeVault = new PublicKey(feeVaultStr);
+    const depositorPubkey = new PublicKey(escrow.depositorId);
+    const receiverPubkey = new PublicKey(escrow.receiverId);
+
+    const client = new WolandEscrowClient(connection, deployWallet.publicKey);
+    const ix = await client.buildArbiterResolveIx(
+      depositorPubkey,
+      escrowId,
+      receiverPubkey,
+      mint,
+      feeVault,
+      depositorShareBps,
+    );
+
+    const tx = await client.buildTransaction([ix]);
+    tx.sign(deployWallet);
+
+    const sig = await connection.sendRawTransaction(tx.serialize());
+    await connection.confirmTransaction(sig, "confirmed");
+
+    const updated = await storage.updateEscrowPhase(escrowId, "released", sig);
+
+    return NextResponse.json({ ...updated, depositorShareBps, signature: sig });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json(

@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import type { User } from "@shared/schema";
 import { storage } from "./storage";
 
-const SESSION_COOKIE = "woland_session";
+const SESSION_COOKIE = "wolo_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 export async function getSessionUser(): Promise<User | null> {

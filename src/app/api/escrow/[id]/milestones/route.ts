@@ -6,14 +6,15 @@ import { z } from "zod";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const escrow = await storage.getEscrow(Number(params.id));
+  const { id } = await params;
+  const escrow = await storage.getEscrow(Number(id));
   if (!escrow) {
     return NextResponse.json({ message: "Escrow not found" }, { status: 404 });
   }

@@ -3,6 +3,7 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { notify } from "@/server/notifications";
 
 async function verifyParticipant(orderId: number, userId: string) {
   const order = await storage.getOrder(orderId);
@@ -19,32 +20,34 @@ async function verifyParticipant(orderId: number, userId: string) {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const check = await verifyParticipant(Number(params.id), user.id);
+  const { id } = await params;
+  const check = await verifyParticipant(Number(id), user.id);
   if ("error" in check) {
     return NextResponse.json({ message: check.error }, { status: check.status });
   }
 
-  const messages = await storage.getSecureMessages(Number(params.id), user.id);
+  const messages = await storage.getSecureMessages(Number(id), user.id);
   return NextResponse.json(messages);
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const check = await verifyParticipant(Number(params.id), user.id);
+  const { id } = await params;
+  const check = await verifyParticipant(Number(id), user.id);
   if ("error" in check) {
     return NextResponse.json({ message: check.error }, { status: check.status });
   }
@@ -54,9 +57,21 @@ export async function POST(
     const input = api.messages.send.input.parse(body);
     const msg = await storage.sendSecureMessage({
       ...input,
-      orderId: Number(params.id),
+      orderId: Number(id),
       senderId: user.id,
     });
+
+    const recipientId = user.id === check.order.buyerId
+      ? check.service.creatorId
+      : check.order.buyerId;
+    await notify(
+      recipientId,
+      "message_received",
+      "New Message",
+      "You have a new encrypted message",
+      `/orders/${check.order.id}`,
+    );
+
     return NextResponse.json(msg, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) {

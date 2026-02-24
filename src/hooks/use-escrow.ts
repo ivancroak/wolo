@@ -107,6 +107,7 @@ export function useAddMilestone() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.escrow.get.path] });
+      queryClient.invalidateQueries({ queryKey: [api.escrow.myEscrows.path] });
     },
   });
 }
@@ -127,6 +128,7 @@ export function useUpdateMilestone() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.escrow.get.path] });
+      queryClient.invalidateQueries({ queryKey: [api.escrow.myEscrows.path] });
     },
   });
 }

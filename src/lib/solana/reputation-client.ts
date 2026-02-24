@@ -10,6 +10,13 @@ import { encodeU64 } from "./escrow-client";
 
 const programId = new PublicKey(REPUTATION_PROGRAM_ID);
 
+function findRepConfigPDA(): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("rep_config")],
+    programId
+  );
+}
+
 function findReputationPDA(user: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("reputation"), user.toBuffer()],
@@ -44,6 +51,21 @@ export class WolandReputationClient {
     private walletPubkey: PublicKey,
   ) {}
 
+  async buildInitializeRepConfigIx(): Promise<TransactionInstruction> {
+    const [configPDA] = findRepConfigPDA();
+    const disc = await getDiscriminator("initialize_rep_config");
+
+    return new TransactionInstruction({
+      keys: [
+        { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
+        { pubkey: configPDA, isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      programId,
+      data: disc,
+    });
+  }
+
   async buildInitializeReputationIx(): Promise<TransactionInstruction> {
     const [repPDA] = findReputationPDA(this.walletPubkey);
     const disc = await getDiscriminator("initialize_reputation");
@@ -66,6 +88,7 @@ export class WolandReputationClient {
     isBuyer: boolean,
   ): Promise<TransactionInstruction> {
     const [repPDA] = findReputationPDA(userPubkey);
+    const [configPDA] = findRepConfigPDA();
     const disc = await getDiscriminator("record_completion");
 
     const data = Buffer.concat([
@@ -78,6 +101,7 @@ export class WolandReputationClient {
     return new TransactionInstruction({
       keys: [
         { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
+        { pubkey: configPDA, isSigner: false, isWritable: false },
         { pubkey: repPDA, isSigner: false, isWritable: true },
       ],
       programId,
@@ -90,6 +114,7 @@ export class WolandReputationClient {
     escrowId: number,
   ): Promise<TransactionInstruction> {
     const [repPDA] = findReputationPDA(userPubkey);
+    const [configPDA] = findRepConfigPDA();
     const disc = await getDiscriminator("record_dispute");
 
     const data = Buffer.concat([disc, encodeU64(escrowId)]);
@@ -97,6 +122,7 @@ export class WolandReputationClient {
     return new TransactionInstruction({
       keys: [
         { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
+        { pubkey: configPDA, isSigner: false, isWritable: false },
         { pubkey: repPDA, isSigner: false, isWritable: true },
       ],
       programId,
@@ -109,6 +135,7 @@ export class WolandReputationClient {
     escrowId: number,
     score: number,
     comment: string,
+    escrowAccountPubkey: PublicKey,
   ): Promise<TransactionInstruction> {
     const [targetRepPDA] = findReputationPDA(targetPubkey);
     const [ratingPDA] = findRatingPDA(this.walletPubkey, escrowId);
@@ -127,6 +154,7 @@ export class WolandReputationClient {
         { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
         { pubkey: targetRepPDA, isSigner: false, isWritable: true },
         { pubkey: ratingPDA, isSigner: false, isWritable: true },
+        { pubkey: escrowAccountPubkey, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       programId,
@@ -141,6 +169,11 @@ export class WolandReputationClient {
     tx.recentBlockhash = blockhash;
     tx.feePayer = this.walletPubkey;
     return tx;
+  }
+
+  getRepConfigPDA(): PublicKey {
+    const [pda] = findRepConfigPDA();
+    return pda;
   }
 
   getReputationPDA(user?: PublicKey): PublicKey {
