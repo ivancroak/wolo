@@ -3,12 +3,13 @@
 import { ServiceCard } from "@/components/ServiceCard";
 import { CreateServiceModal } from "@/components/CreateServiceModal";
 import { PurchaseModal } from "@/components/PurchaseModal";
-import { useServices } from "@/hooks/use-services";
+import { useServices, useCompleteAction } from "@/hooks/use-services";
 import { useAuth } from "@/hooks/use-auth";
 import { useWatchedIds, useToggleWatchlist } from "@/hooks/use-watchlist";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, Loader2, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,6 +25,16 @@ const categories = [
 ];
 
 export default function MarketplacePage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+      <MarketplaceContent />
+    </Suspense>
+  );
+}
+
+function MarketplaceContent() {
+  const searchParams = useSearchParams();
+  const creatorFilter = searchParams.get("creator") || undefined;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [listingType, setListingType] = useState<string>("offer");
@@ -31,17 +42,33 @@ export default function MarketplacePage() {
     search: search || undefined,
     category: category !== "all" ? category : undefined,
     listingType: listingType,
+    creatorId: creatorFilter,
   });
   const { user } = useAuth();
   const { data: watchedIds } = useWatchedIds();
   const { addMutation, removeMutation } = useToggleWatchlist();
   const { toast } = useToast();
+  const { mutate: completeAction } = useCompleteAction();
 
   const [selectedService, setSelectedService] = useState<any>(null);
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
 
   const handlePurchase = (service: any) => {
-    if (!user) return;
+    if (!user) {
+      toast({ title: "Wallet not connected", description: "Please connect your wallet to continue.", variant: "destructive" });
+      return;
+    }
+    if (service.pricingCategory === "pay_per_action") {
+      completeAction(service.id, {
+        onSuccess: (data: any) => {
+          toast({ title: "Action Completed", description: `Payout: ${data.payoutPerAction} SOL` });
+        },
+        onError: (err: any) => {
+          toast({ title: "Error", description: err.message, variant: "destructive" });
+        },
+      });
+      return;
+    }
     setSelectedService(service);
     setIsPurchaseOpen(true);
   };

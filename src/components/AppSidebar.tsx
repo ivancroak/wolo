@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { useToast } from "@/hooks/use-toast";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +23,7 @@ import { Store, LayoutDashboard, User, Eye, LogOut } from "lucide-react";
 import { TransparentLogo } from "@/components/TransparentLogo";
 import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ConnectWallet";
+import { useState, useEffect } from "react";
 
 const navItems = [
   { href: "/marketplace", label: "Marketplace", icon: Store },
@@ -32,6 +35,10 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { setVisible } = useWalletModal();
+  const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
     <Sidebar>
@@ -50,22 +57,38 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems
-                .filter((item) => !item.requiresAuth || user)
-                .map((item) => (
+              {navItems.map((item) => {
+                const needsAuth = item.requiresAuth && mounted && !user;
+                return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
-                      asChild
+                      asChild={!needsAuth}
                       isActive={pathname === item.href}
                       data-testid={`sidebar-link-${item.label.toLowerCase()}`}
+                      {...(needsAuth
+                        ? {
+                            onClick: () => {
+                              toast({ title: "Connect your wallet", description: "Please connect your wallet to access this page." });
+                              setVisible(true);
+                            },
+                          }
+                        : {})}
                     >
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
+                      {needsAuth ? (
+                        <>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </>
+                      ) : (
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -81,7 +104,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        {user ? (
+        {mounted && user ? (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">

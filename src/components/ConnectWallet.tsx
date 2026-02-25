@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Wallet, LogOut, Copy, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 interface ConnectWalletProps {
   variant?: "default" | "outline" | "ghost" | "sidebar";
@@ -27,6 +28,8 @@ export function ConnectWallet({
 }: ConnectWalletProps) {
   const { address, shortAddress, isConnecting, isConnected, error, connect, disconnect } = useWallet();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const copyAddress = () => {
     if (address) {
@@ -34,6 +37,21 @@ export function ConnectWallet({
       toast({ title: "Copied", description: "Wallet address copied to clipboard." });
     }
   };
+
+  if (!mounted) {
+    return (
+      <Button
+        variant={variant === "sidebar" ? "default" : variant}
+        size={size}
+        className={`${fullWidth ? "w-full" : ""} ${className}`}
+        disabled
+        data-testid="button-connect-wallet"
+      >
+        <Wallet className="mr-2 h-4 w-4" />
+        Connect Wallet
+      </Button>
+    );
+  }
 
   if (error) {
     return (

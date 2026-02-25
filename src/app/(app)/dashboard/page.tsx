@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyOrders, useMySales, useUpdateOrder } from "@/hooks/use-orders";
 import { useMyServices } from "@/hooks/use-services";
-import { useMyEscrows, useUpdateEscrowPhase } from "@/hooks/use-escrow";
+import { useMyEscrows, useUpdateEscrowPhase, useDisputeResolve } from "@/hooks/use-escrow";
 import { useSolanaEscrow } from "@/hooks/use-solana-escrow";
 import { useSolanaReputation } from "@/hooks/use-solana-reputation";
 import { useMyReputation } from "@/hooks/use-reputation";
@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, AlertTriangle, Send } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -34,10 +35,12 @@ export default function DashboardPage() {
   const { data: reputation } = useMyReputation();
   const { mutate: updateOrder } = useUpdateOrder();
   const { mutate: updateEscrowPhase } = useUpdateEscrowPhase();
+  const { mutate: disputeResolve, isPending: isDisputeResolving } = useDisputeResolve();
   const solanaEscrow = useSolanaEscrow();
   const solanaRep = useSolanaReputation();
   const { toast } = useToast();
   const [ratingTarget, setRatingTarget] = useState<{ orderId: number; escrowId?: number; targetId: string; depositorId?: string } | null>(null);
+  const [evidenceInputs, setEvidenceInputs] = useState<Record<number, { tweetUrl?: string; targetHandle?: string }>>({});
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -422,28 +425,95 @@ export default function DashboardPage() {
                             </div>
                           )}
                           {escrow.phase === "disputed" && isDepositor && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-full text-xs"
-                              onClick={async () => {
-                                const mint = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT;
-                                if (!solanaEscrow.isReady || !mint) {
-                                  toast({ title: "Wallet not connected", variant: "destructive" });
-                                  return;
-                                }
-                                try {
-                                  const txSig = await solanaEscrow.refund(escrow.depositorId, escrow.id, mint);
-                                  updateEscrowPhase({ id: escrow.id, phase: "refunded", txHash: txSig });
-                                  toast({ title: "Refund Processed", description: `Tx: ${txSig.slice(0, 12)}...` });
-                                } catch (err: any) {
-                                  toast({ title: "On-chain refund failed", description: err?.message, variant: "destructive" });
-                                }
-                              }}
-                            >
-                              Claim Refund
-                            </Button>
+                            <div className="space-y-2">
+                              <p className="text-xs text-muted-foreground">Awaiting seller evidence. You can claim a refund at any time.</p>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="rounded-full text-xs"
+                                onClick={async () => {
+                                  const mint = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT;
+                                  if (!solanaEscrow.isReady || !mint) {
+                                    toast({ title: "Wallet not connected", variant: "destructive" });
+                                    return;
+                                  }
+                                  try {
+                                    const txSig = await solanaEscrow.refund(escrow.depositorId, escrow.id, mint);
+                                    updateEscrowPhase({ id: escrow.id, phase: "refunded", txHash: txSig });
+                                    toast({ title: "Refund Processed", description: `Tx: ${txSig.slice(0, 12)}...` });
+                                  } catch (err: any) {
+                                    toast({ title: "On-chain refund failed", description: err?.message, variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                Claim Refund
+                              </Button>
+                            </div>
                           )}
+                          {escrow.phase === "disputed" && !isDepositor && (() => {
+                            const cat = (escrow as any).serviceCategory as string | null;
+                            const manualOnly = !cat || cat === "like" || cat === "ambassador" || cat === "custom";
+                            const ev = evidenceInputs[escrow.id] ?? {};
+                            return (
+                              <div className="space-y-3 border border-dashed border-red-500/30 rounded-md p-3">
+                                <p className="text-xs font-medium flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3 text-red-500" />
+                                  Dispute — Submit Evidence
+                                </p>
+                                {manualOnly ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    This service category ({cat ?? "unknown"}) requires admin review. Please wait for manual resolution.
+                                  </p>
+                                ) : (
+                                  <>
+                                    {cat === "repost" && (
+                                      <Input
+                                        placeholder="Tweet URL (e.g. https://x.com/user/status/123)"
+                                        className="text-xs h-8"
+                                        value={ev.tweetUrl ?? ""}
+                                        onChange={(e) => setEvidenceInputs((prev) => ({ ...prev, [escrow.id]: { ...prev[escrow.id], tweetUrl: e.target.value } }))}
+                                      />
+                                    )}
+                                    {cat === "follow" && (
+                                      <Input
+                                        placeholder="Target @handle (e.g. @elonmusk)"
+                                        className="text-xs h-8"
+                                        value={ev.targetHandle ?? ""}
+                                        onChange={(e) => setEvidenceInputs((prev) => ({ ...prev, [escrow.id]: { ...prev[escrow.id], targetHandle: e.target.value } }))}
+                                      />
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      className="rounded-full text-xs"
+                                      disabled={isDisputeResolving}
+                                      onClick={() => {
+                                        disputeResolve(
+                                          { escrowId: escrow.id, tweetUrl: ev.tweetUrl, targetHandle: ev.targetHandle },
+                                          {
+                                            onSuccess: (data: any) => {
+                                              if (data.resolution === "released") {
+                                                toast({ title: "Verified", description: "Evidence confirmed — funds released to you." });
+                                              } else if (data.resolution === "refunded") {
+                                                toast({ title: "Not Verified", description: "Evidence could not be confirmed — funds refunded to buyer.", variant: "destructive" });
+                                              } else {
+                                                toast({ title: "Manual Review", description: data.message });
+                                              }
+                                            },
+                                            onError: (err: any) => {
+                                              toast({ title: "Error", description: err?.message, variant: "destructive" });
+                                            },
+                                          }
+                                        );
+                                      }}
+                                    >
+                                      {isDisputeResolving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Send className="mr-1 h-3 w-3" />}
+                                      Submit Evidence
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                           {escrow.phase === "released" && (
                             <div className="flex gap-2">
                               <Button

@@ -198,3 +198,21 @@ create table if not exists notifications (
 create index idx_notifications_user on notifications(user_id);
 create index idx_notifications_unread on notifications(user_id, read);
 alter table notifications enable row level security;
+
+-- Action Completions (for pay_per_action services)
+create table if not exists action_completions (
+  id serial primary key,
+  service_id integer not null references services(id) on delete cascade,
+  user_id text not null references users(id) on delete cascade,
+  status text not null default 'completed' check (status in ('completed','verified','rejected')),
+  created_at timestamptz default now(),
+  unique(service_id, user_id)
+);
+create index if not exists idx_action_completions_service on action_completions(service_id);
+alter table action_completions enable row level security;
+
+-- Add actions_completed counter to services
+alter table services add column if not exists actions_completed integer not null default 0;
+
+-- Add twitter_verified to profiles
+alter table profiles add column if not exists twitter_verified boolean not null default false;

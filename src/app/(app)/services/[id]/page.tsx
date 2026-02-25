@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useService } from "@/hooks/use-services";
+import { useService, useCompleteAction } from "@/hooks/use-services";
 import { useAuth } from "@/hooks/use-auth";
 import { PurchaseModal } from "@/components/PurchaseModal";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, ArrowLeft, Heart, Repeat, UserPlus, Users, Sparkles, DollarSign, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   repost: <Repeat className="h-4 w-4" />,
@@ -39,6 +40,8 @@ export default function ServiceDetailPage() {
   const id = Number(params.id);
   const { data: service, isLoading } = useService(id);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const { toast } = useToast();
+  const { mutate: completeAction, isPending: actionPending } = useCompleteAction();
 
   if (isLoading) {
     return (
@@ -126,10 +129,22 @@ export default function ServiceDetailPage() {
 
               {service.pricingCategory === "pay_per_action" && service.maxActions && (
                 <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Max Actions</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Progress</span>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-4 w-4" />
-                    <span className="text-sm font-medium">{service.maxActions}</span>
+                    <span className="text-sm font-medium">{service.actionsCompleted} / {service.maxActions} actions</span>
+                  </div>
+                </div>
+              )}
+
+              {service.pricingCategory === "pay_per_action" && service.maxActions && (
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Payout / Action</span>
+                  <div className="flex items-center gap-1.5">
+                    <DollarSign className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      {(parseFloat(service.budgetCap || service.price) / service.maxActions).toFixed(4)} SOL
+                    </span>
                   </div>
                 </div>
               )}
@@ -167,8 +182,37 @@ export default function ServiceDetailPage() {
             <div className="pt-4 border-t flex justify-end">
               {isOwn ? (
                 <Badge variant="outline" className="text-muted-foreground">This is your listing</Badge>
+              ) : service.pricingCategory === "pay_per_action" ? (
+                <Button
+                  disabled={actionPending}
+                  onClick={() => {
+                    if (!user) {
+                      toast({ title: "Wallet not connected", description: "Please connect your wallet to continue.", variant: "destructive" });
+                      return;
+                    }
+                    completeAction(service.id, {
+                      onSuccess: (data: any) => {
+                        toast({ title: "Action Completed", description: `Payout: ${data.payoutPerAction} SOL` });
+                      },
+                      onError: (err: any) => {
+                        toast({ title: "Error", description: err.message, variant: "destructive" });
+                      },
+                    });
+                  }}
+                  className="rounded-full px-8"
+                >
+                  {actionPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Complete Action
+                  <ArrowUpRight className="ml-2 h-4 w-4" />
+                </Button>
               ) : (
-                <Button onClick={() => setPurchaseOpen(true)} className="rounded-full px-8">
+                <Button onClick={() => {
+                  if (!user) {
+                    toast({ title: "Wallet not connected", description: "Please connect your wallet to continue.", variant: "destructive" });
+                    return;
+                  }
+                  setPurchaseOpen(true);
+                }} className="rounded-full px-8">
                   {service.listingType === "request" ? "Fulfill Request" : "Purchase Service"}
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Button>

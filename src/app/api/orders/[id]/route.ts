@@ -4,6 +4,33 @@ import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import type { OrderStatus } from "@shared/schema";
+import { checkRateLimit } from "@/server/with-rate-limit";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const order = await storage.getOrder(Number(id));
+  if (!order) {
+    return NextResponse.json({ message: "Order not found" }, { status: 404 });
+  }
+
+  const service = await storage.getService(order.serviceId);
+  const isBuyer = order.buyerId === user.id;
+  const isSeller = service?.creatorId === user.id;
+
+  if (!isBuyer && !isSeller) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+  }
+
+  return NextResponse.json(order);
+}
 
 const VALID_ORDER_TRANSITIONS: Record<OrderStatus, { status: OrderStatus; by: "buyer" | "seller" | "both" }[]> = {
   pending: [
@@ -23,6 +50,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rl = checkRateLimit(ip, "update-order", 30, 60000);
+  if (rl) return rl;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

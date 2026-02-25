@@ -56,3 +56,12 @@ export async function checkFollowRelationship(
 export async function getUserInfo(userName: string): Promise<any> {
   return twitterFetch("/user/info", { userName });
 }
+
+export async function getUserTweets(userName: string): Promise<{ text: string; id: string }[]> {
+  const data = await twitterFetch("/user/last_tweets", { userName, limit: "20" });
+  const tweets: any[] = data?.tweets ?? data?.data ?? [];
+  return tweets.map((t: any) => ({
+    text: t.text ?? t.full_text ?? "",
+    id: t.id ?? t.id_str ?? "",
+  }));
+}

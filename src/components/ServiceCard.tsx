@@ -12,6 +12,7 @@ import {
 import { Heart, Repeat, UserPlus, Users, Sparkles, ArrowUpRight, Eye, EyeOff, DollarSign, Briefcase, CalendarClock, ShieldCheck, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type Service } from "@shared/schema";
 
 interface ServiceCardProps {
@@ -23,6 +24,12 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWatch, isOwnService = false }: ServiceCardProps) {
+  const router = useRouter();
+
+  const handleCardClick = () => {
+    router.push(`/services/${service.id}`);
+  };
+
   const getIcon = (category: string) => {
     switch (category) {
       case "repost": return <Repeat className="h-3.5 w-3.5" />;
@@ -58,7 +65,7 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       data-testid={`card-service-${service.id}`}
     >
-      <Card className="overflow-visible h-full flex flex-col group hover-elevate">
+      <Card className="overflow-visible h-full flex flex-col group hover-elevate cursor-pointer" onClick={handleCardClick}>
         <CardHeader className="pb-3 flex-row items-start justify-between gap-2 flex-wrap">
           <div className="flex-1 min-w-0">
             <Link href={`/services/${service.id}`}>
@@ -125,13 +132,20 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
                 {getPricingLabel(service.pricingCategory, service.payrollBasis)}
               </Badge>
             )}
-            {service.pricingCategory === "pay_per_action" && (service.maxActions || service.budgetCap) && (
+            {service.pricingCategory === "pay_per_action" && service.maxActions && (
               <div className="flex items-center gap-1 mt-1">
                 <ShieldCheck className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[10px] text-muted-foreground">
-                  {service.maxActions && `${service.maxActions} actions`}
-                  {service.maxActions && service.budgetCap && " / "}
-                  {service.budgetCap && `${service.budgetCap} SOL cap`}
+                  {service.actionsCompleted}/{service.maxActions} actions
+                  {service.budgetCap && ` \u00b7 ${service.budgetCap} SOL cap`}
+                </span>
+              </div>
+            )}
+            {service.pricingCategory === "pay_per_action" && !service.maxActions && service.budgetCap && (
+              <div className="flex items-center gap-1 mt-1">
+                <ShieldCheck className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">
+                  {service.budgetCap} SOL cap
                 </span>
               </div>
             )}
@@ -146,11 +160,11 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
           </div>
           <Button
             variant="outline"
-            onClick={() => onPurchase(service)}
+            onClick={(e) => { e.stopPropagation(); onPurchase(service); }}
             className="rounded-full"
             data-testid={`button-purchase-${service.id}`}
           >
-            {service.listingType === "request" ? "Fulfill" : "Purchase"}
+            {service.pricingCategory === "pay_per_action" ? "Complete Action" : service.listingType === "request" ? "Fulfill" : "Purchase"}
             <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         </CardFooter>

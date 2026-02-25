@@ -132,3 +132,26 @@ export function useUpdateMilestone() {
     },
   });
 }
+
+export function useDisputeResolve() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ escrowId, tweetUrl, targetHandle }: { escrowId: number; tweetUrl?: string; targetHandle?: string }) => {
+      const res = await fetch(`/api/escrow/${escrowId}/dispute-resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tweetUrl, targetHandle }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to submit dispute evidence");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.escrow.get.path] });
+      queryClient.invalidateQueries({ queryKey: [api.escrow.myEscrows.path] });
+    },
+  });
+}

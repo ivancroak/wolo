@@ -25,6 +25,7 @@ export interface Profile {
   walletAddress: string | null;
   bio: string | null;
   twitterHandle: string | null;
+  twitterVerified: boolean;
   isInfluencer: boolean | null;
 }
 
@@ -43,6 +44,7 @@ export interface Service {
   deadlineDays: number | null;
   imageUrl: string | null;
   active: boolean;
+  actionsCompleted: number;
   createdAt: Date | null;
 }
 
@@ -222,6 +224,16 @@ export interface Notification {
   body: string;
   linkUrl: string | null;
   read: boolean;
+  createdAt: Date | null;
+}
+
+export type ActionCompletionStatus = "completed" | "verified" | "rejected";
+
+export interface ActionCompletion {
+  id: number;
+  serviceId: number;
+  userId: string;
+  status: ActionCompletionStatus;
   createdAt: Date | null;
 }
 

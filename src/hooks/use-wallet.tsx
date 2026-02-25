@@ -20,6 +20,7 @@ export function useWallet() {
 
   useEffect(() => {
     if (connected && address && signMessage && !prevConnected && !loginInProgress) {
+      prevConnected = true;
       loginInProgress = true;
       login(
         { walletAddress: address, signMessage },
@@ -27,10 +28,10 @@ export function useWallet() {
       );
     }
     if (!connected && prevConnected) {
+      prevConnected = false;
       logout();
       loginInProgress = false;
     }
-    prevConnected = connected;
   }, [connected, address, signMessage, login, logout]);
 
   const connect = useCallback(async () => {

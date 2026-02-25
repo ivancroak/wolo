@@ -20,9 +20,10 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Save, Wallet, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Save, Wallet, ExternalLink, CheckCircle2, Copy, Twitter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ConnectWallet } from "@/components/ConnectWallet";
@@ -93,6 +94,60 @@ export default function ProfilePage() {
         toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
       },
     });
+  };
+
+  const [verifyCode, setVerifyCode] = useState<string | null>(null);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyCopied, setVerifyCopied] = useState(false);
+
+  const getVerifyCode = async () => {
+    setVerifyLoading(true);
+    try {
+      const res = await fetch("/api/profiles/verify-twitter", { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+        return;
+      }
+      if (data.verified) {
+        toast({ title: "Already Verified", description: "Your X account is already verified." });
+        return;
+      }
+      setVerifyCode(data.tweetText);
+    } catch {
+      toast({ title: "Error", description: "Failed to get verification code", variant: "destructive" });
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const checkVerification = async () => {
+    setVerifyLoading(true);
+    try {
+      const res = await fetch("/api/profiles/verify-twitter", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (data.verified) {
+        toast({ title: "Verified!", description: "Your X account has been verified." });
+        setVerifyCode(null);
+        // Refetch profile to update UI
+        window.location.reload();
+      } else {
+        toast({ title: "Not Found", description: data.message, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Verification check failed", variant: "destructive" });
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const copyVerifyText = () => {
+    if (verifyCode) {
+      navigator.clipboard.writeText(verifyCode);
+      setVerifyCopied(true);
+      toast({ title: "Copied", description: "Tweet text copied to clipboard." });
+      setTimeout(() => setVerifyCopied(false), 2000);
+    }
   };
 
   if (authLoading) return null;
@@ -173,6 +228,12 @@ export default function ProfilePage() {
                       <FormItem>
                         <div className="flex items-center gap-2">
                           <FormLabel>X Handle</FormLabel>
+                          {profile?.twitterVerified && (
+                            <Badge variant="outline" className="gap-1 text-green-600 border-green-500/50">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Verified
+                            </Badge>
+                          )}
                           {profile?.twitterHandle && twitterHandleRegex.test(profile.twitterHandle) && (
                             <a
                               href={`https://x.com/${profile.twitterHandle}`}
@@ -196,6 +257,60 @@ export default function ProfilePage() {
                           1-15 characters: letters, numbers, or underscores only.
                         </FormDescription>
                         <FormMessage />
+
+                        {profile?.twitterHandle && !profile.twitterVerified && !verifyCode && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={getVerifyCode}
+                            disabled={verifyLoading}
+                            className="mt-2 gap-1.5"
+                            data-testid="button-verify-x"
+                          >
+                            {verifyLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Twitter className="h-3.5 w-3.5" />}
+                            Verify X Account
+                          </Button>
+                        )}
+
+                        {verifyCode && (
+                          <div className="mt-3 space-y-3 rounded-md border p-3 bg-muted/50">
+                            <p className="text-xs text-muted-foreground">
+                              Post this exact text as a tweet, then click "Check Verification":
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 text-xs bg-background rounded px-2 py-1.5 border font-mono break-all">
+                                {verifyCode}
+                              </code>
+                              <Button type="button" variant="ghost" size="icon" onClick={copyVerifyText} className="shrink-0 h-8 w-8">
+                                {verifyCopied ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                              </Button>
+                            </div>
+                            <div className="flex gap-2">
+                              <a
+                                href={`https://x.com/intent/tweet?text=${encodeURIComponent(verifyCode)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  Post on X
+                                </Button>
+                              </a>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={checkVerification}
+                                disabled={verifyLoading}
+                                className="gap-1.5"
+                                data-testid="button-check-verification"
+                              >
+                                {verifyLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                                Check Verification
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </FormItem>
                     )}
                   />

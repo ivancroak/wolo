@@ -121,3 +121,24 @@ export function useDeleteService() {
     },
   });
 }
+
+export function useCompleteAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (serviceId: number) => {
+      const res = await fetch(`/api/services/${serviceId}/actions`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to complete action");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.services.get.path] });
+    },
+  });
+}

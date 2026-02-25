@@ -20,6 +20,7 @@ import {
   type Reputation,
   type OrderRating,
   type InsertRating,
+  type ActionCompletion,
 } from "@shared/schema";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -29,6 +30,7 @@ export interface IStorage {
   getProfile(userId: string): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(userId: string, profile: Partial<InsertProfile>): Promise<Profile>;
+  setTwitterVerified(userId: string, verified: boolean): Promise<void>;
   getServices(filters?: { category?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]>;
   getServicesByCreator(creatorId: string): Promise<Service[]>;
   getService(id: number): Promise<Service | undefined>;
@@ -63,6 +65,9 @@ export interface IStorage {
   getChannelPublicKey(userId: string): Promise<string | null>;
   getNotifications(userId: string): Promise<any[]>;
   markNotificationsRead(userId: string, ids?: number[]): Promise<void>;
+  recordActionCompletion(serviceId: number, userId: string): Promise<ActionCompletion>;
+  getActionCompletions(serviceId: number): Promise<ActionCompletion[]>;
+  hasCompletedAction(serviceId: number, userId: string): Promise<boolean>;
 }
 
 function toUser(row: any): User {
@@ -84,6 +89,7 @@ function toProfile(row: any): Profile {
     walletAddress: row.wallet_address,
     bio: row.bio,
     twitterHandle: row.twitter_handle,
+    twitterVerified: row.twitter_verified ?? false,
     isInfluencer: row.is_influencer,
   };
 }
@@ -104,6 +110,7 @@ function toService(row: any): Service {
     deadlineDays: row.deadline_days,
     imageUrl: row.image_url,
     active: row.active,
+    actionsCompleted: row.actions_completed ?? 0,
     createdAt: row.created_at ? new Date(row.created_at) : null,
   };
 }
@@ -261,7 +268,13 @@ class SupabaseStorage implements IStorage {
     const updateObj: any = {};
     if (profileData.walletAddress !== undefined) updateObj.wallet_address = profileData.walletAddress;
     if (profileData.bio !== undefined) updateObj.bio = profileData.bio;
-    if (profileData.twitterHandle !== undefined) updateObj.twitter_handle = profileData.twitterHandle;
+    if (profileData.twitterHandle !== undefined) {
+      updateObj.twitter_handle = profileData.twitterHandle;
+      // Reset verification when handle changes
+      if (profileData.twitterHandle !== existing.twitterHandle) {
+        updateObj.twitter_verified = false;
+      }
+    }
     if (profileData.isInfluencer !== undefined) updateObj.is_influencer = profileData.isInfluencer;
 
     const { data, error } = await supabaseAdmin
@@ -272,6 +285,14 @@ class SupabaseStorage implements IStorage {
       .single();
     if (error) throw new Error(error.message);
     return toProfile(data);
+  }
+
+  async setTwitterVerified(userId: string, verified: boolean): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ twitter_verified: verified })
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
   }
 
   async getServices(filters?: { category?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]> {
@@ -791,6 +812,67 @@ class SupabaseStorage implements IStorage {
     }
     const { error } = await query;
     if (error) throw new Error(error.message);
+  }
+
+  // --- Action Completions (pay_per_action) ---
+
+  async recordActionCompletion(serviceId: number, userId: string): Promise<ActionCompletion> {
+    const { data, error } = await supabaseAdmin
+      .from("action_completions")
+      .insert({ service_id: serviceId, user_id: userId, status: "completed" })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+
+    // Get current count and increment
+    const { data: svc } = await supabaseAdmin
+      .from("services")
+      .select("actions_completed, max_actions")
+      .eq("id", serviceId)
+      .single();
+
+    if (svc) {
+      const newCount = (svc.actions_completed ?? 0) + 1;
+      const fulfilled = svc.max_actions != null && newCount >= svc.max_actions;
+      await supabaseAdmin
+        .from("services")
+        .update({ actions_completed: newCount, ...(fulfilled ? { active: false } : {}) })
+        .eq("id", serviceId);
+    }
+
+    return {
+      id: data.id,
+      serviceId: data.service_id,
+      userId: data.user_id,
+      status: data.status,
+      createdAt: data.created_at ? new Date(data.created_at) : null,
+    };
+  }
+
+  async getActionCompletions(serviceId: number): Promise<ActionCompletion[]> {
+    const { data, error } = await supabaseAdmin
+      .from("action_completions")
+      .select("*")
+      .eq("service_id", serviceId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      serviceId: row.service_id,
+      userId: row.user_id,
+      status: row.status,
+      createdAt: row.created_at ? new Date(row.created_at) : null,
+    }));
+  }
+
+  async hasCompletedAction(serviceId: number, userId: string): Promise<boolean> {
+    const { data } = await supabaseAdmin
+      .from("action_completions")
+      .select("id")
+      .eq("service_id", serviceId)
+      .eq("user_id", userId)
+      .single();
+    return !!data;
   }
 }
 
