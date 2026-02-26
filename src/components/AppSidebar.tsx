@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { useToast } from "@/hooks/use-toast";
 import {
   Sidebar,
   SidebarContent,
@@ -27,16 +25,14 @@ import { useState, useEffect } from "react";
 
 const navItems = [
   { href: "/marketplace", label: "Marketplace", icon: Store },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, requiresAuth: true },
-  { href: "/watchlist", label: "Watchlist", icon: Eye, requiresAuth: true },
-  { href: "/profile", label: "Profile", icon: User, requiresAuth: true },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/watchlist", label: "Watchlist", icon: Eye },
+  { href: "/profile", label: "Profile", icon: User },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { setVisible } = useWalletModal();
-  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -57,38 +53,20 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
-                const needsAuth = item.requiresAuth && mounted && !user;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild={!needsAuth}
-                      isActive={pathname === item.href}
-                      data-testid={`sidebar-link-${item.label.toLowerCase()}`}
-                      {...(needsAuth
-                        ? {
-                            onClick: () => {
-                              toast({ title: "Connect your wallet", description: "Please connect your wallet to access this page." });
-                              setVisible(true);
-                            },
-                          }
-                        : {})}
-                    >
-                      {needsAuth ? (
-                        <>
-                          <item.icon />
-                          <span>{item.label}</span>
-                        </>
-                      ) : (
-                        <Link href={item.href}>
-                          <item.icon />
-                          <span>{item.label}</span>
-                        </Link>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    data-testid={`sidebar-link-${item.label.toLowerCase()}`}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

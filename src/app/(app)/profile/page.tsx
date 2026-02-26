@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Save, Wallet, ExternalLink, CheckCircle2, Copy, Twitter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { useWallet } from "@/hooks/use-wallet";
@@ -44,12 +43,11 @@ const formSchema = insertProfileSchema.omit({ userId: true }).extend({
 });
 
 export default function ProfilePage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isLoggingIn } = useAuth();
   const { address: walletAddress, isConnected: walletConnected } = useWallet();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { mutate: updateProfile, isPending: updatePending } = useUpdateProfile();
   const { toast } = useToast();
-  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -61,9 +59,7 @@ export default function ProfilePage() {
     },
   });
 
-  useEffect(() => {
-    if (!authLoading && !user) router.push("/");
-  }, [user, authLoading, router]);
+  // removed redirect — show fallback UI instead to avoid race with wallet auto-login
 
   useEffect(() => {
     if (profile) {
@@ -150,7 +146,26 @@ export default function ProfilePage() {
     }
   };
 
-  if (authLoading) return null;
+  if (authLoading || isLoggingIn) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-xl font-bold mb-2">Connect wallet to view Profile</h2>
+          <p className="text-muted-foreground text-sm mb-6">Manage your profile, bio, and verification.</p>
+          <ConnectWallet />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-6 max-w-2xl">

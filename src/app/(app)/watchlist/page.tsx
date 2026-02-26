@@ -13,9 +13,17 @@ import Link from "next/link";
 import { ConnectWallet } from "@/components/ConnectWallet";
 
 export default function WatchlistPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading, isLoggingIn } = useAuth();
   const { data: watchlistItems, isLoading } = useWatchlist();
   const { removeMutation } = useToggleWatchlist();
+
+  if (authLoading || isLoggingIn) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Eye className="h-8 w-8 animate-pulse text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!user) {
     return (

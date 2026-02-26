@@ -2,7 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyOrders, useMySales, useUpdateOrder } from "@/hooks/use-orders";
-import { useMyServices } from "@/hooks/use-services";
+import { useMyServices, useActionCompletions, useDisputeAction } from "@/hooks/use-services";
 import { useMyEscrows, useUpdateEscrowPhase, useDisputeResolve } from "@/hooks/use-escrow";
 import { useSolanaEscrow } from "@/hooks/use-solana-escrow";
 import { useSolanaReputation } from "@/hooks/use-solana-reputation";
@@ -13,21 +13,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, AlertTriangle, Send } from "lucide-react";
+import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, AlertTriangle, Send, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ConnectWallet } from "@/components/ConnectWallet";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatPanel } from "@/components/ChatPanel";
 import { MilestonePanel } from "@/components/MilestonePanel";
 import { RatingModal } from "@/components/RatingModal";
-import { type Order, type Service, type Escrow } from "@shared/schema";
+import { type Order, type Service, type Escrow, type ActionCompletion } from "@shared/schema";
 
 export default function DashboardPage() {
-  const { user, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  const { user, isLoading: authLoading, isLoggingIn } = useAuth();
   const { data: orders, isLoading: ordersLoading } = useMyOrders();
   const { data: sales, isLoading: salesLoading } = useMySales();
   const { data: myServices, isLoading: servicesLoading } = useMyServices();
@@ -41,12 +40,9 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [ratingTarget, setRatingTarget] = useState<{ orderId: number; escrowId?: number; targetId: string; depositorId?: string } | null>(null);
   const [evidenceInputs, setEvidenceInputs] = useState<Record<number, { tweetUrl?: string; targetHandle?: string }>>({});
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/");
-    }
-  }, [user, authLoading, router]);
+  const [actionEvidenceInputs, setActionEvidenceInputs] = useState<Record<number, { tweetUrl?: string; targetHandle?: string }>>({});
+  const [expandedActions, setExpandedActions] = useState<Record<number, boolean>>({});
+  const { mutate: disputeAction, isPending: isActionDisputing } = useDisputeAction();
 
   const handleStatusUpdate = (orderId: number, status: "completed" | "cancelled") => {
     updateOrder({ id: orderId, status }, {
@@ -64,7 +60,154 @@ export default function DashboardPage() {
     return <Badge variant={variant === "default" ? "default" : variant === "destructive" ? "destructive" : "secondary"} className="text-xs capitalize" data-testid={`badge-status-${status}`}>{status}</Badge>;
   };
 
-  if (authLoading || !user) return null;
+  const ActionStatusBadge = ({ status }: { status: string }) => {
+    if (status === "verified") return <Badge variant="default" className="text-xs bg-green-600">verified</Badge>;
+    if (status === "rejected") return <Badge variant="destructive" className="text-xs">rejected</Badge>;
+    return <Badge variant="secondary" className="text-xs text-amber-600">completed</Badge>;
+  };
+
+  const ActionTrackingSection = ({ service }: { service: Service }) => {
+    const { data: actions, isLoading } = useActionCompletions(service.id);
+    const isExpanded = expandedActions[service.id] ?? false;
+    const completions = (actions ?? []) as ActionCompletion[];
+    const pct = service.maxActions ? Math.round((service.actionsCompleted / service.maxActions) * 100) : 0;
+
+    return (
+      <div className="space-y-3 pt-2 border-t border-border/50">
+        {/* Progress bar */}
+        <div>
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <span>Actions</span>
+            <span>{service.actionsCompleted} / {service.maxActions ?? "∞"}{service.maxActions ? ` (${pct}%)` : ""}</span>
+          </div>
+          <Progress value={service.maxActions ? pct : 0} className="h-1.5" />
+        </div>
+
+        {/* Toggle */}
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" /> Loading actions…
+          </div>
+        ) : completions.length > 0 ? (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs w-full justify-between"
+              onClick={() => setExpandedActions((prev) => ({ ...prev, [service.id]: !isExpanded }))}
+            >
+              <span>{isExpanded ? "Hide" : "Show"} {completions.length} action{completions.length !== 1 ? "s" : ""}</span>
+              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </Button>
+
+            {isExpanded && (
+              <div className="space-y-2">
+                {completions.map((ac: ActionCompletion) => {
+                  const ev = actionEvidenceInputs[ac.id] ?? {};
+                  const manualOnly = service.category === "like" || service.category === "ambassador" || service.category === "custom";
+
+                  return (
+                    <div key={ac.id} className="border rounded-md p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="font-mono text-muted-foreground">
+                            {ac.userId.slice(0, 4)}…{ac.userId.slice(-4)}
+                          </span>
+                          <ActionStatusBadge status={ac.status} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">
+                          {ac.createdAt ? format(new Date(ac.createdAt), "MMM d, HH:mm") : ""}
+                        </span>
+                      </div>
+
+                      {ac.status === "completed" && (
+                        <div className="space-y-2 pt-1">
+                          {manualOnly ? (
+                            <p className="text-xs text-muted-foreground">Manual verification only for &ldquo;{service.category}&rdquo; category.</p>
+                          ) : (
+                            <>
+                              {service.category === "repost" && (
+                                <Input
+                                  placeholder="Tweet URL (e.g. https://x.com/user/status/123)"
+                                  className="text-xs h-8"
+                                  value={ev.tweetUrl ?? ""}
+                                  onChange={(e) => setActionEvidenceInputs((prev) => ({ ...prev, [ac.id]: { ...prev[ac.id], tweetUrl: e.target.value } }))}
+                                />
+                              )}
+                              {service.category === "follow" && (
+                                <Input
+                                  placeholder="Target @handle (e.g. @elonmusk)"
+                                  className="text-xs h-8"
+                                  value={ev.targetHandle ?? ""}
+                                  onChange={(e) => setActionEvidenceInputs((prev) => ({ ...prev, [ac.id]: { ...prev[ac.id], targetHandle: e.target.value } }))}
+                                />
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="rounded-full text-xs"
+                                disabled={isActionDisputing}
+                                onClick={() => {
+                                  disputeAction(
+                                    { serviceId: service.id, actionId: ac.id, tweetUrl: ev.tweetUrl, targetHandle: ev.targetHandle },
+                                    {
+                                      onSuccess: (data: any) => {
+                                        const v = data.verification;
+                                        if (v?.status === "verified") {
+                                          toast({ title: "Verified", description: v.message });
+                                        } else if (v?.status === "not_found") {
+                                          toast({ title: "Rejected", description: v.message, variant: "destructive" });
+                                        } else {
+                                          toast({ title: "Manual Review", description: v?.message ?? "Could not auto-verify" });
+                                        }
+                                      },
+                                      onError: (err: any) => {
+                                        toast({ title: "Error", description: err?.message, variant: "destructive" });
+                                      },
+                                    }
+                                  );
+                                }}
+                              >
+                                {isActionDisputing ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-1 h-3 w-3" />}
+                                Dispute
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">No actions yet.</p>
+        )}
+      </div>
+    );
+  };
+
+  if (authLoading || isLoggingIn) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <LayoutList className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-xl font-bold mb-2">Connect wallet to view Dashboard</h2>
+          <p className="text-muted-foreground text-sm mb-6">Manage your orders, services, and escrows.</p>
+          <ConnectWallet />
+        </div>
+      </div>
+    );
+  }
 
   const OrderCard = ({ order, isSeller }: { order: Order; isSeller?: boolean }) => (
     <motion.div
@@ -227,6 +370,9 @@ export default function DashboardPage() {
                       <CardContent>
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{service.description}</p>
                         <p className="text-lg font-bold font-mono">{service.price} <span className="text-xs text-muted-foreground font-sans">SOL</span></p>
+                        {service.pricingCategory === "pay_per_action" && (
+                          <ActionTrackingSection service={service} />
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>

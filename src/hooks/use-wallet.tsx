@@ -2,54 +2,52 @@
 
 import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { useAuth } from "./use-auth";
-
-let prevConnected = false;
-let loginInProgress = false;
 
 export function useWallet() {
   const { publicKey, connected, connecting, disconnect: solanaDisconnect, signMessage } = useSolanaWallet();
   const { setVisible } = useWalletModal();
-  const { login, logout } = useAuth();
+  const { user, isLoading: authLoading, login, isLoggingIn, logout } = useAuth();
 
   const address = publicKey?.toBase58() ?? null;
   const shortAddress = address
     ? `${address.slice(0, 4)}...${address.slice(-4)}`
     : null;
 
-  useEffect(() => {
-    if (connected && address && signMessage && !prevConnected && !loginInProgress) {
-      prevConnected = true;
-      loginInProgress = true;
-      login(
-        { walletAddress: address, signMessage },
-        { onSettled: () => { loginInProgress = false; } },
-      );
-    }
-    if (!connected && prevConnected) {
-      prevConnected = false;
-      logout();
-      loginInProgress = false;
-    }
-  }, [connected, address, signMessage, login, logout]);
-
-  const connect = useCallback(async () => {
+  const connect = useCallback(() => {
     setVisible(true);
   }, [setVisible]);
+
+  // Explicitly trigger the nonce→sign→session flow
+  const signIn = useCallback(() => {
+    if (address && signMessage) {
+      login({ walletAddress: address, signMessage });
+    }
+  }, [address, signMessage, login]);
 
   const disconnect = useCallback(() => {
     solanaDisconnect();
     logout();
   }, [solanaDisconnect, logout]);
 
+  // Session exists but for a different wallet (user switched wallets)
+  const walletMismatch = !!user && !!address && user.id !== address;
+  // Authenticated = session exists AND matches current wallet
+  const isAuthenticated = !!user && !walletMismatch;
+
   return {
     address,
     shortAddress,
     isConnecting: connecting,
     isConnected: connected,
+    isAuthenticated,
+    isAuthLoading: authLoading,
+    isLoggingIn,
+    canSignIn: connected && !!address && !!signMessage && !isAuthenticated && !isLoggingIn,
     error: null,
     connect,
+    signIn,
     disconnect,
   };
 }

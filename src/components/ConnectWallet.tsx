@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Wallet, LogOut, Copy, Loader2 } from "lucide-react";
+import { Wallet, LogOut, Copy, Loader2, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 
@@ -26,7 +26,20 @@ export function ConnectWallet({
   className = "",
   fullWidth = false,
 }: ConnectWalletProps) {
-  const { address, shortAddress, isConnecting, isConnected, error, connect, disconnect } = useWallet();
+  const {
+    address,
+    shortAddress,
+    isConnecting,
+    isConnected,
+    isAuthenticated,
+    isAuthLoading,
+    isLoggingIn,
+    canSignIn,
+    error,
+    connect,
+    signIn,
+    disconnect,
+  } = useWallet();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -68,7 +81,8 @@ export function ConnectWallet({
     );
   }
 
-  if (isConnected && shortAddress) {
+  // State: Wallet connected + session exists → show address dropdown
+  if (isConnected && isAuthenticated && shortAddress) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -106,6 +120,57 @@ export function ConnectWallet({
     );
   }
 
+  // State: Wallet connected but no session → sign in (or loading)
+  if (isConnected && shortAddress && !isAuthenticated) {
+    // Still checking if session exists
+    if (isAuthLoading) {
+      return (
+        <Button
+          variant={variant === "sidebar" ? "ghost" : "outline"}
+          size={size}
+          className={`font-mono text-xs ${fullWidth ? "w-full justify-start" : ""} ${className}`}
+          disabled
+          data-testid="button-wallet-loading"
+        >
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {shortAddress}
+        </Button>
+      );
+    }
+
+    // Login in progress (signing message)
+    if (isLoggingIn) {
+      return (
+        <Button
+          variant={variant === "sidebar" ? "default" : variant}
+          size={size}
+          className={`${fullWidth ? "w-full" : ""} ${className}`}
+          disabled
+          data-testid="button-signing-in"
+        >
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Signing in...
+        </Button>
+      );
+    }
+
+    // Ready to sign in
+    return (
+      <Button
+        variant={variant === "sidebar" ? "default" : variant}
+        size={size}
+        className={`${fullWidth ? "w-full" : ""} ${className}`}
+        onClick={signIn}
+        disabled={!canSignIn}
+        data-testid="button-sign-in"
+      >
+        <KeyRound className="mr-2 h-4 w-4" />
+        Sign In
+      </Button>
+    );
+  }
+
+  // State: Not connected → connect wallet
   return (
     <Button
       variant={variant === "sidebar" ? "default" : variant}

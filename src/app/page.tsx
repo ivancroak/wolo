@@ -115,11 +115,11 @@ export default function LandingPage() {
   }, [mouseX, mouseY]);
 
   const serviceTypes = [
-    { icon: Repeat, label: "Reposts", desc: "Amplify reach across networks" },
-    { icon: Heart, label: "Likes", desc: "Boost engagement metrics" },
-    { icon: UserPlus, label: "Follows", desc: "Grow your audience base" },
-    { icon: Handshake, label: "Ambassadorships", desc: "Long-term brand partnerships" },
-    { icon: Sparkles, label: "Custom Work", desc: "Tailored promotional campaigns" },
+    { icon: Repeat, label: "Reposts", desc: "Amplify reach on X with targeted reposts" },
+    { icon: Heart, label: "Likes", desc: "Boost engagement on your X posts" },
+    { icon: UserPlus, label: "Follows", desc: "Grow your X audience organically" },
+    { icon: Handshake, label: "Ambassadorships", desc: "Long-term X brand partnerships" },
+    { icon: Sparkles, label: "Custom Work", desc: "Tailored X promotional campaigns" },
   ];
 
   const [particles, setParticles] = useState<{ delay: number; x: string; y: string }[]>([]);
@@ -180,7 +180,7 @@ export default function LandingPage() {
                 data-testid="badge-platform"
               >
                 <SiX className="h-3 w-3" />
-                On-Chain Social Marketplace
+                On-Chain X Marketplace
               </span>
             </motion.div>
 
@@ -189,7 +189,7 @@ export default function LandingPage() {
               className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] xl:text-[6.5rem] font-black tracking-[-0.04em] leading-[0.9] mb-8"
               data-testid="text-hero-title"
             >
-              The Social Layer
+              The X Layer
               <br />
               <span className="text-muted-foreground">of Web3</span>
             </motion.h1>
@@ -199,7 +199,7 @@ export default function LandingPage() {
               className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-14 leading-relaxed"
               data-testid="text-hero-subtitle"
             >
-              The trustless marketplace for social influence. Reposts, likes, follows,
+              The trustless marketplace for X influence. Reposts, likes, follows,
               ambassadorships, and custom campaigns &mdash; all settled on-chain.
             </motion.p>
 
@@ -245,10 +245,10 @@ export default function LandingPage() {
               What You Can Trade
             </motion.span>
             <motion.h2 variants={heroItem} className="text-3xl md:text-5xl lg:text-6xl font-black tracking-[-0.03em] mb-5" data-testid="text-services-title">
-              Every Type of Influence
+              Every Type of X Influence
             </motion.h2>
             <motion.p variants={heroItem} className="text-muted-foreground max-w-lg mx-auto text-lg">
-              From quick engagements to long-term ambassador deals.
+              From quick X engagements to long-term ambassador deals.
             </motion.p>
           </motion.div>
 
@@ -296,7 +296,7 @@ export default function LandingPage() {
               How It Works
             </motion.h2>
             <motion.p variants={heroItem} className="text-muted-foreground max-w-lg mx-auto text-lg">
-              A trustless protocol connecting brands with influencers.
+              A trustless protocol connecting brands with X influencers.
             </motion.p>
           </motion.div>
 
@@ -304,7 +304,7 @@ export default function LandingPage() {
             {[
               { icon: <Zap className="h-6 w-6" />, title: "Instant Settlement", desc: "Smart contracts ensure creators get paid immediately upon completion. No delays, no disputes.", step: "01" },
               { icon: <Shield className="h-6 w-6" />, title: "Trustless Escrow", desc: "Funds are held securely on-chain until requirements are met. Zero middlemen involved.", step: "02" },
-              { icon: <Globe className="h-6 w-6" />, title: "Global Network", desc: "Access a worldwide network of influencers and ambassadors without boundaries or gatekeepers.", step: "03" },
+              { icon: <Globe className="h-6 w-6" />, title: "Global X Network", desc: "Access a worldwide network of X influencers and ambassadors without boundaries or gatekeepers.", step: "03" },
             ].map((feature, i) => (
               <motion.div
                 key={i}
@@ -337,7 +337,7 @@ export default function LandingPage() {
               Ready to Monetize<br />Your Influence?
             </motion.h2>
             <motion.p variants={heroItem} className="text-muted-foreground max-w-md mx-auto mb-12 text-lg">
-              Join the decentralized marketplace where social capital meets blockchain.
+              Join the decentralized marketplace where X influence meets blockchain.
             </motion.p>
             <motion.div variants={heroItem}>
               <Link href="/marketplace">

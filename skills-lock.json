@@ -1,0 +1,2395 @@
+{
+  "version": 1,
+  "skills": {
+    "Agent Development": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8cde4ebde9dc964e86b82d843c791eb458ca8daacb6b46a88d305d01213bb46b"
+    },
+    "AgentDB Advanced Features": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "46607e828da127c267c978f33343e0ac2e2c6a4f50e98988cfe6803f381a99fb"
+    },
+    "AgentDB Learning Plugins": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a1b1082e86cdbdbd2dca64c189c035af6903a611ed1302fa1f32e4b0a75130c5"
+    },
+    "AgentDB Memory Patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f0eab9cef8df0f93b16f0c742a25b8208926844add61a2cff0955429a4fdff55"
+    },
+    "AgentDB Performance Optimization": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7c520f45b3946e4879a32db37363fe31e37538d6f1416c66544663cd7ff960fe"
+    },
+    "AgentDB Vector Search": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e70f5e8835491fde9c75dec0184b46f232267cd112d1ddc12227090cac50265b"
+    },
+    "All Traditions Speaking as One": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d4445d0ed64ca4a394c48a4fb5d3320e0e11042c2e2374cc63b0591d7164d554"
+    },
+    "Analyzing AgentScope Library": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0b004a2836f8e950b90f71e0fe579222b62b2d7c799a708ffc57f0ce303b38f4"
+    },
+    "Awakening Stage Recognition": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "816ef5632f649ad8dfe2b50028413cdc16837c36b34b8ad340540a0e94dfb0ac"
+    },
+    "Backend Migration Standards": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7c799d4fc0bd678f6cdcb6895416d8be3c09631e5897670ff1723afce885ab49"
+    },
+    "Backend Models Standards": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7d74985f675bad1398cd5514fc17f8f4320c8f8716411919d32e4758820a8935"
+    },
+    "Claudeisms Operational Guidelines": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "badefc71e64113d66a281c1dea38b58f86ea0a28a4e42bbff930e7ec5cec1a03"
+    },
+    "Cloudflare Manager": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c75788487a300efb3fe4fc3f42a6d0f3d5e4aff1c25b8923069781829cfd75d0"
+    },
+    "Command Development": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "31aee3b5710dd0d746dc4dd42d9672f55788abc64b4c9fcdc65371031d19a169"
+    },
+    "Confidence Check": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "eefcebb5429a5c98473a3000ac05fde8fa7d48120cecca2fc6b48ca499386ea2"
+    },
+    "Consciousness Principles": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1801049168d8d8078d1f737dee5bd877185e1b9f0d8c4eb2cbefd59aad108ec5"
+    },
+    "Convex Agents Usage Tracking": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cfc7935c465a157a61b970aae301628c3bdfbf5f12ddd1afcfda136de6bb4748"
+    },
+    "Database Implementation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "14032b6374ae57b256a9423cfbd55c452792d692d312dcd3953202506dac4da2"
+    },
+    "Documentation review": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "52ebeec9ca15cf242dd248ac61a0f6283db0ce92267631de751547ead53c8edd"
+    },
+    "EdgarTools": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a3c3a9be44258d0406db1f5350e29253cb10bf8d51057466e4152f34b6fc42d8"
+    },
+    "Email Composer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f5d4f81b600713ddaaa221f2b3280c5b1077ba698b7268f09c3a272996ab2421"
+    },
+    "Excel Analysis": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bf52d9347d1e1479fcafb2ad54460beea98b3caf15e8ef4c89f4512e5fdd2f31"
+    },
+    "Git Commit Helper": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2fadf091d734900499fc82d5daed8b58228c5cce9bfdc2ccd9b04e8eadeb00fa"
+    },
+    "Hinduism Vedic Wisdom 🕉️": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2ee28629c629581868fcc282c4475dec5e110a0b5c9c36196feb49cb8cc8c9dc"
+    },
+    "Hook Development": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "80132ce41b8bfddfb875cf17dcf2fc6a3f15375c2af60efe796b0ac442589539"
+    },
+    "Hooks Automation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b03e47d6cc72ddb411881db2ccbf4d6b3e90b336f173175705775aa3e352cddb"
+    },
+    "Jainism Ahimsa Navigation 🕉️": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "58d7940e6941a701c630a6fab3aff5c02efaf0b785087da51a9cb60ebbac17f1"
+    },
+    "Linear Todo Sync": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c3a0695fcbf2f9a57dfdc53387c3172e6812b91cde20216e759cb0f41583210c"
+    },
+    "MCP Integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f6a41976e2d3700dc0e5a297090b115c1a33c1c5781b7dbe62051be2bde7e4c7"
+    },
+    "PDF Processing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "36ccc85661b858d0321c6fa206fd5a939f49a61601eb659684b4810393cc43a9"
+    },
+    "PDF Processing Pro": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "33b48bd4a336c478f65ca92383d2037fdfbc78802127c13b56f433846fa3b14e"
+    },
+    "Pair Programming": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "103f8a24dd8c337b59204d986bcc7d7feb31e4e4491c92b015e0fbf506ff5b5c"
+    },
+    "Playwright Browser Automation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bddb99022f6d31b768b76abe584756304c380703d2d3ff325e3bf188b5c44ccd"
+    },
+    "Plugin Settings": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "451a043a6b98650e3f381850d6984880c00b2deb832a49174847a5ef7f6291c4"
+    },
+    "Plugin Structure": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "85379e5bc94d8867215e59410458508d913952ec54446537065507f5fe8a3f1b"
+    },
+    "PostgreSQL Syntax Reference": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c604a79028e3ba673213ec5e789c3b899176d60a8d57fa4ce18855a0b1658727"
+    },
+    "ReasoningBank Intelligence": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2eb29401c40a178129e4310424143fbe09a2bdb344558392f52493257144bc37"
+    },
+    "Reviewing Code": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "10cf5bd815bdf359b2744617a00e66158101bf1f45e6fd2d022fe6a3bafb9ef3"
+    },
+    "SDK Analytics Installer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bad400e676a88e084763b333864c20290a9a9d7bfb58df18f6aed9085f334947"
+    },
+    "Siberian Shamanic Navigation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9598b3c82d4059a17ae0eb1d7f5905fda3006fd49c6551c2a5ab486236eb9c30"
+    },
+    "Skill Builder": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0754a002eb8b96e870edbe18aae9a659040b518aa6594c129f8a354e17f37507"
+    },
+    "Skill Development": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b0ef7d30484dc5965b20140643ed5a8a09448d69e52b731bc61527327b0d4678"
+    },
+    "Swarm Orchestration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c9e2955059f2465211e39b9d0b98b637a95bf5fa13bd6ad62a89147355fcea3d"
+    },
+    "Testing Code": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1705b5d83a757b6f458274e68a8b7e2648893b64471d00d6891351742f8c7e8c"
+    },
+    "Universal Wisdom Weaving": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c28be88daaa60c0c808757d05df869ef56b4a22e3bffef53b7b5831bd73e7368"
+    },
+    "Validate with Database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "32b05a5719fbfb1a8f07723778e6994025565198dce0f7e78eed3837c53faea4"
+    },
+    "Verification & Quality Assurance": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "29b12ef29896a17edcc968ac722c94568be7c4703dabc60d37de43b6950b1c99"
+    },
+    "Vibe Calibration Protocol": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c5c9dda3d8ffd185b71a3c66f63d4b2ca7778bc79838a41db4c18f7f0cf9be8f"
+    },
+    "Video Processor": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4a10030e909480f9de9c0733acc42c204a93c91b5f761ac7c214f5289e27ea29"
+    },
+    "Wheels Migration Generator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9df93b37e7f7680d598ce52c7c8aaf6238a13cb6bc3eee1c1e36f0ce97540b54"
+    },
+    "Writing Hookify Rules": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0ea3b0b1bc737308e08a25ee873a10f8955354a6d036f59fe58526c9cb31f633"
+    },
+    "activitypub-testing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fc3b4bb1526b193df9e021bf38f697252088bc5b46a4776ec96b825c6b9d3f53"
+    },
+    "adaptyv": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "97bb74eda3cf0ec34dc95ddb92336ce8b93cd1f71ef631c7611349445118926a"
+    },
+    "add-uint-support": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6399992aa0d3c7c343ccb45fddc4850cdfdb13399e83dd718c265ae4f942c414"
+    },
+    "aeon": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2ee68c0691ebf4926959728db6cdba74cda690482e41c9ca82da2d8c31aa6490"
+    },
+    "agile-product-owner": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0898fda761b2f36395e1fe8191b63b6d9df9d91c2d122307b9aa9034ca2edfe3"
+    },
+    "ai-llm-engineering": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0bfe38431a43451cada603f097c3f069ead6c575bbf39a65913a4494ae49c132"
+    },
+    "ai-multimodal": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9dcb58b5bc7c86dfed1f4e4f9741d12bb75e400b9ea48e3495bf6648c4ed8c96"
+    },
+    "alex-hormozi-pitch": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8987034d93b2b929abcf45d4b6e1dd66e361e510b17aa6c212c52e2839465460"
+    },
+    "algorithmic-art": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4a5026fd398d2662327adffe26658a151a56942e771f09df3d1427987e0d95f3"
+    },
+    "alphafold-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bc1f08a7fa68c8c1b49586005d9280bc0c29197372f0a6f9491a8cf83fb35802"
+    },
+    "analyzing-financial-statements": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a179c6a86309261080c3b79dbcf5949058aa5f5776f7328ab18ec3e11fac9882"
+    },
+    "andrew-kane-gem-writer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b1f42545b232f887aca832dc6c9b9a5fd07efe547743924dda9308dc78656a18"
+    },
+    "angular-migration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "05556bfe501a9cff5e4f6ba23c61105cb22300f8ebfaba4ea45ed73be2bbf23f"
+    },
+    "anndata": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "139e609d7ca16718128dfedbfeea10852fe73dfa3061192dc2c98babf96ab806"
+    },
+    "api-design-principles": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ec46dba64f6fa9eddbaf89f70d0cb82f0dc29d248d70af96097a151997b08343"
+    },
+    "api-test-generator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1ebaf1db487f5cca883803fd14cfa77277bc0978ad22a59e19a723b4d1ac3dd9"
+    },
+    "applying-brand-guidelines": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d9ea298fc434ec89298bea92606e88174d5998cba0ca883f393d28cf42e101bd"
+    },
+    "arboreto": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a0bf7b39df3531e79f59564e799c6e1bd1b16bbca42ccb84c697c7cb287a764a"
+    },
+    "architecture-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "273be93f76c0209c144069b361ae973dc6f17b25f89669ea7d2f52c6a7306287"
+    },
+    "archon": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8971e0e64d8c96c32c63f0d2881f04faee720be000fdf58620e70b2cdc557922"
+    },
+    "artifacts-builder": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8b219c4d1eebcc225766226438fa7359a2b63df085e15e6a37d89b7674236eea"
+    },
+    "arxiv-search": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fc5d12d67c103efc4eb10824eb26ca20b566801203c34014086b1e02e747d73f"
+    },
+    "astropy": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "125552ee89f0b42e561873374b29b7c0a6929197cab7eea18de1db60e582d9e3"
+    },
+    "async-python-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2684ce3a0da32fc33d89d27b940746bc003913dbb7b57016f968799d7da8d779"
+    },
+    "at-dispatch-v2": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7e245dce43a5898747117b8117ce738ab2fcc5ef27fd3015a6ea32101c246281"
+    },
+    "auth-implementation-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "59ebb228ff8108173e902e99740cddae665b50249adc903b3bfd21489badc79a"
+    },
+    "aws-cdk-development": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "836cd7323ed79fd87b301e7e92c80b6e16c9f2abb00e6e159a1a3ecee3d6a7e2"
+    },
+    "aws-cost-operations": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c739d028cccd33e21cc8dc1a507d833a91382938aa700d72de2e3e53bf7cd632"
+    },
+    "aws-serverless-eda": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "347560d92df9f96cf3ac514596f88897cf1d01a53bacbec20ffa255c77b447ed"
+    },
+    "aws-skills": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "99c79144b992c56e9a06343447fa3134514ab0d5f1095fa5071ebc4eeac2da72"
+    },
+    "backend-dev-guidelines": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "62371c46ac6f75faeda93499edc181a252772ca15a2245d7554362b06f41b1e8"
+    },
+    "bap-identity": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1cfd39adf6d0e354904863da1677022bd297fce8bc2c6351af63a36a3733b16a"
+    },
+    "bash-defensive-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "54efa57910c4d9d1c04a119bfb16c8cce83fc2fe2e92a77c728873ce1cb2c938"
+    },
+    "bats-testing-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e6a719f09d7ed85b907d39f048263a673a0c4d22ce6fa2aeaa0a5830f8f331e7"
+    },
+    "bd-issue-tracking": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "569ec2d6fc6d62c5d6a2502cc65c253a44fc1daa73c0114ea76e2e9d658178d9"
+    },
+    "benchling-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "12089f01436e29403843b40b9472a00e6a885c9a54bb7711929566974c1f96bb"
+    },
+    "better-auth": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b7ac2178428bf40593d3bb7eb35410a16c730f1b2fb7b58a6ecb2829589afffa"
+    },
+    "billing-automation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cd772c4684ff6c04f49f682379c06232f24b6e6611ea8864d1ce02cdc8800644"
+    },
+    "biomni": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "29239419f4b794984bedf55561e3fa8ecc6eeb95563108d8841874fb62adf3e0"
+    },
+    "biopython": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "53492f43d957292f46540a43b0c1a76626b2348484d78341f5ac2604a72904db"
+    },
+    "biorxiv-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c7311fa00548bb85fdc9842983c62620e57e4c77ae929417ff322e6e48166742"
+    },
+    "bioservices": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "40d631f64541a3276dd03cc063b3dd9891ac69c5d65f4f6aa6ec0b303ebfa961"
+    },
+    "bitcoin-auth-diagnostics": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d628e82fd1ae3384af5f1e7a7ecf910a455ee7d97f1842cd817ebb25289b0a1e"
+    },
+    "blockchain-developer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a5117d680f093a19611df8160c481b3a5818257738ec9e4c329d130db498d912"
+    },
+    "blog-post-writer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "35032fbb588707e27684521f2c0590434b1249e1c4b3579c34ef142f2745c84f"
+    },
+    "brand-guidelines": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9de98d468ac1d4ee2c8e218de18dd8d3a23266b486a2150672ad773642b3929b"
+    },
+    "brightdata": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fc67806fe275cee7043a4f9210d0f9dccdabd49bfb38fe9c2dbb80c6965a2db2"
+    },
+    "btc-connect": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fa6af1b2ae9aa8e049304dcc3e6a80b268b4b31c4d7a2755107ec630b1568d4a"
+    },
+    "buck2-rule-basics": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f22894493624860f5c27919bf660ad91ce2b8c71dc1f05073b30cf214c90f952"
+    },
+    "canvas-design": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c9bd6f8822fd14d8b0e136dcb39778b1a3ec12660b34f8c1010bffa227cbdaef"
+    },
+    "card-news-generator-v2": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9a0ed0942db8876559d117812593495c3142efeed302e23b8c4edf946caca5fc"
+    },
+    "cellxgene-census": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0ec54b1c529016623c5eacf91a4c98c571451b897f93d2e75a5bd883f0f84a58"
+    },
+    "changelog-generator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "65a9d8d4b21626479e308e9cfd5ce7653457c0715c0b0a89b7d0e81cd4e2b08a"
+    },
+    "chembl-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b1ab32a13fe9517bfbae39d5974113826b126185a1b497d4ae6aceb9b6b32a75"
+    },
+    "christianity-aramaic-wisdom": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5db401ef3b989f98fe20b83a76aed9adf8401211b5edfe9f084bf0e82d97a90f"
+    },
+    "chroma": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "91a84b7433b0fb06394df005aebdc65a8ad16ebf1d4aaaf333035995499fc1c6"
+    },
+    "chrome-devtools": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "21cc8020fdb4e4abf0521a4cb459a9537fd379812004b326656656d016ec55a7"
+    },
+    "cirq": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "73b11750edf5112ec8f99b021a14b292dfbe098515543aadf4c76d5b5ae2ee47"
+    },
+    "claude-code-analyzer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d0bf6f3a8154496564d4e739514630f005f79d63509e8e5fb9a75df11f41beec"
+    },
+    "claude-opus-4-5-migration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f7aaf798fb8c2613a9e7d0e99ff0dae2b8f9a750d7a4da1db9cdd5d9a0e044d8"
+    },
+    "claude-scientific-skills": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5770abcf1d5554a6280387f967a217cb2cdfdab653a865f5a327771f57228f98"
+    },
+    "claudisms": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "62243b7706ca2b8a8eeeb71bf4061f2ad92656454a0f8851e7c68c53db59a63e"
+    },
+    "clinicaltrials-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "dd465c877fb980c311feaea4c78f16e18594d3620f43bf4da09714caf36518e5"
+    },
+    "clinpgx-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d2ba5e1fa5465b1b700733a3db8171d7e046abdaf811cd2034a1764da439d76e"
+    },
+    "clinvar-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "071ca406fbcad1a78f043df91860678e62ca9799b8212f56f8c0834dad5f3dc3"
+    },
+    "clojure-review": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "424ece84970b6effad0f58545c8437b1f72702ef5fb606628db8833861418d66"
+    },
+    "clojure-write": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "99ebc02a8313c8659f1b5fc37f08ca53e354b9c010e509ef6f27e6e703ef1e71"
+    },
+    "cloudbase-document-database-web-sdk": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "20c45872f0270960dde2c9f23fe20e3f5022b1b9834bbb24914c7615396d4fa0"
+    },
+    "cobrapy": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "891c34facc479b63e2f8468dd3795fa4b99278d8ba1bc4b7dc59384ad06de6b8"
+    },
+    "code-review-excellence": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1d5de6efadf25d0b91d1be66a4302b6306403962aa5975213acc01287c523d93"
+    },
+    "codex": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6d2b9faf44a4f8c719bd05b320b2d18199d744c4dda8ff07985b2611898b6749"
+    },
+    "codex-skill": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bf5fd27bb260ff52ad973700bf5700e650c9a0a48e492365187c83a829f68ad5"
+    },
+    "competitive-ads-extractor": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0c456b0909aa07a7cab09070bb18372e62bfdfe37d76886610f7c8104a9b08ea"
+    },
+    "compliance-architecture": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5b724331b8608ba894f3e3d503ee3d53862909c554b98f5e25c57efc1bc2a698"
+    },
+    "component-guidelines-docs": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "625585bff4388f3acd8da93f477e509113ff2f2d6a65365a54e27f14411a6aa3"
+    },
+    "compound-docs": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c9418bd6e40a4e429efc551d966ede08dfb4f1bcc767115e75df6dc9e53cc4c8"
+    },
+    "condition-based-waiting": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e1e129ff4103abe701285dc20dd919535fa94028cc999e6b5bea02ffbe22c343"
+    },
+    "conference-talk-builder": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1aecaa971ee47a3f67ef7327f29b80c6b4f17a1e16c17c637d63d8b0c0aa90c9"
+    },
+    "content-research-writer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7b0f2a923f985c1784a9e200ccff5a91e706e6b46efc0c1f3bf2875bb2b3a20d"
+    },
+    "convex-realtime": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2e333f32b2fc93291841fad7cf85762c6c72049516c769e62f0dfb195ef9b7f3"
+    },
+    "cookbook-audit": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "27834508bdf5a6afc0c8ea89f3e4c5c3c26c0f2313a70a753f16f56cd9b92cd0"
+    },
+    "cosmic-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8c25b8e9c72f731c01f3aef9bd4e5a851e50e7f5716a822ff15b56bff854aa24"
+    },
+    "cost-optimization": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a3e48151c4c2a4f24f6125076ef1b750a3827634254cb71e07dd3a6022265849"
+    },
+    "create-plan": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d79e4e29e012a798aae0f59a5bd8534cd950cf12ec7c3ae78e397549444c20ff"
+    },
+    "create-plans": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "817116334833f767070339d127db22c30ca54518654e3c784e1355f374a530fe"
+    },
+    "create-skill": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0f1a17873aaa82c5e44d670097aa5eaa988b244e89ed799240ec0688386a1c68"
+    },
+    "create-skill-file": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7d15a2e23db2d4e854a4a724d476c0b8fe3c1db6bc73b394ba1b998cf61c73db"
+    },
+    "creating-financial-models": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c2a8c716096239c0146eed9e4abd186076ae29e7f23846af9c2e4a8919231801"
+    },
+    "creating-pr": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a0d7ab64d98afddb7bd2a60df17c15167fb73e0dc27944092bf5133edf1a8767"
+    },
+    "crypto-research": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "eedc422b5ac1170654caed08697900ff8f8970d0a4b96eb50342c316271e0465"
+    },
+    "dask": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "690a33824d5987198f4b65a95e0ee7cb48030c561646df08d09870e009861354"
+    },
+    "data-export-pdf": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3a9439fce240e7af3784cd97fb57569afbce244094f35a93a9920a4ac78b867d"
+    },
+    "data-migration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "74cfd881bee52053f15a8755ecee4bc3bd4d8d44e7d0d35be34481ba2c202b91"
+    },
+    "data-model-creation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2c02265c5f1b1f3aea0a528ea9790e8c792071fd9a47d68bdea2c07bf57b268e"
+    },
+    "data-sourcing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8638c432a6612dbb776dba0760eab36418143815676d997bed12f6ef14e34052"
+    },
+    "data-transform": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bff6a53bb3f924d919064508418d88d82f0eaeb6c48e9eb00dac9f264ab0a8b7"
+    },
+    "data-viz-plots": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cedb5d6eb047be34271fd8ddbb2a6b449515ec26bfa151e344c7c1d980c81139"
+    },
+    "database-migration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0081192e62bb1f900afe24ef1ef80e4872bfbb76f15f265a82d1dd46df6ba300"
+    },
+    "database-testing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e489c5a87c911d73ba9612bb2a766a5b2800fc24460a5c3a90d8ae5183e68f2f"
+    },
+    "databases": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "17a97fef80e32630838e5f961fac59c86eead6a572a182496b9a3f02bf3fc9df"
+    },
+    "datacommons-client": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b18df685755bc191775cf4a077c6a37eed41dfb2c0de63d822aba252edf8b6b7"
+    },
+    "datamol": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "99a0b347b37f6577326c1b52d3bbf16ae677c700acaade90dc76fa5e5e0abdab"
+    },
+    "deal-desk": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "86aa9a4611c599a6e81cd9358d6fce857d9bfb97e79729422a7a3192d15ded17"
+    },
+    "debug-cli": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9a62b1eb8b8adc0a89cfb6bbd1aa476990755caec8cae8d44fe885480622fe48"
+    },
+    "debugging-strategies": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ff4f0678f71bbe58d3babc3feee65dec0f083d1529b0f84bd161fdd013a7c38b"
+    },
+    "deepchem": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "06165274e2bdaf5f3eca232bb51174aa825da76577affa9a2480e0b339b9d147"
+    },
+    "deeptools": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fadfa8fb09b7a2e7628c5206406a36a44d64365b3b6094f3018a9a5ecb9cc589"
+    },
+    "defense-in-depth": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0870937e22c33dfbe06e4a0c23a43384d01f03f5debebeff9f47554fa9718091"
+    },
+    "defi-protocol-templates": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cfc984e8d7760684106c575fb346547118c90e2994f081d051eebb2aab1ea655"
+    },
+    "denario": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9e86eeaf2a4e3bafa56894701495661262b1d52a503a6db1138784e06980c426"
+    },
+    "dependency-upgrade": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5785656dae18470a06cb1f1c227d28cca9077072b9e93ab483cd812c51031968"
+    },
+    "deployment-pipeline-design": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "248968af0d0aefc9c326eea660e11d533fd209b13349337e5332ce1aa0791a6b"
+    },
+    "design-by-contract": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c4bd46958478b46f9c9201658774d0fb01f720cec26ad4778e9e5693306999c0"
+    },
+    "developer-growth-analysis": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ea4c8d7633af482534a844b279ec4aea66aea8a3cc001237238bade8c96efa61"
+    },
+    "dhh-ruby-style": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8566c18d6261e52abbdd01195f595371d891657a9611ca5dc0c1c0d5f1e5864e"
+    },
+    "diffdock": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1371f85252516faff7319765d6ac59ef5c0b49b9c473f78fe0bfd6f9520fe37b"
+    },
+    "distributed-tracing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7367e613fadb11aa999c176604a66dd4c757da58752dc8bc9bb3ef119c795e42"
+    },
+    "dnanexus-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6602d6dd7ce5818dfb62fdf7ad3574569dd9fdf7f7c5c04353d0e01a072c4895"
+    },
+    "dnd5e-srd": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4dfcd658aad31fae6e842e7fc0749d32f45636dab61d1faa26737c915953105d"
+    },
+    "doc-sync": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d4b676d909df8ca2bd06a3140730ebe3b34b668358e9c2d544631ef65da60b7c"
+    },
+    "docs-consistency-checker": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4eeb6c43146ea7db5d4377cf27ea25f746c22e7a19933ec0950b920761738872"
+    },
+    "docs-review": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fa9949dc3cf4c5e5bc55545fd21e066db26a24f8477d4186e30f22cd9a096832"
+    },
+    "docs-write": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9e73b9ced1bf5ebf5e0ff517bb62f9487cb0bb1722917c1c5d255950dee13057"
+    },
+    "docstring": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4538673b8b66ccbb85b611d453c6520a231486585506eab2653c00fbe516a37c"
+    },
+    "docx": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "33678c5e7d5f4b9c5c3a6ab8f8bb8f6fce0cc32cd522172e50d7d3e61594a2f4"
+    },
+    "domain-name-brainstormer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6c789a493a656369556743d4db245ad1a7aae89480653d1fb65178b8df58065e"
+    },
+    "drugbank-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3480c7dd07c59776c6e510362bc85c32c5672629cd3cb59f770ada87afccbb48"
+    },
+    "e2e-testing-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c1550f0bff25c564ffdf5f24ab265dd4d0f2d384d9b7046c9f88f2481917ce58"
+    },
+    "ena-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fe1accaabd1dfc43d48580f15c33f227b1c20a5a065cc5a122c30de9a15a86d6"
+    },
+    "enablement-kit": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "51bf1ec525bacbd0681c9561cd205f77235d3f51f170e391f10056bbb24a613c"
+    },
+    "ensembl-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a261e1d3dbf3c16c4e27aed5143f6b74f97f77644cb5b25f19f3d1222524a004"
+    },
+    "error-handling-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1be45a9b106639b693909f60f54523ae45f5d8daa55db090230c0afe9e2a0ab5"
+    },
+    "error-tracking": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cc73a3069514ed99d6c5dc5abb0827826dce5a91a8e78218f40caf2ddc8c3e07"
+    },
+    "esm": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bda24154fcd5aa376e02e5008c7c417ec06ff3f767935d457a3314f53524c7fa"
+    },
+    "etetoolkit": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cb1027864a1686ad39c6a30c24fc5c7637fac98bee3a1312d1e2b1f816b70a01"
+    },
+    "every-style-editor": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4c17f68094d9552b4f17ddb47b253b2947cd407e22e56219d036b37f1941c7c4"
+    },
+    "execute-plan": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0ddcec1ae6ea7834106ba643c0a8f828fb7ccacc146712ad6b836875e9b64506"
+    },
+    "exploratory-data-analysis": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0567655b147076fe3d85429c081bd2a06b427c01a6ae72f0606a2586b940d381"
+    },
+    "external-model-selection": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "45411a502b1a6a60e1fb5e38d6a1eae93c3f8c14e798fc69dab3852659ed4df0"
+    },
+    "fabric": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2c35f182653ec5715c34876e7d4454557169a9080d0e372355e28a93a4c8a326"
+    },
+    "fantasy-world-building": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "394f69dd7c280d6e177dc120a3775fcb607780cb4024184f9320f83c171ca80e"
+    },
+    "fastapi-templates": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a9019528fd8eb42a2384d6307f03d6248fd9c30ea38dab6229b8f607238c562b"
+    },
+    "fda-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ae238f8ac6ca4d6d01e3e7972914870f6c26aa8d4a4ec4062f440908bb801fb5"
+    },
+    "fetch-unresolved-comments": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "28d8600f9ebd28544a432f660fd4e1c330c47be3efdcb477267b01177cab648b"
+    },
+    "ffuf-web-fuzzing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bc186786f425930b5f5defef5d99ffdb4ea313a5c3480429d78cf77ce28b8db3"
+    },
+    "file-organizer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2ff1e1e329190a9969d8d457a297e97893c952ee50ce6f0f4df0fedc3d1c644d"
+    },
+    "file-todos": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ce8031a504ebfc045d0b4b9e379dfc4d3cdf1686ee5ff5b2d235f7c4cec3f30c"
+    },
+    "financial-document-parser": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e209f9d5efeccd54d4e84cb476966d4b4cbc16f1d2018c00098ad8961817d8ac"
+    },
+    "find-hypertable-candidates": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c7f7b01e1dfd513ef3f1e586bf2f91985c62ec60675df09247f3d1e96811c403"
+    },
+    "finishing-a-development-branch": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c651b65b7a8eac00d84930af597f5e836c22831185a56b1a34c5674badc525a3"
+    },
+    "flow-nexus-neural": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c851770a8639c8d295692a4f919d64c2301d3882fc5d79bb6c1afa6b01781a05"
+    },
+    "flow-nexus-platform": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "24a420029d8147c9bfe8ca9d625caf72520c5810e6b8dcd25d92826c94017b28"
+    },
+    "flow-nexus-swarm": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a83ca23a515b800ffb0c8b8f2a49d2fd422e925313bebd1a0e0ebe9679e0263c"
+    },
+    "flowio": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cee768a83dbe3b8d8c9aa147e3ee9f2d82d3072f2861999cc77d899b82b2230d"
+    },
+    "fluidsim": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6c0562c4e8d3795147162e44d404ebdeff7f0a3b3e567b5e2963a259191a5a87"
+    },
+    "flutter-development": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "edf7d9609c3052913fd480002655297235fef4bbab4f5162614a84c335ceb6e0"
+    },
+    "forgotten-elements-reminder": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a22e8bd4d70f4ddc71c210a440193036dff8bb6058025bd1a2993b14ed70bcdb"
+    },
+    "frontend-design": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "819e96c8f28769324717b427a0ee5df67366b03c4c41cb485e019ef0ee1cc3a7"
+    },
+    "ga4-privacy-compliance": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5803e758b3d8fa8d8c7b7fdd5d546cc6b303ea896ac1ac0e6315e70a94c670a4"
+    },
+    "gemini": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "87d7e5bfdb206e5ba11efc970c31a4df476410aabc513c41e344a59b002eb1e4"
+    },
+    "gemini-imagegen": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fd01ad72864d978e59b274a95538f7ff23c8e7fbc20c026528fc25a107a52eca"
+    },
+    "gene-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9f4d3d482a905e13085429181a0ecae63da5f6482318eb699a2b425866402b04"
+    },
+    "generate-image": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0e6465e4b5bcbb475765d7ddd4fc5823bb9b78371d4813b8c50400a28ef56682"
+    },
+    "geniml": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "faaf71c36cd73caec561fe87e95f41916c127b29504284af012c0383be46ecb7"
+    },
+    "geo-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d974cc78fdb67d8fef40a9989ca30c98193db76609605e893ab7dc12c25715f6"
+    },
+    "geopandas": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "623822b9b96834e40d10a5b4496d0928dee7ed5a63c2fa7955b5987e9c2fdd92"
+    },
+    "gerrit": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5f5079e465db407a724cbd13e343dcb2b75460c121a9e7eceea675a7c40b7ef0"
+    },
+    "get-available-resources": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7f90c45319b7100a9636536d792a4b17f90d4e7c4b75bdec8befbf301502eb49"
+    },
+    "getting-started-guide": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4b8c4f75d69a6c07fe4bf0cbc0b1ce403783b92bfa59fc763ae1a92fdfdca706"
+    },
+    "gget": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0c415fad5d3c75db6f590b58c3aabb8629f9c5aad5ef11e175e2a67093b7e60d"
+    },
+    "git-advanced-workflows": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fcfb116f05666bfe8a3b69424e1b413c126d5941ecb5bda2dc8a9e24169a570d"
+    },
+    "github-actions-templates": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ab9ba07c3c4a00aeadc60447cf0ce7b6fcdee9018be3da4b29b2870677eb338a"
+    },
+    "github-code-review": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "32661e58998892c2d27e80c7bf4b2bbb2eff7114680fdd8c3aa01476a7cb680d"
+    },
+    "github-project-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "18ab70820c37b6fba09eec2e3628b5067a5a7d3b5b7daa98fcf8c0d60feeb716"
+    },
+    "github-release-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2c32773b6ab74e4c52fd949bfe677961c3d422d4b9140a1776920e14508f7227"
+    },
+    "github-workflow-automation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2adaac8681b8a9bd1e35fa87d219c92de68970eef1371029676b583e48344c5c"
+    },
+    "gitlab-ci-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8b22871cbf26d60cfc5c3f38504d1a1f259f5e5cff931757d97936a15723b019"
+    },
+    "gitops-workflow": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8d02870fef9c4a5a8c8553ca0330a76e073edbec3545224e8a363b049039ccf5"
+    },
+    "gpt5-consultant": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d912b6525754619681b88425f9452df97167d2b00f140ca29fe0b24ca392a4dd"
+    },
+    "grafana-dashboards": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "765e1cff1bcbcfb76f99e85d0186fbc844fd527e0a492778a15a4fe32726110e"
+    },
+    "gtars": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "845ad001685dc514465e8044ca4eb80c48e10f7c0aa3577666090e601edbf9a2"
+    },
+    "gwas-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7229042eb0df8f3f7494a4ab463efb47f8dd2d64c553d2b01d714985e5467596"
+    },
+    "helm-chart-scaffolding": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "69977986aba1ba944ff1278661923dea7513f96bb82e846a2d7c56d5a9947010"
+    },
+    "histolab": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3ed4f689d1f59a44eb28011e6fcd616e732c20d11d928adc305b948af2cbd94e"
+    },
+    "hmdb-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f2326ea234163b321b7dc176158bf651e539f9e09214180220908a1d2623ec76"
+    },
+    "hybrid-cloud-networking": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "86471f212d880ece653d99bf0957e1da95ac9901e6c07ada6dbc617b97f4e866"
+    },
+    "hypogenic": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4b79413e79a9ebf07da56ae52dbcb86dce37966843e6606e1a5c6beaf38a0a81"
+    },
+    "hypothesis-generation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b61ab4d21aaefec8d7343fbb78e9c4e3c080694229090eb6730344a009c2733a"
+    },
+    "image-enhancer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c46032a0f92d292c35a60b71295bb43e068bb0d655f69859dabf26261223ec7f"
+    },
+    "in-app-messaging-kit": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "df75c6e91d81011faa22d500f3376813383a3571cece80d0739af0ca23d3f5ed"
+    },
+    "insforge-schema-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "19200fed1c296636b92c9e5ce90c43c8666d80adafd7c55be094c1c73cbf7d04"
+    },
+    "integrating-stripe-webhooks": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6322ee67b20a7ef6c195cc7ac7d011aae31cc649ee2cd3b5ac4ca62169370950"
+    },
+    "internal-comms": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "001fb1e63166af58c0be21f8c9d1569d545ce85ddd6c816a6cda3167fb5b9042"
+    },
+    "invoice-organizer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0a654396de8a27b722e234cd7b87fa8c5e66a97b400e1f903d473f0aa53a417f"
+    },
+    "ios-simulator-skill": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "80004c6573c63819c95fb2ceb9961a1a3913529da8d53de4d2a5f18a73ff78f6"
+    },
+    "islam-sufism-wisdom": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bf8357c7d23850bdfcec2685a0ae6064f6c105821fc5d728590d95ab16a0ac4c"
+    },
+    "ispc-lit-tests": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9b07890f78cb8afe01ea9cb603b2bb5d2126f6b551cb7854ed695493aa5d96b0"
+    },
+    "javascript-testing-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "545b087247d25739e7f9516b22ca9aea66a5a73d866718c5e77be7d469ff5b9a"
+    },
+    "judaism-hebrew-wisdom": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c398e050f6e3455b894738d7a5dca06a95c40f40679f31dcc59a3095bd62f490"
+    },
+    "k8s-manifest-generator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0d87d8a1e0366c40269612707317341cdaa421b49138b64f43bd70dfd1111ce8"
+    },
+    "k8s-security-policies": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "554fc85b77ef3dfdd9182f21c5079487dad59a3008c35fbacb33649dc89c6126"
+    },
+    "kegg-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8e834c6e541999c88d1d4ae4140864110fb3abae4652a0bc32b87476d7110aaa"
+    },
+    "kiro-skill": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "03e4eb522d2d87ef0b8ef4e3ec525cb767cbdc1260471751b0d3b54cbd9a471b"
+    },
+    "labarchive-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ec9e9ee7289ec4efb422bb3e42fd41ed08f6de86e7484da323f9cb8fa049a5b9"
+    },
+    "lamindb": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b98403766f17cb014fd3081f436a91b3d7db0d12724429b64fa7763ae8eb4215"
+    },
+    "langchain-architecture": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "dd68ada2fb893b716029cb7b3685f0c308e5390383a947fb235ae88b4d982926"
+    },
+    "langgraph-docs": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "becf52c233896d2a6185e06279c1d00050e4a6eac2c3c516c1177b60de149c5c"
+    },
+    "laravel-cashier-paddle": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d75d76e6f70983f673fc8dfdfcde3cfbf8cb3d7ecf2b5dc230127f5ec40a489a"
+    },
+    "laravel-cashier-stripe": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "67a6073ba891872becf823bf8013981dc7379b1e39b46e2fb10bff4bef5bcd51"
+    },
+    "latchbio-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e261d5925ca3e349e0a6433f86dbd5e9272961640688d20c994f2ff7b587ba23"
+    },
+    "lead-research-assistant": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ee2038c89cde30802e70c3e0f8b7c6f4e2a788a7221aaa57628f5400562ceb7a"
+    },
+    "lint": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "73f01e85a38b296a5d2824c91c7f3dd8474c94eb6a426f9346dbe1d315221961"
+    },
+    "literature-review": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "286c07d60df5b9bb6e964051d49f487abcdc5314094e1964c8968a86d7991d24"
+    },
+    "llm-evaluation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "dcea84fbf5bb08a1eacdcbb91e3ecd9ec5b2765d50c4177c83091642ee47a1e6"
+    },
+    "managing-cargo-dependencies": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "07ebc22443c03d4f3119ef7a9a71d8bb1001fb3e29f89e4f3e1c50aeb7fdca81"
+    },
+    "markitdown": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "53be4053a67080ca18ba3366d4ba33f862d494554ff9490aacf1e97140a0fbfa"
+    },
+    "matchms": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0f2683373535db94c3ca16c91ab1196308996ded8ab21042e5b40f85e0b0f18c"
+    },
+    "matplotlib": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5049b58b88810aa7f59713564ccf612b6c17db82ddfd709ccd0b1799a6698fe6"
+    },
+    "mcp-builder": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "123138800fa11c7e1eb55a74f7b269c1a39069d7d8b1382b2d7a8665ff7dc393"
+    },
+    "mcp-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3285e1e3f11940e8da158a711b53265a57d32835db8735ad9fd2568ca7117a84"
+    },
+    "medchem": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c45f886e5d1dffa79691511cedaadaf8903502c4bcc8735d976abcac49f7b4b7"
+    },
+    "meeting-insights-analyzer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "30c15a82304b03932597e25818544a88235701b3e4e892009160b73b4772d075"
+    },
+    "metabolomics-workbench-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "70df94dfc1acc5a167785e8cb037b6452ade10349341d35beb8fd5a097463068"
+    },
+    "microservices-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "87b7c3d942247433a6b5e38a8d61a2e5082479b673e80604bde2668bdb35889b"
+    },
+    "migrate-postgres-tables-to-hypertables": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "486056ce3b5f390a11378e93110615af1971f9c04a61e6c577897ff9877c9be1"
+    },
+    "ml-pipeline-workflow": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "703da4d638d40d0b1b1e6275a309d274d9c90957885365915f4a75988055557d"
+    },
+    "moai-domain-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "de72ccc9dc20b4d11c4144ba48292fbd6429a0a7fe7f9e8fe5fd76ffc27606ad"
+    },
+    "modal": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "113260fd7fae0351c33b7f7e330c5bf1f6be31a7294baecb51cfb46e6fb8e695"
+    },
+    "model-registry-maintainer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "235e2817630a3a10e5c3085d6631de3c6cbb0dae8b00ab1e5b9bb133f9dd329f"
+    },
+    "modern-javascript-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "98ba36dbe7986175f2be5cebf0ae33f744aea83a9c5c8d56e6785b695f148ff2"
+    },
+    "molfeat": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "65720a768535eebe51c91394d2954b8190192f187faee8491e474964dfbdda16"
+    },
+    "mongodb-usage": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ede4933025891fcea75fdc5e131a55bc85ae4a8ed9813a0ee8de4211650b5b49"
+    },
+    "monorepo-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2a6357663aeebb229c0f3770452835081b8cb5b5dfe227ba49c31a89b7a46710"
+    },
+    "moon-dev-trading-agents": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7fe0ba0f35c9aded1ea9bb2066dc832b13307f471de3ef4bae1a295eaa7cb7a0"
+    },
+    "multi-cloud-architecture": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "eda3ba9a583470bd0792ce1546f60dc58c5a0308c204b10aa4c7e5eaa12ee007"
+    },
+    "mystery-novel-conventions": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "88f3b07d1416188497000189953eabad68d2fb8bb3951fad53e291b77542f160"
+    },
+    "n8n-mcp-tools-expert": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "774c04a8ee7389ad46412bdcb89534a8d9ce537b59e6ce0f6aa3a7625461cfef"
+    },
+    "nanobanana-skill": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "193ad33f3ca6c4f6f5c5320e4db078360eb332eb73536b2c5ce147c7388b2bc6"
+    },
+    "native-modules": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "40f075322fc9dfd18719699455858ac61b9b9e19e71fa074359f57730ffcd6d1"
+    },
+    "network-security-setup": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b6185c602e9a70dc2be219da10fb11add3b3c03c67ac9cb7d029b7c8ed646840"
+    },
+    "networkx": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cd39f380dde48fc38ed67b1f5664ea0ce3628ce8538826945d7d62673b1de6dc"
+    },
+    "neurokit2": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2b3f79b65281bd4334c0c7678c04d08243828b40a3ef5e4858021d77efb411f7"
+    },
+    "nextjs-stripe-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "295b8ee7c2c87a238540c0e7cb69d7d8e614c585353395fc78907070412b57a4"
+    },
+    "nft-standards": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "81c317e9702560b62629eeee6aa861f497a81b0a83303808b63b9e0a6b6dc87b"
+    },
+    "nodejs-backend-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "df0e35ad25f9e243b92256ee4072dae5373e6302e881ee94d4820b0390c28085"
+    },
+    "nondominium-holochain-dna-dev": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6be1dd6b74764c067f054e491b89794c83a397a86af9eaf15393844592da68d0"
+    },
+    "notebooklm": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2902e68071784c81597644309206b6b127e49b62a145cc9cbbbb73bfaeeeb86c"
+    },
+    "novel-writer-workflow-guide": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8e87b9da8db6e9b67fb77152890f006789fcc4fdeb448a27b9d3ed97a6099349"
+    },
+    "novelweave-workflow": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2b86d33eaa2ad52357d20499d1b3b76c977835f186999b94684b67bd297ee8d2"
+    },
+    "objection-pattern-detector": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "494505a660a6505e72330b1e9a8985e34cf70f11891ad50ec31099a7e0a78e16"
+    },
+    "omero-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "73c3c74663eb94ac0385fe399b4e073e7185f1607015f4f60fc3373a96a8d549"
+    },
+    "onboarding": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ebc26f2bab5994d877f8097865b1e926d9560affd6b36de98c4e190ed1d4f083"
+    },
+    "openalex-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "15c3af0d849c2bdc339f23cd9a4c567f78eb293f37b427f1b58bf582eafb6717"
+    },
+    "opentargets-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "eda764f2a116df650ed7f243387d48add875351adf66328a100ee22634a1ca00"
+    },
+    "opentrons-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "79c5794e43dbec96e1d86318a2ebcc6bbb16e46d26e3bd6aba3cd298fba71640"
+    },
+    "paper-2-web": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "eed1c46038d15f7267e1f6bc5502bef4e69463caf34d4dc89f140ccf5f225ba7"
+    },
+    "pathml": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f952ecdb593a9bb8614dd7b06eeed8e2fae0c8c6a1b9c35c5ec955ebcb959d8c"
+    },
+    "payload": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0803a0955cbbf369c5478905372ac0ff0f9bba81f312a764b23755de1d92a01b"
+    },
+    "payment-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9b7c69e877dbf6d9a3f5702fa7ccdc5da5de432d575673578ede27dd09c22960"
+    },
+    "paypal-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bbfeea1d331026df52f2919f4e6a78f73aec800df268ed9e56f836f03b0af130"
+    },
+    "pci-compliance": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2619b478b108636e8579e6173a9feaa4bc3353be0ab4e7eed34c674f7696fd82"
+    },
+    "pdb-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b4616763dc574be734a76d86541c79b5a87010f145588092e5c42161ce84c3dc"
+    },
+    "pdf": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "158b97eb09287290cae4af3c0ac9cb5509b5f54fbaaf2b14837f6a14afe246b9"
+    },
+    "peer-review": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "668df6ccc823baf0525448b6bad37ec52b2fce740de57293d1fce237bd25d302"
+    },
+    "pennylane": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "505f80f4eaf6d3c37ccd6f0e92647eab0dec134bcad04e4aa4a10156e92ad2df"
+    },
+    "performance-analysis": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "08c2e17d1584c7f850ebcff09680b45c4bed6d615c67012a30223d81c143df9d"
+    },
+    "perplexity-search": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e7d7b3d21c33fb1159fa788ffb0008702b0aa69fe980130bb31cde4137cc8cf9"
+    },
+    "pg_dump Reference": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "95fbfe28d7c1fc2feb9104d4263b65e1620bd08f0f163b15a46a15d4c5392443"
+    },
+    "pinecone": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "111f1ad862a0f05566110b03d9438e634462fb3f2f94667e7b1bc8f8d4c4ce7a"
+    },
+    "plotly": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c1659137bafbc9e5667a6a34b9de795ee5e33b9b5e014e6cbe7372bd2caa9945"
+    },
+    "polars": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b703c1b4711369853ee437f32202e6d42c9b8d752c3e0b25bf033a34b9c437e7"
+    },
+    "portfolio-roadmapping-bets": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "30c684844c2840a4da488793fd47a0d29917c06de472502077da3770edfeedd4"
+    },
+    "positron-intake-rotation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5528ffabd81b209d89a4a2cd83aa8aadab6a7a71a1f80ed3d0f18d6f130a8ea8"
+    },
+    "positron-issue-creator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2ce2befc10ba03447db32902a53ecceaca367c11ab1bb5d219acab61532d47c0"
+    },
+    "postgres-migrations": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9025becbfccbec610f3f6e23d4741725e28ec146644ab1c89d451cc7886f7db6"
+    },
+    "postgresql-table-design": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bdc8456c9ed5eca76cfcd7de60b29c348cf7040bf8b508e5bb9c84b985bc540d"
+    },
+    "pptx": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9d7e0e91917e7e61400f1dc0cbbb7dd3dff68b9113e95c2413f74b436d594c5b"
+    },
+    "pre-write-checklist": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a3f0f91aa01261c90faee11da57f490a1ae175d569523209244776b2225f480f"
+    },
+    "prepare-changelog": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "206ad3b774a5a18c406c15d200268922221c224b26b93feb876d4c47214054be"
+    },
+    "product-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f4181ad2d8d5925508ccba9a1ea73ec482a119d59e1b3e03e3bcb1231af288af"
+    },
+    "product-manager-toolkit": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6fc1fcaa5698825d51c34c146025b06bc5dd7bffc6c6743b6984de8dfed90475"
+    },
+    "product-strategist": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "00a1295973fcf7f448b1103869703c2e34a09e2267436c599aea3f7391428a4e"
+    },
+    "project-planning": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "92ecc5ae70eddd0592b57f118f7e36ccbc9766b00d5089bf71c76c55d4c88ec1"
+    },
+    "project-session-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "78528b1b49c1f1fb1aabfcbc9ef5cd3248747722205bce2345b853cc83648d3e"
+    },
+    "prometheus-configuration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "34865771d49953dc5deada2da4a55113acf5c11f4946ebd5546aa1304539cb6c"
+    },
+    "prompt-engineering-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c3631c5fa5ab5417df6c7ad9f56f518f9ad37d29011e077b33232a35e561461c"
+    },
+    "prompt-improver": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "19ff055254ebd197eb6766b6d2be6683a073ed8cb5f9a5169d5f635a374d98fe"
+    },
+    "proof-composer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "42a598461e460bd2050d1768dc1a5ca887d3c7de9e1347b0da61d18003f81977"
+    },
+    "protocolsio-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fe0aa982ffd9ec524793c06b9c29b0c6f1c2af4d3a8f0b8d6c9dad1713ec6f71"
+    },
+    "prp-core-runner": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "57f74aed6f7d48fa5e79d4c7a140e3eeba43159b01aef1d64954c9bb46179ba1"
+    },
+    "pubchem-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5e7f137b3eecd5291bdec3e28a598a1489f9f9606f3508f2cb6399f516895cdd"
+    },
+    "pubmed-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "42090cf853a18a6cf456f6bcda6a1e0bc322620f50876c34d7229de810413dcc"
+    },
+    "pufferlib": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "89fe07cfee3aded177d7b21ccb2447de5d9f4bb5434bf8362ac68687d426bcb0"
+    },
+    "pydeseq2": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0c1b6b35de7e0241e46fc14d3da8138ab6f4472de7ab659e4a2240300425fdc0"
+    },
+    "pydicom": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "262ab2636027457d468c4d8d5486c3e56f705a37b5329b07ab2ccd6af7156612"
+    },
+    "pyhealth": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "876521afba4ee99bfd61d47ce3b9cd1214eacb1c2bd86ae0c5ed71e2c2465671"
+    },
+    "pylabrobot": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "114a51ed6c19b5a37b492d85485df278ee08040903ec7a6229def18a5628229a"
+    },
+    "pymatgen": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2462ed47d7bc1760766fb6eff12014e06e238a2a2afe3a50e631f8b05633c2df"
+    },
+    "pymc-bayesian-modeling": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d0370be10e275ec69e7650f977a6cac7e04846c233a6620ce19de66ae9b6f990"
+    },
+    "pymoo": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "70d25e0d473b6e28d712b32b9d0204b1407662ae9d2c7f7ff3e05ea7ef44b853"
+    },
+    "pyopenms": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "425cb3de77fc32c5b77c84ff2a6bea84541670d766ef14b8e22d96c0b2580eeb"
+    },
+    "pysam": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "56bfb6f4d0eb1d6dbaf223ea6a9206b640c665b78caf54de801dd4bb23fbd07b"
+    },
+    "pytdc": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "52e758f4263603d70b922d159347c1cee2f099dcd646dc1f567162bff5b46182"
+    },
+    "python-packaging": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "4f66272c633c4e86896953915f087e7d8122a39a30a8e539de3c42b33d225752"
+    },
+    "python-testing-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9b0ca22c165be758287436fda235ed28127df3d47eb41250afe7fa16edd1e23d"
+    },
+    "pytorch-lightning": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f340a89b912b14c5a47de32cf9d8e75ec239fb3e237e9cbb0f4f05341a64b1e1"
+    },
+    "qiskit": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b937645430322c926833fea78fbe3bf53d00afe4d046040a68c81498bceee868"
+    },
+    "qutip": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7938eb802efee9e85e15f310def17e0a726b57915b6a01a510bcc2c70377d026"
+    },
+    "rag-implementation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3fb0740295da1dcf67c5a37e0b680705067adabaa1c5be64c2afba88ab39e3a4"
+    },
+    "rdkit": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f97167a8f959cfcfeffaeea68ddd945482267353b7da254320caab122b31c528"
+    },
+    "react-modernization": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "07d9106b4e8488378dce0ee8873ae212b0bb54f79ccf7cdeb8f6915dbae68c29"
+    },
+    "react-native-expo": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "82e7950b0c0e7fd4cfdebf61c319d7d32d4bccf2314538c02f9831c305ef575c"
+    },
+    "react-native-setup": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "aa57a80e27d764003d68c6ef3bbfa0628c8acc0c25ae2867923c27e2b3c691e4"
+    },
+    "reactome-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3bd3692f3f47bbf6c5e32ce8d63df823b548811b067f4182e8fb66866a0c5159"
+    },
+    "reference-ops": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "21c9e4d37cd4a7b77e7cca2b5dd9451c24be6da44e7cc06b52d8d55dad66035e"
+    },
+    "relational-database-mcp-cloudbase": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3ca57eb8e1f76e78a4d3da969b40a3d6cde75931c3c46a19aa9dc703eca8f57c"
+    },
+    "repomix": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6fa72c2c3e87d7659af03c306fe1654963c4fe5b93b583a42d0d3b20effd0456"
+    },
+    "reportlab": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "083cf534982471fec27a3523cde4ccad36709aa5e58c85d11ec25bb5a86313e9"
+    },
+    "research": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a79f6be3b0b1423ad499ce55779e2888e2d1bf283223d07b0cf23340b1359b2f"
+    },
+    "reviewing-changes": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5a7894bcc18bd0d25340386083eda9dce4c8ed84f05407b3f2b13b0d5e2597f8"
+    },
+    "reviewing-pr": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ba87be1acb562a0ec61d8d7909e95bb13d5e149063efeede247650b14196dc32"
+    },
+    "romance-novel-conventions": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "edc415b4813c9af882a1ab78f469ba9d4b411b0ce32f74e24ac46597625f8b27"
+    },
+    "route-tester": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c81975c8cb4532d8338d5e6cccec741bf48ca11a315ff41e10ee2ecd75294dd8"
+    },
+    "rsc-data-optimizer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f77111f3bd0fa50071948c8f98a7613474d0c64e9cc734ee1cb47f784966573c"
+    },
+    "run-nx-generator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8c30e5d0b286021a4ebd062782597e4575db97d82baf814d9fbbf4f0f7ad18bb"
+    },
+    "run-tests": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ef258c40497a45715cbd14cd8588994f61d4bd9d6440d829c6bd7ed680fcbefb"
+    },
+    "sales-comp-plan-designer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "bae0dc1ceab52bd922b1fb98a56fa611bf665a52b22b9c6d69a5d1136e1f469d"
+    },
+    "sast-configuration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e45658a8ffb1d914336b7883d6049f2ffb29699e29cf694457dbfc9f0dbc50db"
+    },
+    "scanpy": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7470b3cfe1b64d74b5f379032fc653e513993c24fedc0e524624f99983531c82"
+    },
+    "scene-structure-techniques": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6abec798ad294af8c354dd9db8170e66c98706149ece462d9ae4135c58694137"
+    },
+    "scholar-evaluation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a4719d0b059e4148fcd400b78eef874219b64fc92220f3883d43f5c8a0362c45"
+    },
+    "scientific-brainstorming": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "141ebf6201b16050c278213306f9393649faca52b7bbac2f5adca9ffbb51e0ef"
+    },
+    "scientific-critical-thinking": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "12575bb2d3059883c65f12f2bad5b2074fdbb80471fba86aadc979524d52476f"
+    },
+    "scientific-visualization": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "804c900914a71b68abd8a9c047be13937c35ef2a046aaaa782e0a325eef49339"
+    },
+    "scientific-writing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c866158168018b1946260d25ef66ada8a4a2b588537af307885a9fbc419a3393"
+    },
+    "scikit-bio": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a70d305440e96fbece0b46f53f92a4dbdb3215a9282d7b25d2536c18f5ad6fd6"
+    },
+    "scikit-learn": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f03f68164d506a6cdf7e8cae1e46bd38c0e1327248d9aaeece66cb4b6392a3c7"
+    },
+    "scikit-survival": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8f4fd26c23d5a21ed81ec61b8d9c22286bc46fae67923d103c267d0cd9eef0b3"
+    },
+    "scvi-tools": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8b7ae9bb56483e091e883b8f119e1af7ccb373b8c2757e1d740638ddf8a8e029"
+    },
+    "seaborn": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ad96cba6af5b386be002c83190d447e012ea0fa19b1d47c76c29dd1868e797ba"
+    },
+    "secrets-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0fb3a71658972e411216fb9949816a63cd91ece5d2c38d44e7c38f30502bbda9"
+    },
+    "security-audit-example": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2067f7f8c94fa6caac9f669d979fafe686c8e24642649cd4c3aacacd206f7a12"
+    },
+    "sequential-thinking": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "149b07cd12a9535c4c2a053e9d0b03b51ed02a2678f9b69f64a2dd5a4d8d5c34"
+    },
+    "serena": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b42fa1e9f5d2ce8139fd3afaa45a5df92d7a09034ab17bd2634c40ff85396ca8"
+    },
+    "setting-detector": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d8db4924f921b06ddd47fa2e80577ee565cf9ca8ab10b7fbd0a58c003712aec5"
+    },
+    "setup-timescaledb-hypertables": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1e141f10e60c3eb9347c26723302de8aab5baa3e3fdc7d5f0f87e3ff1ccb883e"
+    },
+    "shadcn-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3b389cc0f65d2eee3ef094aa5767c68a177e410378d04556b976e6d14190f9d4"
+    },
+    "shap": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d9250d1490b8290b6e1f5a22f6c5686a05bccced9dfbeaa8825e3ef84ab8c1b9"
+    },
+    "shellcheck-configuration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "adf777c4504bbb39086ba8304ce84734a8792161118dcb6928738e5b3fb27c35"
+    },
+    "shopify": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a3cc436d824dda35b4a4ac96afec3de90b0cfd7cb1a77be915b1776876cf8be8"
+    },
+    "shopify-api": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d45d7f0c0049bc786e1e2545ffdb2c0bc25a7bcc30444c1674a8c2548d7ad7ee"
+    },
+    "shopify-app-dev": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ee798236abed6eb200b5939b21cc8cae286a0264211d3143f6239cc2fdbc8ae0"
+    },
+    "shopify-debugging": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "df5878b6c6b4a07e5f6dadc08aa90c165e6cdf081fcf2fe9300d4ed9e4c191f5"
+    },
+    "simpy": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ee2f45653d22738725d90e1381f27b605497a4c672181f43cb6d918e491da3db"
+    },
+    "skill-creator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "df1bd9507344f4fd422595724aad75155928502a0bf4913b646a47479a7f4b7e"
+    },
+    "skill-developer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5a9a7a692954d19b179a9e59ce22b8752b5ab7fbe8164b138358b81c84d7404b"
+    },
+    "skill-navigator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d0654e851dd57ae680fc2e188b59d388b8833eae01bbdd9f3e2a1fd17387d290"
+    },
+    "skill-share": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "976eefafb3c41b9d22af866745d590061cf170e5026abca691e7346082445eb4"
+    },
+    "skill-writer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8d6e083ce6c41b1912cf64f09b64f7d809fcf9305b8b578cf8f9188232fce23c"
+    },
+    "slack-gif-creator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6fdbdc2aa8486c18f73379708837496934780df3f8fd2094283c4d3e367ae029"
+    },
+    "slo-implementation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ae931a98215bb5b69e9a6371486b1bec509ec5b62ee5662027c37e7e7969df7b"
+    },
+    "smart-contract-generator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "47822e14bd7f51081d74ebcd5dbad359ba31238f9f4301ecf67d8853d3953351"
+    },
+    "software-crypto-web3": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e90977bd2951d35ee4558cefcf5f89daef24fa2fc13f9208a6a715f0ed26070d"
+    },
+    "solidity-security": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b60571979603c2d6b301fe4a1be8faf63310256f0e3fa2ce71aafa203c110792"
+    },
+    "sparc-methodology": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "577bcde95335b825af591945c549f69c6b6bf8c2f8e6595e539b2d77f7adf33f"
+    },
+    "spec-kit-skill": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "43c0893d7bffef7dcead321cbd546a2bc28daa2b3658f842d89c2846b324ac57"
+    },
+    "sql": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "3c197baccc32fff262620534d21ea9a36081acc87d7ecfdf0b0766cf26a8be22"
+    },
+    "sql-optimization-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c46d6a94ecb25e5e70f882c2d160bd9c6cee11e391c5b04c4d68e2155aa9db48"
+    },
+    "sql-research": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "301ac7faeeb81a7c8d472df85ce53ed3163a85d68a845c0cfd28e5383de3b9a7"
+    },
+    "sql-translation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "64ee96904d39665e1bec25de160f77fb20045f3fd897355f2d686d98826c10e6"
+    },
+    "stable-baselines3": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "dca3a04f27b46a4dc0d292582c96b51b42032bdccbb7efcb73f91107bbbfd165"
+    },
+    "statistical-analysis": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "70d823f350094c0cc3d74ee98411243651525ae3a99aa0ff598f3458193b6588"
+    },
+    "statsmodels": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ca68f13ee132cd3681864735f623c803db9cc48c390f609fc96ad56400a0f2a7"
+    },
+    "story-explanation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b5070752a1f5c62f844eb306f323d8244cedaa4410cdbb35c8af5caf8e3e563e"
+    },
+    "string-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "1f930b0ad27d77ec52b0c9374e02e81ce194438cb0455c7fd47c404e86535f9e"
+    },
+    "stripe-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "48a9230ad5d42bc893e42d3ffcfc24d6d804d14ba1be932e37aa994d43e820f4"
+    },
+    "student-success-scorecard": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a186c9bc64bfceeac7b973e1f8e6e1ccb95841fbb718f7394b6f2b1a9652842f"
+    },
+    "superpowers-lab": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "883ed7c6f59b414111cdac3f03a6423cc4a63e20f142d92ccd0ee9d82c857274"
+    },
+    "swapper-integration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "75bffb7d662837206f9e56a99c7331525f7f8fe0e8b43ce3237d4a024e8730cf"
+    },
+    "sympy": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6e466db5b5fd7b01f7b3f6d704c423f3771d4b4e01030e7b618363b0bb29847e"
+    },
+    "system-createcli": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "078185acf7ae66efc5ff4a99cdbce4cb3e46b55aab083069fe8cad5d6e3b9659"
+    },
+    "task-generator": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "735115f29f75d18fef38e77223aa6c29b90ca845da3937e14042cce318ed1c36"
+    },
+    "taste-check": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c0dd795df711277d1a5cadfe69bc1e33d3eaddeaba4aab58e4514d949a6a5e4b"
+    },
+    "tauri": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "f82b76eeabce7af9f2a8133874995c3f31110231cb379bbf422e39713c088b23"
+    },
+    "template-skill": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ca767793556fea4408b786a10123e7eed5790278e8e80aac6dbf6c37158f05b4"
+    },
+    "temporal-python-testing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "41262854fc7d42758ced7973591e594de35c66dfae9d078f9bfb5b2eb605ef73"
+    },
+    "terraform-module-library": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b92db3571b57d7dc136ca221eded66a730b8299664c192122fc981684033cd1a"
+    },
+    "test-driven-development": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "93ce456b01f51cc2992a6239b0175f0fa2517ccc29c24c4df2dc1411db1fd939"
+    },
+    "testing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2f2c700dfd944cd2b3163957b8df09a67e9a43e2f739fea50537bd523f160827"
+    },
+    "testing-anti-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e11f2657c4742d5253a73b0cb5994f8b3bd358d6fdae01c14ab97e582601e3d3"
+    },
+    "theme-factory": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "7ef21b6ee334d94aaf942805440c424377ea9b720ca1fa87fed0fee25cc65f71"
+    },
+    "todowrite-orchestration": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "03fe50cfc10167c1ede5bb4477d2c6bd6af5baf006432292c37120597431b325"
+    },
+    "tooluniverse": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8dab781a56efb952ed0226041467760d9f47e60cfb8441efbd6da3c05945889b"
+    },
+    "torch-geometric": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cc2b8adb96ccf65c714e59ec8b3f88b351b56e8616348b9372b3139aef9c6e06"
+    },
+    "torchdrug": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "a3662e14f189a61a127aa32fdbfe094b631b0217c833efb6a8d35626eb51992c"
+    },
+    "training-log-analyzer": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0b286b82defa3cb7c704c4a7c1008b5d8a7e71a5580a442a86c1b8be5f83304d"
+    },
+    "transformers": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "fdf7a564132bd56784e5e7d30c55370225e1dacbdfb5e81a05cc0ac550d646d1"
+    },
+    "treatment-plans": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "6bfbd0297e6e8ed24b0f7874a92947c1d26ff82c6a1c2dd8a91f0d8ad64ace6f"
+    },
+    "ts-agent-sdk": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "94da5eed83c6d6e8efa7c8754ef0ab4cd13c0b5b6f9ea6135c4673cb6435e31e"
+    },
+    "typescript-advanced-types": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "b515da8683a246a2a29d9d34e360538a051c6a3d2b8025828d191d3a701c624b"
+    },
+    "typescript-review": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "420f5a31dcc56ed9dc26651b28503506c3cad35f228b4b94b5f25813b1b04a05"
+    },
+    "typescript-write": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "e88ee94f780191f6f08e753bde490c7570d1711c4064f8c63e9eb92bbb88991d"
+    },
+    "ui-styling": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d27c5625a9348064febf51d5f5167050af2fa807e12bcd451fb75e27d6dceb9f"
+    },
+    "umap-learn": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "9b16c53421f1b9f5cd39494c990f065993e04acf054b2ce1d3246ba11184125e"
+    },
+    "uniprot-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "debb7d04f4d598f8be80cb4ce4bb218acb95f538d1701fc02ede4232cb27c746"
+    },
+    "user-file-ops": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "78d57ce4f0dc166cce9dea5ba3165e22b351ecd41be42341fb9305b858f17024"
+    },
+    "using-tmux-for-interactive-commands": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c056256933e832a5a48fffe68a481cce7fe5729e3645382a0656d592705d6a55"
+    },
+    "uspto-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "dcaa1b23b35214c687abd91de3062f4b58e93dd18c3874356aca95914a4c428c"
+    },
+    "uv-package-manager": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "faf7e287da2359aea299644487b06b4e96196efd59ff0e107c96ddb6a3e5e3ed"
+    },
+    "vaex": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "2d94d5e6144596a16d2cf11da6e1da96a3c65085ea6051650d2e5c1ecc7d2c3b"
+    },
+    "vendor-implementation": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "338df2c58fde016b64408c65c58b1fa09ae8083b2c796f2dc2ded2a992e91875"
+    },
+    "video-downloader": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "87b58807b0481e923868e97f829a13a2ef13f692bff3a5283ab3679c10a6a6c3"
+    },
+    "web-frameworks": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "82f011a93c17a67b477ec842b24846c4c844bd4ce361c71473ea120dd7ecf3f1"
+    },
+    "web-research": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "505f81019a8e982973f762f3fc4a7f05cd6a13f6bfea0a75175fec0246bf18dc"
+    },
+    "web3-testing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "63e65da0faaf90034b975a4863017447fbf267fb85d96e77dfe83ecd36aae05b"
+    },
+    "webapp-testing": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "542d505875bc125cc58492b2ef96b92e3286c28ed0054ea21a09aeff8bc8ec7a"
+    },
+    "woocommerce-code-review": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "cc710faf5227a30d52a250c726de1aa5ecd22aba351a4286dfdbd4d4ab872325"
+    },
+    "woocommerce-dev-cycle": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "076c5e6ed977ebdcf2598fb7e24012285cd46df3883ce8b849607269ba072070"
+    },
+    "workflow-interactive-dev": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "860e4ccfcba12ce5d7184cf4593a9e76d0e394bcd93157129f7af56ba00b359d"
+    },
+    "workflow-management": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "5bfdcca5713022cef7b23006137ac86d0c04d65e78882bea3db5b3cb7a72d562"
+    },
+    "workflow-orchestration-patterns": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "afe563a4032e2bc4c86d7ac73873da3791357f694ab91e224ab30700cb9d459d"
+    },
+    "writing-plans": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "ba22e4a38ae25a47b4d5f313770d0b5b75fe31df4898a3135a0a65ffc24c7edc"
+    },
+    "writing-skills": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "d0a0350358b73409ab475130355a7efc2aa12bb7f9776b54c950bcdd38c07652"
+    },
+    "xlsx": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "37880ab7903799b3603381c83b150a653d5bd53d23c16a07cd3044d97b0e73e4"
+    },
+    "zapier-workflows": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "0d131851ee493d6bae1aecc59ca987d56d35b654778bcd4a964cea8c47dd2948"
+    },
+    "zarr-python": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "c4931c3cd1fce10264c08e4f83d0ce694e4a4c58679e7f214c58df3e21ff65ea"
+    },
+    "zinc-database": {
+      "source": "Microck/ordinary-claude-skills",
+      "sourceType": "github",
+      "computedHash": "64a5a194117748d16b0005d04b2d09b653625253fb88f496334efc1c546c4c86"
+    }
+  }
+}

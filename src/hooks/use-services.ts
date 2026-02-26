@@ -142,3 +142,49 @@ export function useCompleteAction() {
     },
   });
 }
+
+export function useActionCompletions(serviceId: number) {
+  return useQuery({
+    queryKey: ["actionCompletions", serviceId],
+    queryFn: async () => {
+      const res = await fetch(`/api/services/${serviceId}/actions`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch action completions");
+      return res.json();
+    },
+    enabled: !!serviceId,
+  });
+}
+
+export function useDisputeAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      serviceId,
+      actionId,
+      tweetUrl,
+      targetHandle,
+    }: {
+      serviceId: number;
+      actionId: number;
+      tweetUrl?: string;
+      targetHandle?: string;
+    }) => {
+      const res = await fetch(`/api/services/${serviceId}/actions/${actionId}/dispute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tweetUrl, targetHandle }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to dispute action");
+      }
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["actionCompletions", variables.serviceId] });
+      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.services.myServices.path] });
+    },
+  });
+}

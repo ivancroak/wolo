@@ -21,6 +21,7 @@ import {
   type OrderRating,
   type InsertRating,
   type ActionCompletion,
+  type ActionCompletionStatus,
 } from "@shared/schema";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -68,6 +69,8 @@ export interface IStorage {
   recordActionCompletion(serviceId: number, userId: string): Promise<ActionCompletion>;
   getActionCompletions(serviceId: number): Promise<ActionCompletion[]>;
   hasCompletedAction(serviceId: number, userId: string): Promise<boolean>;
+  getActionCompletion(id: number): Promise<ActionCompletion | undefined>;
+  updateActionCompletionStatus(id: number, status: ActionCompletionStatus): Promise<ActionCompletion>;
 }
 
 function toUser(row: any): User {
@@ -873,6 +876,58 @@ class SupabaseStorage implements IStorage {
       .eq("user_id", userId)
       .single();
     return !!data;
+  }
+
+  async getActionCompletion(id: number): Promise<ActionCompletion | undefined> {
+    const { data } = await supabaseAdmin
+      .from("action_completions")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (!data) return undefined;
+    return {
+      id: data.id,
+      serviceId: data.service_id,
+      userId: data.user_id,
+      status: data.status,
+      createdAt: data.created_at ? new Date(data.created_at) : null,
+    };
+  }
+
+  async updateActionCompletionStatus(id: number, status: ActionCompletionStatus): Promise<ActionCompletion> {
+    const { data, error } = await supabaseAdmin
+      .from("action_completions")
+      .update({ status })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+
+    if (status === "rejected") {
+      // Decrement actions_completed on the parent service
+      const { data: svc } = await supabaseAdmin
+        .from("services")
+        .select("actions_completed, max_actions, active")
+        .eq("id", data.service_id)
+        .single();
+
+      if (svc) {
+        const newCount = Math.max(0, (svc.actions_completed ?? 0) - 1);
+        const shouldReactivate = !svc.active && svc.max_actions != null && newCount < svc.max_actions;
+        await supabaseAdmin
+          .from("services")
+          .update({ actions_completed: newCount, ...(shouldReactivate ? { active: true } : {}) })
+          .eq("id", data.service_id);
+      }
+    }
+
+    return {
+      id: data.id,
+      serviceId: data.service_id,
+      userId: data.user_id,
+      status: data.status,
+      createdAt: data.created_at ? new Date(data.created_at) : null,
+    };
   }
 }
 
