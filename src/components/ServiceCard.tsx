@@ -9,7 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Heart, Repeat, UserPlus, Users, Sparkles, ArrowUpRight, Eye, EyeOff, DollarSign, Briefcase, CalendarClock, ShieldCheck, Clock } from "lucide-react";
+import { Users, ArrowUpRight, Eye, EyeOff, Briefcase, CalendarClock, ShieldCheck, Clock, Radio, Image, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,18 +32,17 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
 
   const getIcon = (category: string) => {
     switch (category) {
-      case "repost": return <Repeat className="h-3.5 w-3.5" />;
-      case "like": return <Heart className="h-3.5 w-3.5" />;
-      case "follow": return <UserPlus className="h-3.5 w-3.5" />;
+      case "content": return <Image className="h-3.5 w-3.5" />;
+      case "space": return <Radio className="h-3.5 w-3.5" />;
       case "ambassador": return <Users className="h-3.5 w-3.5" />;
-      default: return <Sparkles className="h-3.5 w-3.5" />;
+      case "campaign": return <TrendingUp className="h-3.5 w-3.5" />;
+      default: return <Image className="h-3.5 w-3.5" />;
     }
   };
 
   const getPricingLabel = (pricingCategory: string, payrollBasis: string | null) => {
     switch (pricingCategory) {
-      case "pay_per_action": return "Per Action";
-      case "full_service": return "Full Service";
+      case "fixed": return "Fixed Contract";
       case "payroll": return payrollBasis ? `Payroll / ${payrollBasis.charAt(0).toUpperCase() + payrollBasis.slice(1)}` : "Payroll";
       default: return pricingCategory;
     }
@@ -51,10 +50,9 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
 
   const getPricingIcon = (pricingCategory: string) => {
     switch (pricingCategory) {
-      case "pay_per_action": return <DollarSign className="h-3 w-3" />;
-      case "full_service": return <Briefcase className="h-3 w-3" />;
+      case "fixed": return <Briefcase className="h-3 w-3" />;
       case "payroll": return <CalendarClock className="h-3 w-3" />;
-      default: return <DollarSign className="h-3 w-3" />;
+      default: return <Briefcase className="h-3 w-3" />;
     }
   };
 
@@ -132,24 +130,23 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
                 {getPricingLabel(service.pricingCategory, service.payrollBasis)}
               </Badge>
             )}
-            {service.pricingCategory === "pay_per_action" && service.maxActions && (
+            {service.requiredKeyword && (
               <div className="flex items-center gap-1 mt-1">
                 <ShieldCheck className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[10px] text-muted-foreground">
-                  {service.actionsCompleted}/{service.maxActions} actions
-                  {service.budgetCap && ` \u00b7 ${service.budgetCap} SOL cap`}
+                  Keyword: {service.requiredKeyword}
                 </span>
               </div>
             )}
-            {service.pricingCategory === "pay_per_action" && !service.maxActions && service.budgetCap && (
+            {service.maxActions && (
               <div className="flex items-center gap-1 mt-1">
                 <ShieldCheck className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[10px] text-muted-foreground">
-                  {service.budgetCap} SOL cap
+                  {service.actionsCompleted}/{service.maxActions} contracts
                 </span>
               </div>
             )}
-            {service.listingType === "request" && service.deadlineDays && (
+            {service.deadlineDays && (
               <div className="flex items-center gap-1 mt-1">
                 <Clock className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[10px] text-muted-foreground">
@@ -164,7 +161,9 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
             className="rounded-full"
             data-testid={`button-purchase-${service.id}`}
           >
-            {service.pricingCategory === "pay_per_action" ? "Complete Action" : service.listingType === "request" ? "Fulfill" : "Purchase"}
+            {isOwnService
+              ? "View"
+              : service.listingType === "request" ? "Fulfill" : "Take Contract"}
             <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         </CardFooter>

@@ -31,36 +31,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState, useCallback, useRef } from "react";
+import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 
-// --- Offer (List Service) schema ---
 const offerSchema = insertServiceSchema.omit({ creatorId: true }).extend({
   price: z.coerce.number().min(0.001, "Price must be positive"),
-  pricingCategory: z.enum(["pay_per_action", "full_service", "payroll"]),
-  payrollBasis: z.enum(["daily", "weekly", "monthly", "annually", "custom"]).nullable().optional(),
+  pricingCategory: z.enum(["fixed", "payroll"]),
+  payrollBasis: z.enum(["weekly", "monthly"]).nullable().optional(),
   maxActions: z.coerce.number().int().min(1, "Must be at least 1").nullable().optional(),
-  budgetCap: z.coerce.number().min(0.01, "Must be at least 0.01").nullable().optional(),
+  requiredKeyword: z.string().nullable().optional(),
+  minPostCount: z.coerce.number().int().min(1).nullable().optional(),
+  postsPerPeriod: z.coerce.number().int().min(1).nullable().optional(),
 }).refine(
   (data) => data.pricingCategory !== "payroll" || data.payrollBasis != null,
   { message: "Please select a payroll basis", path: ["payrollBasis"] }
-).refine(
-  (data) => {
-    if (data.pricingCategory === "pay_per_action") {
-      return (data.maxActions != null && data.maxActions > 0) || (data.budgetCap != null && data.budgetCap > 0);
-    }
-    return true;
-  },
-  { message: "Set at least one: actions cap or budget cap", path: ["maxActions"] }
 );
 
-// --- Request schema ---
 const requestSchema = insertServiceSchema.omit({ creatorId: true }).extend({
   price: z.coerce.number().min(0.001, "Budget must be positive"),
+  pricingCategory: z.enum(["fixed", "payroll"]),
+  payrollBasis: z.enum(["weekly", "monthly"]).nullable().optional(),
   deadlineDays: z.coerce.number().int().min(1, "Must be at least 1 day").nullable().optional(),
+  requiredKeyword: z.string().nullable().optional(),
+  minPostCount: z.coerce.number().int().min(1).nullable().optional(),
+  postsPerPeriod: z.coerce.number().int().min(1).nullable().optional(),
 });
 
 interface CreateServiceModalProps {
@@ -69,67 +64,36 @@ interface CreateServiceModalProps {
 
 export function CreateServiceModal({ listingType = "offer" }: CreateServiceModalProps) {
   const isRequest = listingType === "request";
-
   return isRequest ? <RequestServiceModal /> : <OfferServiceModal />;
 }
-
-// ===== OFFER (List Service) Modal =====
 
 function OfferServiceModal() {
   const [open, setOpen] = useState(false);
   const { mutate: createService, isPending } = useCreateService();
   const { toast } = useToast();
-  const lastEditedRef = useRef<"price" | "maxActions" | "budgetCap" | null>(null);
 
   const form = useForm<z.infer<typeof offerSchema>>({
     resolver: zodResolver(offerSchema),
     defaultValues: {
       title: "",
       description: "",
-      category: "custom",
+      category: "content",
       listingType: "offer",
-      pricingCategory: "pay_per_action",
+      pricingCategory: "fixed",
       payrollBasis: null,
       maxActions: null,
-      budgetCap: null,
+      requiredKeyword: null,
+      minPostCount: null,
+      postsPerPeriod: null,
+      deadlineDays: null,
       price: 0,
       imageUrl: "",
       active: true,
     },
   });
 
-  const autoCalibrate = useCallback((changed: "price" | "maxActions" | "budgetCap") => {
-    lastEditedRef.current = changed;
-    if (form.getValues("pricingCategory") !== "pay_per_action") return;
-
-    const p = form.getValues("price");
-    const a = form.getValues("maxActions");
-    const b = form.getValues("budgetCap");
-
-    const hasPrice = typeof p === "number" && p > 0;
-    const hasActions = typeof a === "number" && a > 0;
-    const hasBudget = typeof b === "number" && b > 0;
-
-    if ([hasPrice, hasActions, hasBudget].filter(Boolean).length < 2) return;
-
-    if (changed === "price" || changed === "maxActions") {
-      if (hasPrice && hasActions) {
-        form.setValue("budgetCap", Math.round(p * a * 100) / 100, { shouldValidate: true });
-      }
-    } else if (changed === "budgetCap") {
-      if (hasPrice && hasBudget) {
-        form.setValue("maxActions", Math.ceil(b / p), { shouldValidate: true });
-      }
-    }
-  }, [form]);
-
   function onSubmit(values: z.infer<typeof offerSchema>) {
-    const payload = {
-      ...values,
-      maxActions: values.pricingCategory === "pay_per_action" ? (values.maxActions || null) : null,
-      budgetCap: values.pricingCategory === "pay_per_action" && values.budgetCap ? String(values.budgetCap) : null,
-    };
-    createService(payload as any, {
+    createService(values as any, {
       onSuccess: () => {
         setOpen(false);
         form.reset();
@@ -143,11 +107,7 @@ function OfferServiceModal() {
 
   const pricingCategory = form.watch("pricingCategory");
 
-  const priceLabel = pricingCategory === "pay_per_action"
-    ? "Price per Action (SOL)"
-    : pricingCategory === "payroll"
-      ? "Rate (SOL)"
-      : "Price (SOL)";
+  const priceLabel = pricingCategory === "payroll" ? "Rate per Period (SOL)" : "Contract Price (SOL)";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -172,7 +132,7 @@ function OfferServiceModal() {
                 <FormItem>
                   <FormLabel>Service Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Retweet to 10k followers" {...field} data-testid="input-service-title" />
+                    <Input placeholder="e.g. DeFi Content Campaign" {...field} data-testid="input-service-title" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -192,11 +152,10 @@ function OfferServiceModal() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="repost">Repost</SelectItem>
-                      <SelectItem value="like">Like</SelectItem>
-                      <SelectItem value="follow">Follow</SelectItem>
+                      <SelectItem value="content">Content</SelectItem>
+                      <SelectItem value="space">Space</SelectItem>
                       <SelectItem value="ambassador">Ambassador</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectItem value="campaign">Campaign</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -210,34 +169,29 @@ function OfferServiceModal() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Pricing Model</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        if (value !== "payroll") form.setValue("payrollBasis", null);
-                        if (value !== "pay_per_action") {
-                          form.setValue("maxActions", null);
-                          form.setValue("budgetCap", null);
-                        }
-                      }}
-                      value={field.value}
-                      className="flex gap-4"
-                      data-testid="radio-pricing-category"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="pay_per_action" id="pay_per_action" />
-                        <Label htmlFor="pay_per_action" className="text-sm cursor-pointer">Pay Per Action</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="full_service" id="full_service" />
-                        <Label htmlFor="full_service" className="text-sm cursor-pointer">Full Service</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="payroll" id="payroll" />
-                        <Label htmlFor="payroll" className="text-sm cursor-pointer">Payroll</Label>
-                      </div>
-                    </RadioGroup>
-                  </FormControl>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value !== "payroll") {
+                        form.setValue("payrollBasis", null);
+                        form.setValue("postsPerPeriod", null);
+                      }
+                      if (value !== "fixed") {
+                        form.setValue("minPostCount", null);
+                      }
+                    }}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-pricing-category">
+                        <SelectValue placeholder="Select pricing model" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed Contract</SelectItem>
+                      <SelectItem value="payroll">Payroll</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -250,17 +204,7 @@ function OfferServiceModal() {
                 <FormItem>
                   <FormLabel>{priceLabel}</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      {...field}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        setTimeout(() => autoCalibrate("price"), 0);
-                      }}
-                      data-testid="input-price"
-                    />
+                    <Input type="number" min="0" step="0.01" {...field} data-testid="input-price" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -281,11 +225,8 @@ function OfferServiceModal() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
                         <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="annually">Annually</SelectItem>
-                        <SelectItem value="custom">Custom</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -294,27 +235,44 @@ function OfferServiceModal() {
               />
             )}
 
-            {pricingCategory === "pay_per_action" && (
+            <FormField
+              control={form.control}
+              name="requiredKeyword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Required Keyword</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. #SolanaDefi or @woloprotocol"
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                      data-testid="input-required-keyword"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {pricingCategory === "fixed" && (
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="maxActions"
+                  name="minPostCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Actions Cap</FormLabel>
+                      <FormLabel>Min Post Count</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min="1"
                           step="1"
-                          placeholder="e.g. 100"
+                          placeholder="e.g. 5"
                           {...field}
                           value={field.value ?? ""}
-                          onChange={(e) => {
-                            field.onChange(e.target.value ? Number(e.target.value) : null);
-                            setTimeout(() => autoCalibrate("maxActions"), 0);
-                          }}
-                          data-testid="input-max-actions"
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          data-testid="input-min-post-count"
                         />
                       </FormControl>
                       <FormMessage />
@@ -323,34 +281,100 @@ function OfferServiceModal() {
                 />
                 <FormField
                   control={form.control}
-                  name="budgetCap"
+                  name="deadlineDays"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Budget Cap (SOL)</FormLabel>
+                      <FormLabel>Deadline (days)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          min="0.01"
-                          step="0.01"
-                          placeholder="e.g. 10"
+                          min="1"
+                          step="1"
+                          placeholder="e.g. 7"
                           {...field}
                           value={field.value ?? ""}
-                          onChange={(e) => {
-                            field.onChange(e.target.value ? Number(e.target.value) : null);
-                            setTimeout(() => autoCalibrate("budgetCap"), 0);
-                          }}
-                          data-testid="input-budget-cap"
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          data-testid="input-deadline-days"
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <p className="col-span-2 text-xs text-muted-foreground -mt-2">
-                  price &times; actions = budget &mdash; set any two, the third auto-calculates.
-                </p>
               </div>
             )}
+
+            {pricingCategory === "payroll" && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="postsPerPeriod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Posts per Period</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="e.g. 3"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          data-testid="input-posts-per-period"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="deadlineDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration (days)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="Optional"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          data-testid="input-deadline-days"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            <FormField
+              control={form.control}
+              name="maxActions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Max Contracts (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="Unlimited if empty"
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                      data-testid="input-max-actions"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -399,8 +423,6 @@ function OfferServiceModal() {
   );
 }
 
-// ===== REQUEST (Request Service) Modal =====
-
 function RequestServiceModal() {
   const [open, setOpen] = useState(false);
   const { mutate: createService, isPending } = useCreateService();
@@ -411,15 +433,21 @@ function RequestServiceModal() {
     defaultValues: {
       title: "",
       description: "",
-      category: "custom",
+      category: "content",
       listingType: "request",
-      pricingCategory: "full_service",
+      pricingCategory: "fixed",
+      payrollBasis: null,
       price: 0,
       deadlineDays: null,
+      requiredKeyword: null,
+      minPostCount: null,
+      postsPerPeriod: null,
       imageUrl: "",
       active: true,
     },
   });
+
+  const pricingCategory = form.watch("pricingCategory");
 
   function onSubmit(values: z.infer<typeof requestSchema>) {
     createService(values as any, {
@@ -457,7 +485,7 @@ function RequestServiceModal() {
                 <FormItem>
                   <FormLabel>What do you need?</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Need 50 retweets from crypto influencers" {...field} data-testid="input-service-title" />
+                    <Input placeholder="e.g. Need 20 posts promoting our token" {...field} data-testid="input-service-title" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -477,11 +505,41 @@ function RequestServiceModal() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="repost">Repost</SelectItem>
-                      <SelectItem value="like">Like</SelectItem>
-                      <SelectItem value="follow">Follow</SelectItem>
+                      <SelectItem value="content">Content</SelectItem>
+                      <SelectItem value="space">Space</SelectItem>
                       <SelectItem value="ambassador">Ambassador</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectItem value="campaign">Campaign</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="pricingCategory"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pricing Model</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value !== "payroll") {
+                        form.setValue("payrollBasis", null);
+                        form.setValue("postsPerPeriod", null);
+                      }
+                    }}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-pricing-category">
+                        <SelectValue placeholder="Select pricing model" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed Contract</SelectItem>
+                      <SelectItem value="payroll">Payroll</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -495,7 +553,7 @@ function RequestServiceModal() {
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Total Budget (SOL)</FormLabel>
+                    <FormLabel>{pricingCategory === "payroll" ? "Rate per Period (SOL)" : "Total Budget (SOL)"}</FormLabel>
                     <FormControl>
                       <Input type="number" min="0" step="0.01" {...field} data-testid="input-price" />
                     </FormControl>
@@ -527,6 +585,99 @@ function RequestServiceModal() {
                 )}
               />
             </div>
+
+            {pricingCategory === "payroll" && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="payrollBasis"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payroll Basis</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-payroll-basis">
+                            <SelectValue placeholder="Select basis" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="postsPerPeriod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Posts per Period</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="e.g. 3"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          data-testid="input-posts-per-period"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            <FormField
+              control={form.control}
+              name="requiredKeyword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Required Keyword</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. #SolanaDefi or @woloprotocol"
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                      data-testid="input-required-keyword"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {pricingCategory === "fixed" && (
+              <FormField
+                control={form.control}
+                name="minPostCount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Min Post Count</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="e.g. 20"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        data-testid="input-min-post-count"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

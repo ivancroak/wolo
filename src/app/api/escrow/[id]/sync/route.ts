@@ -4,6 +4,7 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { WolandEscrowClient } from "@/lib/solana/escrow-client";
 import type { EscrowPhase } from "@shared/schema";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 const PHASE_MAP: Record<number, EscrowPhase> = {
   0: "awaiting_deposit",
@@ -16,6 +17,17 @@ const PHASE_MAP: Record<number, EscrowPhase> = {
   7: "disputed",
 };
 
+const SYNC_ALLOWED_TRANSITIONS: Record<string, EscrowPhase[]> = {
+  awaiting_deposit: ["funded"],
+  funded: ["in_progress", "disputed"],
+  in_progress: ["under_review", "milestone_check", "disputed"],
+  under_review: ["released", "disputed"],
+  milestone_check: ["in_progress", "released", "disputed"],
+  disputed: ["released", "refunded"],
+  released: [],
+  refunded: [],
+};
+
 function getConnection(): Connection {
   const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
   if (!rpcUrl) throw new Error("NEXT_PUBLIC_SOLANA_RPC_URL not set");
@@ -23,9 +35,13 @@ function getConnection(): Connection {
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, "escrow-sync", 10, 60000);
+  if (rl) return rl;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -51,8 +67,13 @@ export async function POST(
       return NextResponse.json({ message: "On-chain escrow account not found" }, { status: 404 });
     }
 
-    // Escrow layout: discriminator(8) + id(8) + depositor(32) + receiver(32) + mint(32) + amount(8) + released(8) + phase(1)
-    const PHASE_OFFSET = 128;
+    const ESCROW_PROGRAM_ID = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM";
+    if (accountInfo.owner.toBase58() !== ESCROW_PROGRAM_ID) {
+      return NextResponse.json({ message: "Account not owned by escrow program" }, { status: 400 });
+    }
+
+    // SOL-only layout: disc(8) + id(8) + depositor(32) + receiver(32) + amount(8) + released(8) + phase(1)
+    const PHASE_OFFSET = 96;
     const phaseByte = accountInfo.data[PHASE_OFFSET];
     const onChainPhase = PHASE_MAP[phaseByte];
     if (!onChainPhase) {
@@ -63,11 +84,18 @@ export async function POST(
       return NextResponse.json(escrow);
     }
 
+    const allowed = SYNC_ALLOWED_TRANSITIONS[escrow.phase] ?? [];
+    if (!allowed.includes(onChainPhase)) {
+      return NextResponse.json({
+        message: `Cannot sync from '${escrow.phase}' to '${onChainPhase}'`,
+      }, { status: 400 });
+    }
+
     const updated = await storage.updateEscrowPhase(escrow.id, onChainPhase);
     return NextResponse.json(updated);
   } catch (err: any) {
     return NextResponse.json(
-      { message: err?.message ?? "Failed to sync escrow" },
+      { message: "Failed to sync escrow" },
       { status: 500 },
     );
   }

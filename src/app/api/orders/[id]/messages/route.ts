@@ -60,15 +60,18 @@ export async function POST(
   try {
     const body = await request.json();
     const input = api.messages.send.input.parse(body);
-    const msg = await storage.sendSecureMessage({
-      ...input,
-      orderId: Number(id),
-      senderId: user.id,
-    });
 
+    // Calculate recipientId server-side instead of trusting client input
     const recipientId = user.id === check.order.buyerId
       ? check.service.creatorId
       : check.order.buyerId;
+
+    const msg = await storage.sendSecureMessage({
+      ...input,
+      recipientId,
+      orderId: Number(id),
+      senderId: user.id,
+    });
     await notify(
       recipientId,
       "message_received",
@@ -82,6 +85,7 @@ export async function POST(
     if (err instanceof z.ZodError) {
       return NextResponse.json({ message: err.errors[0].message }, { status: 400 });
     }
-    throw err;
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

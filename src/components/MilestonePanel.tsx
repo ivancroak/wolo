@@ -12,14 +12,21 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Plus, CheckCircle, XCircle, Target, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { ServiceCategory } from "@shared/schema";
+import type { ServiceCategory, Escrow, Milestone } from "@shared/schema";
 
 const SOL_DECIMALS = 9;
 
+function solToLamports(sol: string): number {
+  const parts = sol.split(".");
+  const whole = parts[0] || "0";
+  const frac = (parts[1] || "").padEnd(9, "0").slice(0, 9);
+  return Number(BigInt(whole) * BigInt(1_000_000_000) + BigInt(frac));
+}
+
 interface MilestonePanelProps {
   escrowId: number;
-  escrow: any;
-  milestones: any[];
+  escrow: Escrow;
+  milestones: Milestone[];
   isDepositor: boolean;
   serviceCategory?: ServiceCategory;
 }
@@ -45,10 +52,10 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
   const [verifyResults, setVerifyResults] = useState<Record<number, VerificationResult>>({});
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
 
-  const totalMilestoneAmount = milestones.reduce((sum: number, m: any) => sum + parseFloat(m.amount || "0"), 0);
+  const totalMilestoneAmount = milestones.reduce((sum: number, m: Milestone) => sum + parseFloat(m.amount || "0"), 0);
   const completedAmount = milestones
-    .filter((m: any) => m.status === "approved")
-    .reduce((sum: number, m: any) => sum + parseFloat(m.amount || "0"), 0);
+    .filter((m: Milestone) => m.status === "approved")
+    .reduce((sum: number, m: Milestone) => sum + parseFloat(m.amount || "0"), 0);
 
   const handleAdd = async () => {
     if (!title || !amount) return;
@@ -57,7 +64,7 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
       return;
     }
     try {
-      const amountLamports = Math.round(parseFloat(amount) * Math.pow(10, SOL_DECIMALS));
+      const amountLamports = solToLamports(amount);
       await solanaEscrow.addMilestone(escrow.depositorId, escrowId, title, amountLamports, 0);
       addMilestone({ escrowId, title, amount, description: "" }, {
         onSuccess: () => {
@@ -72,7 +79,7 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
     }
   };
 
-  const handleSubmit = async (milestone: any, idx: number) => {
+  const handleSubmit = async (milestone: Milestone, idx: number) => {
     if (!solanaEscrow.isReady) {
       toast({ title: "Wallet not connected", variant: "destructive" });
       return;
@@ -87,7 +94,7 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
     }
   };
 
-  const handleReject = async (milestone: any, idx: number) => {
+  const handleReject = async (milestone: Milestone, idx: number) => {
     if (!solanaEscrow.isReady) {
       toast({ title: "Wallet not connected", variant: "destructive" });
       return;
@@ -102,7 +109,7 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
     }
   };
 
-  const handleApprove = async (milestone: any, idx: number) => {
+  const handleApprove = async (milestone: Milestone, idx: number) => {
     if (!solanaEscrow.isReady) {
       toast({ title: "Wallet not connected", variant: "destructive" });
       return;
@@ -137,8 +144,8 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
     }
   };
 
-  const needsTweetUrl = serviceCategory === "repost" || serviceCategory === "like";
-  const needsTargetHandle = serviceCategory === "follow";
+  const needsTweetUrl = serviceCategory === "content";
+  const needsTargetHandle = serviceCategory === "ambassador" || serviceCategory === "space";
 
   const statusColors: Record<string, string> = {
     pending: "bg-yellow-500/10 text-yellow-600",
@@ -184,7 +191,7 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
           <p className="text-xs text-muted-foreground text-center py-2">No milestones defined</p>
         ) : (
           <div className="space-y-2">
-            {milestones.map((m: any, idx: number) => {
+            {milestones.map((m: Milestone, idx: number) => {
               const result = verifyResults[m.id];
               const badge = result ? verificationBadge[result.status] : null;
               const inputs = verifyInputs[m.id] ?? { tweetUrl: "", targetHandle: "" };

@@ -1,10 +1,10 @@
 import { z } from "zod";
 export * from "./models/auth";
 
-export type ServiceCategory = "repost" | "like" | "follow" | "ambassador" | "custom";
+export type ServiceCategory = "content" | "space" | "ambassador" | "campaign";
 export type ListingType = "offer" | "request";
-export type PricingCategory = "pay_per_action" | "full_service" | "payroll";
-export type PayrollBasis = "daily" | "weekly" | "monthly" | "annually" | "custom";
+export type PricingCategory = "fixed" | "payroll";
+export type PayrollBasis = "weekly" | "monthly";
 export type OrderStatus = "pending" | "completed" | "disputed" | "cancelled";
 
 export type EscrowPhase =
@@ -40,8 +40,10 @@ export interface Service {
   pricingCategory: PricingCategory;
   payrollBasis: PayrollBasis | null;
   maxActions: number | null;
-  budgetCap: string | null;
   deadlineDays: number | null;
+  requiredKeyword: string | null;
+  minPostCount: number | null;
+  postsPerPeriod: number | null;
   imageUrl: string | null;
   active: boolean;
   actionsCompleted: number;
@@ -78,14 +80,16 @@ export const insertServiceSchema = z.object({
   creatorId: z.string(),
   title: z.string(),
   description: z.string(),
-  price: z.string(),
-  category: z.enum(["repost", "like", "follow", "ambassador", "custom"]),
+  price: z.string().refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: "Price must be a positive number" }),
+  category: z.enum(["content", "space", "ambassador", "campaign"]),
   listingType: z.enum(["offer", "request"]).default("offer"),
-  pricingCategory: z.enum(["pay_per_action", "full_service", "payroll"]),
-  payrollBasis: z.enum(["daily", "weekly", "monthly", "annually", "custom"]).nullable().optional(),
+  pricingCategory: z.enum(["fixed", "payroll"]),
+  payrollBasis: z.enum(["weekly", "monthly"]).nullable().optional(),
   maxActions: z.number().int().min(1).nullable().optional(),
-  budgetCap: z.string().nullable().optional(),
   deadlineDays: z.number().int().min(1).nullable().optional(),
+  requiredKeyword: z.string().nullable().optional(),
+  minPostCount: z.number().int().min(1).nullable().optional(),
+  postsPerPeriod: z.number().int().min(1).nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   active: z.boolean().optional(),
 });
@@ -174,7 +178,7 @@ export const insertEscrowSchema = z.object({
   orderId: z.number(),
   depositorId: z.string(),
   receiverId: z.string(),
-  amount: z.string(),
+  amount: z.string().refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: "Amount must be a positive number" }),
   expiresInDays: z.number().min(1).max(90).optional(),
 });
 
@@ -182,7 +186,7 @@ export const insertMilestoneSchema = z.object({
   escrowId: z.number(),
   title: z.string().min(1),
   description: z.string().optional().default(""),
-  amount: z.string(),
+  amount: z.string().refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: "Amount must be a positive number" }),
   targetMetric: z.number().nullable().optional(),
   deadlineDays: z.number().nullable().optional(),
 });
@@ -226,19 +230,6 @@ export interface Notification {
   body: string;
   linkUrl: string | null;
   read: boolean;
-  createdAt: Date | null;
-}
-
-export type ActionCompletionStatus = "completed" | "verified" | "rejected";
-
-export interface ActionCompletion {
-  id: number;
-  serviceId: number;
-  userId: string;
-  status: ActionCompletionStatus;
-  payoutAmount: string | null;
-  payoutTxHash: string | null;
-  paidAt: Date | null;
   createdAt: Date | null;
 }
 

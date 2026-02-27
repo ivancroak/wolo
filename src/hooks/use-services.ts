@@ -8,25 +8,16 @@ import type { InsertService } from "@shared/schema";
 
 type CreateServiceInput = z.infer<typeof api.services.create.input>;
 
-export function useServices(filters?: { category?: string; search?: string; listingType?: string; creatorId?: string }) {
-  const validCategory = filters?.category &&
-    ["repost", "like", "follow", "ambassador", "custom"].includes(filters.category)
-    ? (filters.category as "repost" | "like" | "follow" | "ambassador" | "custom")
-    : undefined;
-
-  const validListingType = filters?.listingType &&
-    ["offer", "request"].includes(filters.listingType)
-    ? filters.listingType
-    : undefined;
-
-  const queryKey = [api.services.list.path, filters?.category, filters?.search, filters?.listingType, filters?.creatorId];
+export function useServices(filters?: { category?: string; pricingCategory?: string; search?: string; listingType?: string; creatorId?: string }) {
+  const queryKey = [api.services.list.path, filters?.category, filters?.pricingCategory, filters?.search, filters?.listingType, filters?.creatorId];
 
   return useQuery({
     queryKey,
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (validCategory) params.set("category", validCategory);
-      if (validListingType) params.set("listingType", validListingType);
+      if (filters?.category) params.set("category", filters.category);
+      if (filters?.pricingCategory) params.set("pricingCategory", filters.pricingCategory);
+      if (filters?.listingType) params.set("listingType", filters.listingType);
       if (filters?.search) params.set("search", filters.search);
       if (filters?.creatorId) params.set("creatorId", filters.creatorId);
 
@@ -122,69 +113,3 @@ export function useDeleteService() {
   });
 }
 
-export function useCompleteAction() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (serviceId: number) => {
-      const res = await fetch(`/api/services/${serviceId}/actions`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to complete action");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
-      queryClient.invalidateQueries({ queryKey: [api.services.get.path] });
-    },
-  });
-}
-
-export function useActionCompletions(serviceId: number) {
-  return useQuery({
-    queryKey: ["actionCompletions", serviceId],
-    queryFn: async () => {
-      const res = await fetch(`/api/services/${serviceId}/actions`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch action completions");
-      return res.json();
-    },
-    enabled: !!serviceId,
-  });
-}
-
-export function useDisputeAction() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      serviceId,
-      actionId,
-      tweetUrl,
-      targetHandle,
-    }: {
-      serviceId: number;
-      actionId: number;
-      tweetUrl?: string;
-      targetHandle?: string;
-    }) => {
-      const res = await fetch(`/api/services/${serviceId}/actions/${actionId}/dispute`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tweetUrl, targetHandle }),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to dispute action");
-      }
-      return res.json();
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["actionCompletions", variables.serviceId] });
-      queryClient.invalidateQueries({ queryKey: [api.services.list.path] });
-      queryClient.invalidateQueries({ queryKey: [api.services.myServices.path] });
-    },
-  });
-}

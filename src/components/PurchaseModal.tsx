@@ -7,6 +7,7 @@ import { useCreateOrder } from "@/hooks/use-orders";
 import { useCreateEscrow, useUpdateEscrowPhase } from "@/hooks/use-escrow";
 import { useSolanaEscrow } from "@/hooks/use-solana-escrow";
 import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,13 @@ import { useState } from "react";
 
 const SOL_DECIMALS = 9;
 
+function solToLamports(sol: string): number {
+  const parts = sol.split(".");
+  const whole = parts[0] || "0";
+  const frac = (parts[1] || "").padEnd(9, "0").slice(0, 9);
+  return Number(BigInt(whole) * BigInt(1_000_000_000) + BigInt(frac));
+}
+
 import { type Service } from "@shared/schema";
 
 const formSchema = z.object({
@@ -49,6 +57,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
   const { mutateAsync: updateEscrowPhase } = useUpdateEscrowPhase();
   const { isReady: escrowReady, initializeAndFund } = useSolanaEscrow();
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,6 +85,16 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
       });
       return;
     }
+    if (!profile?.walletAddress || !profile?.twitterHandle || !profile?.twitterVerified) {
+      toast({
+        title: "Profile incomplete",
+        description: "Set your wallet address and verify your X handle in Profile before purchasing.",
+        variant: "destructive",
+      });
+      router.push("/profile");
+      onOpenChange(false);
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -90,31 +109,38 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
         orderId: orderRes.id,
         receiverId,
         amount: service.price,
-        expiresInDays: 30,
+        expiresInDays: service.deadlineDays ?? 7,
       });
 
       if (escrowReady) {
         try {
-          const amountLamports = Math.round(parseFloat(service.price) * Math.pow(10, SOL_DECIMALS));
-          const txSig = await initializeAndFund(receiverId, escrowRes.id, amountLamports, 30);
+          const amountLamports = solToLamports(service.price);
+          const txSig = await initializeAndFund(receiverId, escrowRes.id, amountLamports, 1);
           await updateEscrowPhase({ id: escrowRes.id, phase: "funded", txHash: txSig });
           toast({
             title: "Escrow Funded On-Chain",
             description: `Transaction: ${txSig.slice(0, 8)}...`,
           });
+          onOpenChange(false);
+          form.reset();
+          toast({ title: "Order Placed", description: "Check your dashboard for escrow status." });
+          router.push("/dashboard");
         } catch (txErr: any) {
+          onOpenChange(false);
+          form.reset();
           toast({
-            title: "On-chain escrow skipped",
-            description: txErr?.message || "Transaction rejected. Escrow record created off-chain.",
+            title: "Order created but escrow not funded",
+            description: txErr?.message || "On-chain transaction failed. Go to your dashboard to retry funding.",
             variant: "destructive",
           });
+          router.push("/dashboard");
         }
+      } else {
+        onOpenChange(false);
+        form.reset();
+        toast({ title: "Order Placed", description: "Check your dashboard for escrow status." });
+        router.push("/dashboard");
       }
-
-      onOpenChange(false);
-      form.reset();
-      toast({ title: "Order Placed", description: "Check your dashboard for escrow status." });
-      router.push("/dashboard");
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "Failed to create order.", variant: "destructive" });
     } finally {
@@ -161,16 +187,17 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
             />
 
             <div className="space-y-2">
-              {service.pricingCategory === "pay_per_action" && (service.maxActions || service.budgetCap) && (
+              {(service.requiredKeyword || service.minPostCount || service.postsPerPeriod || service.deadlineDays) && (
                 <div className="flex items-start gap-3 p-3 rounded-md bg-muted text-sm">
                   <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                   <div>
-                    <p className="font-medium text-foreground">Spending Caps</p>
-                    <p className="text-muted-foreground text-xs mt-0.5">
-                      {service.maxActions && `Max ${service.maxActions} actions`}
-                      {service.maxActions && service.budgetCap && " \u2022 "}
-                      {service.budgetCap && `Budget capped at ${service.budgetCap} SOL`}
-                    </p>
+                    <p className="font-medium text-foreground">Contract Parameters</p>
+                    <div className="text-muted-foreground text-xs mt-0.5 space-y-0.5">
+                      {service.requiredKeyword && <p>Keyword: <span className="font-mono text-foreground">{service.requiredKeyword}</span></p>}
+                      {service.minPostCount && <p>Min posts: {service.minPostCount}</p>}
+                      {service.postsPerPeriod && <p>Posts per period: {service.postsPerPeriod}</p>}
+                      {service.deadlineDays && <p>Deadline: {service.deadlineDays} day{service.deadlineDays !== 1 ? "s" : ""}</p>}
+                    </div>
                   </div>
                 </div>
               )}
@@ -195,9 +222,9 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               <div className="flex items-start gap-3 p-3 rounded-md bg-muted text-sm">
                 <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                 <div>
-                  <p className="font-medium text-foreground">30-Day Guarantee</p>
+                  <p className="font-medium text-foreground">12-Hour Settlement</p>
                   <p className="text-muted-foreground text-xs mt-0.5">
-                    Escrow expires after 30 days with automatic dispute resolution.
+                    Escrow settles within 12 hours with automatic dispute resolution.
                   </p>
                 </div>
               </div>
@@ -207,7 +234,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} data-testid="button-cancel-purchase">Cancel</Button>
               <Button type="submit" disabled={isSubmitting || orderPending} data-testid="button-confirm-purchase">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isRequest ? "Submit & Lock Escrow" : "Purchase & Lock Escrow"}
+                {isRequest ? "Submit & Lock Escrow" : "Take Contract & Lock Escrow"}
               </Button>
             </div>
           </form>

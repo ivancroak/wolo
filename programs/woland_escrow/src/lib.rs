@@ -1,11 +1,13 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9");
+declare_id!("4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM");
 
 const MAX_MILESTONES: usize = 10;
 const MAX_FEE_BPS: u16 = 1000; // 10% cap
-const DISPUTE_WINDOW_SECONDS: i64 = 7 * 86400; // 7 days
+const DISPUTE_WINDOW_SECONDS: i64 = 12 * 3600; // 12 hours
+const MIN_ESCROW_AMOUNT: u64 = 10_000; // 10k lamports minimum
+const MAX_ESCROW_DURATION: i64 = 365 * 24 * 3600; // 1 year max
 
 #[program]
 pub mod woland_escrow {
@@ -36,6 +38,7 @@ pub mod woland_escrow {
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
         if let Some(arbiter) = new_arbiter {
+            require!(arbiter != Pubkey::default(), WolandError::InvalidReceiver);
             config.arbiter = arbiter;
         }
         if let Some(fee_bps) = new_fee_bps {
@@ -43,9 +46,11 @@ pub mod woland_escrow {
             config.fee_bps = fee_bps;
         }
         if let Some(authority) = new_authority {
+            require!(authority != Pubkey::default(), WolandError::InvalidReceiver);
             config.authority = authority;
         }
         if let Some(fee_vault) = new_fee_vault {
+            require!(fee_vault != Pubkey::default(), WolandError::InvalidReceiver);
             config.fee_vault = fee_vault;
         }
         Ok(())
@@ -57,9 +62,13 @@ pub mod woland_escrow {
         amount: u64,
         expires_at: i64,
     ) -> Result<()> {
-        require!(amount > 0, WolandError::ZeroAmount);
+        require!(amount >= MIN_ESCROW_AMOUNT, WolandError::ZeroAmount);
         let clock = Clock::get()?;
         require!(expires_at > clock.unix_timestamp, WolandError::ExpiryInPast);
+        require!(
+            expires_at <= clock.unix_timestamp.checked_add(MAX_ESCROW_DURATION).ok_or(WolandError::Overflow)?,
+            WolandError::ExpiryTooFar
+        );
 
         let escrow = &mut ctx.accounts.escrow;
         escrow.id = escrow_id;
@@ -126,8 +135,8 @@ pub mod woland_escrow {
 
         let total_milestone_amount: u64 = escrow.milestones[..escrow.milestone_count as usize]
             .iter()
-            .map(|m| m.amount)
-            .sum();
+            .try_fold(0u64, |acc, m| acc.checked_add(m.amount))
+            .ok_or(WolandError::Overflow)?;
         let new_total = total_milestone_amount.checked_add(amount)
             .ok_or(WolandError::Overflow)?;
         require!(new_total <= escrow.amount, WolandError::MilestoneExceedsEscrow);
@@ -179,6 +188,10 @@ pub mod woland_escrow {
                 require!(caller == escrow.receiver, WolandError::Unauthorized);
             }
             (EscrowPhase::UnderReview, EscrowPhase::Disputed) => {
+                require!(caller == escrow.depositor, WolandError::Unauthorized);
+                escrow.dispute_opened_at = Clock::get()?.unix_timestamp;
+            }
+            (EscrowPhase::MilestoneCheck, EscrowPhase::Disputed) => {
                 require!(caller == escrow.depositor, WolandError::Unauthorized);
                 escrow.dispute_opened_at = Clock::get()?.unix_timestamp;
             }
@@ -273,23 +286,25 @@ pub mod woland_escrow {
             **ctx.accounts.fee_vault.to_account_info().try_borrow_mut_lamports()? += fee;
         }
 
+        let new_released = prev_released.checked_add(amount)
+            .ok_or(WolandError::Overflow)?;
+        let is_fully_released = new_released >= total_amount;
+
+        if !is_fully_released {
+            check_rent_exempt(&ctx.accounts.escrow.to_account_info())?;
+        }
+
         let escrow_mut = &mut ctx.accounts.escrow;
         escrow_mut.milestones[milestone_idx as usize].status = MilestoneStatus::Approved;
-        escrow_mut.released = prev_released.checked_add(amount)
-            .ok_or(WolandError::Overflow)?;
-
-        if escrow_mut.released >= total_amount {
-            escrow_mut.phase = EscrowPhase::Released;
-        } else {
-            escrow_mut.phase = EscrowPhase::MilestoneCheck;
-        }
+        escrow_mut.released = new_released;
+        escrow_mut.phase = if is_fully_released { EscrowPhase::Released } else { EscrowPhase::MilestoneCheck };
 
         emit!(MilestoneReleased {
             escrow_id,
             milestone_idx,
             amount,
             fee,
-            total_released: escrow_mut.released,
+            total_released: new_released,
         });
 
         Ok(())
@@ -364,7 +379,7 @@ pub mod woland_escrow {
             EscrowPhase::Disputed => {
                 caller == escrow.depositor
                     && escrow.dispute_opened_at > 0
-                    && clock.unix_timestamp > escrow.dispute_opened_at + DISPUTE_WINDOW_SECONDS
+                    && clock.unix_timestamp > escrow.dispute_opened_at.checked_add(DISPUTE_WINDOW_SECONDS).ok_or(WolandError::Overflow)?
             }
             EscrowPhase::Funded | EscrowPhase::InProgress | EscrowPhase::MilestoneCheck => {
                 expired && caller == escrow.depositor
@@ -462,6 +477,7 @@ pub mod woland_escrow {
             escrow.phase == EscrowPhase::Funded || escrow.phase == EscrowPhase::InProgress,
             WolandError::InvalidPhase
         );
+        require!(escrow.milestone_count == 0, WolandError::InvalidPhase);
         require!(amount > 0, WolandError::ZeroAmount);
 
         let remaining = escrow.amount.checked_sub(escrow.released)
@@ -485,11 +501,18 @@ pub mod woland_escrow {
             **ctx.accounts.fee_vault.to_account_info().try_borrow_mut_lamports()? += fee;
         }
 
-        let escrow_mut = &mut ctx.accounts.escrow;
-        escrow_mut.released = escrow_mut.released.checked_add(amount)
+        let prev_released = ctx.accounts.escrow.released;
+        let new_released = prev_released.checked_add(amount)
             .ok_or(WolandError::Overflow)?;
+        let is_fully_released = new_released >= total_amount;
 
-        if escrow_mut.released >= total_amount {
+        if !is_fully_released {
+            check_rent_exempt(&ctx.accounts.escrow.to_account_info())?;
+        }
+
+        let escrow_mut = &mut ctx.accounts.escrow;
+        escrow_mut.released = new_released;
+        if is_fully_released {
             escrow_mut.phase = EscrowPhase::Released;
         }
 
@@ -498,7 +521,7 @@ pub mod woland_escrow {
             completer: ctx.accounts.completer.key(),
             net_amount,
             fee,
-            total_released: escrow_mut.released,
+            total_released: new_released,
         });
 
         Ok(())
@@ -524,9 +547,20 @@ fn calculate_fee(amount: u64, fee_bps: u16) -> Result<u64> {
     if fee_bps == 0 {
         return Ok(0);
     }
-    amount.checked_mul(fee_bps as u64)
+    let numerator = amount.checked_mul(fee_bps as u64)
+        .ok_or(WolandError::Overflow)?;
+    numerator.checked_add(9_999)
+        .ok_or(WolandError::Overflow)?
+        .checked_div(10_000)
         .ok_or(WolandError::Overflow.into())
-        .and_then(|v| v.checked_div(10_000).ok_or(WolandError::Overflow.into()))
+}
+
+fn check_rent_exempt(account_info: &AccountInfo) -> Result<()> {
+    let rent = Rent::get()?;
+    let min_balance = rent.minimum_balance(account_info.data_len());
+    let lamports = account_info.lamports();
+    require!(lamports >= min_balance, WolandError::InsufficientFunds);
+    Ok(())
 }
 
 // --- Accounts ---
@@ -746,11 +780,11 @@ pub struct ReleaseActionPayout<'info> {
         bump = escrow.bump,
     )]
     pub escrow: Box<Account<'info, EscrowAccount>>,
-    /// CHECK: completer wallet — receives payout.
-    /// SECURITY: completer address is caller-supplied; arbiter trust required.
-    /// No on-chain validation exists for this account — the arbiter (deploy wallet)
-    /// is solely responsible for passing the correct completer address.
-    #[account(mut)]
+    /// CHECK: completer wallet — must be receiver or depositor of the escrow.
+    #[account(
+        mut,
+        constraint = completer.key() == escrow.receiver || completer.key() == escrow.depositor @ WolandError::Unauthorized,
+    )]
     pub completer: UncheckedAccount<'info>,
     /// CHECK: fee vault — validated against config
     #[account(
@@ -987,4 +1021,6 @@ pub enum WolandError {
     InvalidShareBps,
     #[msg("Invalid receiver address")]
     InvalidReceiver,
+    #[msg("Expiry too far in the future (max 1 year)")]
+    ExpiryTooFar,
 }

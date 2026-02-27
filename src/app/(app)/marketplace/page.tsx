@@ -3,13 +3,14 @@
 import { ServiceCard } from "@/components/ServiceCard";
 import { CreateServiceModal } from "@/components/CreateServiceModal";
 import { PurchaseModal } from "@/components/PurchaseModal";
-import { useServices, useCompleteAction } from "@/hooks/use-services";
+import { useServices } from "@/hooks/use-services";
 import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
 import { useWatchedIds, useToggleWatchlist } from "@/hooks/use-watchlist";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Search, Loader2, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,11 +18,16 @@ import { useToast } from "@/hooks/use-toast";
 
 const categories = [
   { value: "all", label: "All" },
-  { value: "repost", label: "Repost" },
-  { value: "like", label: "Like" },
-  { value: "follow", label: "Follow" },
+  { value: "content", label: "Content" },
+  { value: "space", label: "Space" },
   { value: "ambassador", label: "Ambassador" },
-  { value: "custom", label: "Custom" },
+  { value: "campaign", label: "Campaign" },
+];
+
+const pricingModels = [
+  { value: "all", label: "All" },
+  { value: "fixed", label: "Fixed" },
+  { value: "payroll", label: "Payroll" },
 ];
 
 export default function MarketplacePage() {
@@ -37,19 +43,22 @@ function MarketplaceContent() {
   const creatorFilter = searchParams.get("creator") || undefined;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const [pricing, setPricing] = useState<string>("all");
   const [listingType, setListingType] = useState<string>("offer");
   const { data: services, isLoading } = useServices({
     search: search || undefined,
     category: category !== "all" ? category : undefined,
+    pricingCategory: pricing !== "all" ? pricing : undefined,
     listingType: listingType,
     creatorId: creatorFilter,
   });
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   const { data: watchedIds } = useWatchedIds();
   const { addMutation, removeMutation } = useToggleWatchlist();
   const { toast } = useToast();
-  const { mutate: completeAction } = useCompleteAction();
 
+  const router = useRouter();
   const [selectedService, setSelectedService] = useState<any>(null);
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
 
@@ -58,15 +67,17 @@ function MarketplaceContent() {
       toast({ title: "Wallet not connected", description: "Please connect your wallet to continue.", variant: "destructive" });
       return;
     }
-    if (service.pricingCategory === "pay_per_action") {
-      completeAction(service.id, {
-        onSuccess: (data: any) => {
-          toast({ title: "Action Completed", description: `Payout: ${data.payoutPerAction} SOL` });
-        },
-        onError: (err: any) => {
-          toast({ title: "Error", description: err.message, variant: "destructive" });
-        },
+    if (user.id === service.creatorId) {
+      router.push("/dashboard");
+      return;
+    }
+    if (!profile?.walletAddress || !profile?.twitterHandle || !profile?.twitterVerified) {
+      toast({
+        title: "Profile incomplete",
+        description: "Set your wallet address and verify your X handle in Profile first.",
+        variant: "destructive",
       });
+      router.push("/profile");
       return;
     }
     setSelectedService(service);
@@ -127,8 +138,7 @@ function MarketplaceContent() {
             </TabsList>
           </Tabs>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-grow max-w-md">
+          <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search services..."
@@ -138,20 +148,39 @@ function MarketplaceContent() {
               data-testid="input-search"
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {categories.map((cat) => (
-              <Button
-                key={cat.value}
-                variant={category === cat.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCategory(cat.value)}
-                className="rounded-full text-xs font-medium"
-                data-testid={`button-filter-${cat.value}`}
-              >
-                {cat.label}
-              </Button>
-            ))}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {categories.map((cat) => (
+                <Button
+                  key={cat.value}
+                  variant={category === cat.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategory(cat.value)}
+                  className="rounded-full text-xs font-medium h-7 px-2.5"
+                  data-testid={`button-filter-${cat.value}`}
+                >
+                  {cat.label}
+                </Button>
+              ))}
+            </div>
           </div>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pricing</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {pricingModels.map((pm) => (
+                <Button
+                  key={pm.value}
+                  variant={pricing === pm.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPricing(pm.value)}
+                  className="rounded-full text-xs font-medium h-7 px-2.5"
+                  data-testid={`button-filter-pricing-${pm.value}`}
+                >
+                  {pm.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </motion.div>
 

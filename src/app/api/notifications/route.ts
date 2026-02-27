@@ -12,8 +12,9 @@ export async function GET() {
   try {
     const notifications = await storage.getNotifications(user.id);
     return NextResponse.json(notifications);
-  } catch (err: any) {
-    return NextResponse.json({ message: err.message }, { status: 500 });
+  } catch (err) {
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -29,7 +30,8 @@ export async function PATCH(request: NextRequest) {
   try {
     await storage.markNotificationsRead(user.id, input.ids);
     return NextResponse.json({ message: "Marked as read" });
-  } catch (err: any) {
-    return NextResponse.json({ message: err.message }, { status: 500 });
+  } catch (err) {
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

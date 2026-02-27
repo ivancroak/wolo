@@ -1,3 +1,4 @@
+import "server-only";
 import {
   type Service,
   type InsertService,
@@ -20,8 +21,6 @@ import {
   type Reputation,
   type OrderRating,
   type InsertRating,
-  type ActionCompletion,
-  type ActionCompletionStatus,
 } from "@shared/schema";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -30,9 +29,9 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   getProfile(userId: string): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
-  updateProfile(userId: string, profile: Partial<InsertProfile>): Promise<Profile>;
+  updateProfile(userId: string, profile: Partial<InsertProfile>, internal?: boolean): Promise<Profile>;
   setTwitterVerified(userId: string, verified: boolean): Promise<void>;
-  getServices(filters?: { category?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]>;
+  getServices(filters?: { category?: string; pricingCategory?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]>;
   getServicesByCreator(creatorId: string): Promise<Service[]>;
   getService(id: number): Promise<Service | undefined>;
   createService(service: InsertService): Promise<Service>;
@@ -66,12 +65,7 @@ export interface IStorage {
   getChannelPublicKey(userId: string): Promise<string | null>;
   getNotifications(userId: string): Promise<any[]>;
   markNotificationsRead(userId: string, ids?: number[]): Promise<void>;
-  recordActionCompletion(serviceId: number, userId: string): Promise<ActionCompletion>;
-  getActionCompletions(serviceId: number): Promise<ActionCompletion[]>;
-  hasCompletedAction(serviceId: number, userId: string): Promise<boolean>;
-  getActionCompletion(id: number): Promise<ActionCompletion | undefined>;
-  updateActionCompletionStatus(id: number, status: ActionCompletionStatus): Promise<ActionCompletion>;
-  markActionPaid(id: number, txHash: string, payoutAmount: string): Promise<ActionCompletion>;
+  hasActiveOrder(serviceId: number, buyerId: string): Promise<boolean>;
 }
 
 function toUser(row: any): User {
@@ -110,8 +104,10 @@ function toService(row: any): Service {
     pricingCategory: row.pricing_category,
     payrollBasis: row.payroll_basis,
     maxActions: row.max_actions,
-    budgetCap: row.budget_cap,
     deadlineDays: row.deadline_days,
+    requiredKeyword: row.required_keyword ?? null,
+    minPostCount: row.min_post_count ?? null,
+    postsPerPeriod: row.posts_per_period ?? null,
     imageUrl: row.image_url,
     active: row.active,
     actionsCompleted: row.actions_completed ?? 0,
@@ -201,19 +197,6 @@ function toReputation(row: any): Reputation {
   };
 }
 
-function toActionCompletion(row: any): ActionCompletion {
-  return {
-    id: row.id,
-    serviceId: row.service_id,
-    userId: row.user_id,
-    status: row.status,
-    payoutAmount: row.payout_amount ?? null,
-    payoutTxHash: row.payout_tx_hash ?? null,
-    paidAt: row.paid_at ? new Date(row.paid_at) : null,
-    createdAt: row.created_at ? new Date(row.created_at) : null,
-  };
-}
-
 function toRating(row: any): OrderRating {
   return {
     id: row.id,
@@ -278,7 +261,7 @@ class SupabaseStorage implements IStorage {
     return toProfile(data);
   }
 
-  async updateProfile(userId: string, profileData: Partial<InsertProfile>): Promise<Profile> {
+  async updateProfile(userId: string, profileData: Partial<InsertProfile>, internal = false): Promise<Profile> {
     const existing = await this.getProfile(userId);
     if (!existing) {
       return this.createProfile({ ...profileData, userId } as InsertProfile);
@@ -288,12 +271,21 @@ class SupabaseStorage implements IStorage {
     if (profileData.bio !== undefined) updateObj.bio = profileData.bio;
     if (profileData.twitterHandle !== undefined) {
       updateObj.twitter_handle = profileData.twitterHandle;
-      // Reset verification when handle changes
       if (profileData.twitterHandle !== existing.twitterHandle) {
         updateObj.twitter_verified = false;
+        if (profileData.twitterHandle) {
+          const { data: dup } = await supabaseAdmin
+            .from("profiles")
+            .select("user_id")
+            .eq("twitter_handle", profileData.twitterHandle)
+            .neq("user_id", userId)
+            .limit(1)
+            .maybeSingle();
+          if (dup) throw new Error("This X handle is already claimed by another user");
+        }
       }
     }
-    if (profileData.isInfluencer !== undefined) updateObj.is_influencer = profileData.isInfluencer;
+    if (internal && profileData.isInfluencer !== undefined) updateObj.is_influencer = profileData.isInfluencer;
 
     const { data, error } = await supabaseAdmin
       .from("profiles")
@@ -313,14 +305,17 @@ class SupabaseStorage implements IStorage {
     if (error) throw new Error(error.message);
   }
 
-  async getServices(filters?: { category?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]> {
+  async getServices(filters?: { category?: string; pricingCategory?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]> {
     let query = supabaseAdmin.from("services").select("*").eq("active", true);
     if (filters?.category) query = query.eq("category", filters.category);
+    if (filters?.pricingCategory) query = query.eq("pricing_category", filters.pricingCategory);
     if (filters?.listingType) query = query.eq("listing_type", filters.listingType);
     if (filters?.creatorId) query = query.eq("creator_id", filters.creatorId);
     if (filters?.search) {
-      const sanitized = filters.search.replace(/[%,.()\[\]]/g, '');
-      query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+      const sanitized = filters.search.replace(/[^a-zA-Z0-9\s\-_]/g, '').slice(0, 100);
+      if (sanitized.length > 0) {
+        query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+      }
     }
     query = query.order("created_at", { ascending: false });
     const { data, error } = await query;
@@ -359,9 +354,11 @@ class SupabaseStorage implements IStorage {
         listing_type: service.listingType ?? "offer",
         pricing_category: service.pricingCategory,
         payroll_basis: service.pricingCategory === "payroll" ? (service.payrollBasis ?? null) : null,
-        max_actions: service.pricingCategory === "pay_per_action" ? (service.maxActions ?? null) : null,
-        budget_cap: service.pricingCategory === "pay_per_action" ? (service.budgetCap ?? null) : null,
+        max_actions: service.maxActions ?? null,
         deadline_days: service.deadlineDays ?? null,
+        required_keyword: service.requiredKeyword ?? null,
+        min_post_count: service.minPostCount ?? null,
+        posts_per_period: service.postsPerPeriod ?? null,
         image_url: service.imageUrl ?? null,
         active: service.active ?? true,
       })
@@ -380,8 +377,10 @@ class SupabaseStorage implements IStorage {
     if (updates.pricingCategory !== undefined) updateObj.pricing_category = updates.pricingCategory;
     if (updates.payrollBasis !== undefined) updateObj.payroll_basis = updates.payrollBasis;
     if (updates.maxActions !== undefined) updateObj.max_actions = updates.maxActions;
-    if (updates.budgetCap !== undefined) updateObj.budget_cap = updates.budgetCap;
     if (updates.deadlineDays !== undefined) updateObj.deadline_days = updates.deadlineDays;
+    if (updates.requiredKeyword !== undefined) updateObj.required_keyword = updates.requiredKeyword;
+    if (updates.minPostCount !== undefined) updateObj.min_post_count = updates.minPostCount;
+    if (updates.postsPerPeriod !== undefined) updateObj.posts_per_period = updates.postsPerPeriod;
     if (updates.imageUrl !== undefined) updateObj.image_url = updates.imageUrl;
     if (updates.active !== undefined) updateObj.active = updates.active;
 
@@ -406,6 +405,17 @@ class SupabaseStorage implements IStorage {
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
+    // Re-check slot availability right before insert to minimize race window
+    const { data: svc } = await supabaseAdmin
+      .from("services")
+      .select("actions_completed, max_actions")
+      .eq("id", order.serviceId)
+      .single();
+
+    if (svc?.max_actions != null && (svc.actions_completed ?? 0) >= svc.max_actions) {
+      throw new Error("All contracts for this service have been taken");
+    }
+
     const { data, error } = await supabaseAdmin
       .from("orders")
       .insert({
@@ -417,7 +427,46 @@ class SupabaseStorage implements IStorage {
       })
       .select()
       .single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message.includes("uq_orders_service_buyer") || error.message.includes("duplicate key") || error.message.includes("unique")) {
+        throw new Error("You already have a contract for this service");
+      }
+      throw new Error(error.message);
+    }
+
+    if (svc) {
+      // Atomic increment: only update if count hasn't changed since our read
+      const currentCount = svc.actions_completed ?? 0;
+      const { error: updateErr } = await supabaseAdmin
+        .from("services")
+        .update({
+          actions_completed: currentCount + 1,
+          ...(svc.max_actions != null && currentCount + 1 >= svc.max_actions ? { active: false } : {}),
+        })
+        .eq("id", order.serviceId)
+        .eq("actions_completed", currentCount);
+
+      if (updateErr) {
+        // Retry with fresh data using CAS (compare-and-swap)
+        const { data: fresh } = await supabaseAdmin
+          .from("services")
+          .select("actions_completed, max_actions")
+          .eq("id", order.serviceId)
+          .single();
+        if (fresh) {
+          const freshCount = fresh.actions_completed ?? 0;
+          await supabaseAdmin
+            .from("services")
+            .update({
+              actions_completed: freshCount + 1,
+              ...(fresh.max_actions != null && freshCount + 1 >= fresh.max_actions ? { active: false } : {}),
+            })
+            .eq("id", order.serviceId)
+            .eq("actions_completed", freshCount);
+        }
+      }
+    }
+
     return toOrder(data);
   }
 
@@ -834,108 +883,16 @@ class SupabaseStorage implements IStorage {
     if (error) throw new Error(error.message);
   }
 
-  // --- Action Completions (pay_per_action) ---
-
-  async recordActionCompletion(serviceId: number, userId: string): Promise<ActionCompletion> {
-    const { data, error } = await supabaseAdmin
-      .from("action_completions")
-      .insert({ service_id: serviceId, user_id: userId, status: "completed" })
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-
-    // Get current count and increment
-    const { data: svc } = await supabaseAdmin
-      .from("services")
-      .select("actions_completed, max_actions")
-      .eq("id", serviceId)
-      .single();
-
-    if (svc) {
-      const newCount = (svc.actions_completed ?? 0) + 1;
-      const fulfilled = svc.max_actions != null && newCount >= svc.max_actions;
-      await supabaseAdmin
-        .from("services")
-        .update({ actions_completed: newCount, ...(fulfilled ? { active: false } : {}) })
-        .eq("id", serviceId);
-    }
-
-    return toActionCompletion(data);
-  }
-
-  async getActionCompletions(serviceId: number): Promise<ActionCompletion[]> {
-    const { data, error } = await supabaseAdmin
-      .from("action_completions")
-      .select("*")
-      .eq("service_id", serviceId)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []).map(toActionCompletion);
-  }
-
-  async hasCompletedAction(serviceId: number, userId: string): Promise<boolean> {
+  async hasActiveOrder(serviceId: number, buyerId: string): Promise<boolean> {
     const { data } = await supabaseAdmin
-      .from("action_completions")
+      .from("orders")
       .select("id")
       .eq("service_id", serviceId)
-      .eq("user_id", userId)
-      .single();
+      .eq("buyer_id", buyerId)
+      .in("status", ["pending", "completed"])
+      .limit(1)
+      .maybeSingle();
     return !!data;
-  }
-
-  async getActionCompletion(id: number): Promise<ActionCompletion | undefined> {
-    const { data } = await supabaseAdmin
-      .from("action_completions")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (!data) return undefined;
-    return toActionCompletion(data);
-  }
-
-  async updateActionCompletionStatus(id: number, status: ActionCompletionStatus): Promise<ActionCompletion> {
-    const { data, error } = await supabaseAdmin
-      .from("action_completions")
-      .update({ status })
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-
-    if (status === "rejected") {
-      // Decrement actions_completed on the parent service
-      const { data: svc } = await supabaseAdmin
-        .from("services")
-        .select("actions_completed, max_actions, active")
-        .eq("id", data.service_id)
-        .single();
-
-      if (svc) {
-        const newCount = Math.max(0, (svc.actions_completed ?? 0) - 1);
-        const shouldReactivate = !svc.active && svc.max_actions != null && newCount < svc.max_actions;
-        await supabaseAdmin
-          .from("services")
-          .update({ actions_completed: newCount, ...(shouldReactivate ? { active: true } : {}) })
-          .eq("id", data.service_id);
-      }
-    }
-
-    return toActionCompletion(data);
-  }
-
-  async markActionPaid(id: number, txHash: string, payoutAmount: string): Promise<ActionCompletion> {
-    const { data, error } = await supabaseAdmin
-      .from("action_completions")
-      .update({
-        payout_tx_hash: txHash,
-        payout_amount: payoutAmount,
-        paid_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return toActionCompletion(data);
   }
 }
 

@@ -10,8 +10,10 @@ interface VerifyMilestoneInput {
 }
 
 export interface VerificationResult {
-  status: "verified" | "not_found" | "manual_only" | "error";
+  status: "verified" | "not_found" | "insufficient" | "manual_only" | "error";
   message: string;
+  matchingPosts?: number;
+  requiredPosts?: number;
   details?: Record<string, any>;
 }
 
@@ -26,6 +28,22 @@ export function useVerifyMilestone() {
       const url = qs ? `${base}?${qs}` : base;
 
       const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Verification failed" }));
+        throw new Error(err.message || "Verification failed");
+      }
+      return res.json();
+    },
+  });
+}
+
+export function useVerifyContract() {
+  return useMutation({
+    mutationFn: async (orderId: number): Promise<VerificationResult> => {
+      const res = await fetch(`/api/orders/${orderId}/verify`, {
+        method: "POST",
+        credentials: "include",
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: "Verification failed" }));
         throw new Error(err.message || "Verification failed");

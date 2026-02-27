@@ -18,10 +18,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Wallet, ExternalLink, CheckCircle2, Copy, Twitter } from "lucide-react";
+import { Loader2, Save, Wallet, ExternalLink, CheckCircle2, Copy } from "lucide-react";
+
+const XIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -55,11 +61,8 @@ export default function ProfilePage() {
       walletAddress: "",
       bio: "",
       twitterHandle: "",
-      isInfluencer: false,
     },
   });
-
-  // removed redirect — show fallback UI instead to avoid race with wallet auto-login
 
   useEffect(() => {
     if (profile) {
@@ -67,7 +70,6 @@ export default function ProfilePage() {
         walletAddress: profile.walletAddress || "",
         bio: profile.bio || "",
         twitterHandle: profile.twitterHandle || "",
-        isInfluencer: profile.isInfluencer || false,
       });
     }
   }, [profile, form]);
@@ -95,6 +97,29 @@ export default function ProfilePage() {
   const [verifyCode, setVerifyCode] = useState<string | null>(null);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyCopied, setVerifyCopied] = useState(false);
+  const [blueLoading, setBlueLoading] = useState(false);
+
+  const checkBlueCheckmark = async () => {
+    setBlueLoading(true);
+    try {
+      const res = await fetch("/api/profiles/check-blue", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+        return;
+      }
+      if (data.isBlueVerified) {
+        toast({ title: "Blue Checkmark Confirmed", description: "Your X account has a verified blue checkmark." });
+      } else {
+        toast({ title: "No Blue Checkmark", description: "This X account does not have a blue checkmark." });
+      }
+      window.location.reload();
+    } catch {
+      toast({ title: "Error", description: "Failed to check blue checkmark status", variant: "destructive" });
+    } finally {
+      setBlueLoading(false);
+    }
+  };
 
   const getVerifyCode = async () => {
     setVerifyLoading(true);
@@ -125,7 +150,6 @@ export default function ProfilePage() {
       if (data.verified) {
         toast({ title: "Verified!", description: "Your X account has been verified." });
         setVerifyCode(null);
-        // Refetch profile to update UI
         window.location.reload();
       } else {
         toast({ title: "Not Found", description: data.message, variant: "destructive" });
@@ -269,7 +293,9 @@ export default function ProfilePage() {
                           </div>
                         </FormControl>
                         <FormDescription>
-                          1-15 characters: letters, numbers, or underscores only.
+                          {profile?.twitterVerified
+                            ? "Your X account is verified. Save to update handle (re-verification required)."
+                            : "Enter your handle, save, then verify to complete actions on the marketplace."}
                         </FormDescription>
                         <FormMessage />
 
@@ -283,7 +309,7 @@ export default function ProfilePage() {
                             className="mt-2 gap-1.5"
                             data-testid="button-verify-x"
                           >
-                            {verifyLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Twitter className="h-3.5 w-3.5" />}
+                            {verifyLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XIcon className="h-3.5 w-3.5" />}
                             Verify X Account
                           </Button>
                         )}
@@ -291,7 +317,7 @@ export default function ProfilePage() {
                         {verifyCode && (
                           <div className="mt-3 space-y-3 rounded-md border p-3 bg-muted/50">
                             <p className="text-xs text-muted-foreground">
-                              Post this exact text as a tweet, then click "Check Verification":
+                              Post this exact text as a tweet, then click &ldquo;Check Verification&rdquo;:
                             </p>
                             <div className="flex items-center gap-2">
                               <code className="flex-1 text-xs bg-background rounded px-2 py-1.5 border font-mono break-all">
@@ -350,27 +376,41 @@ export default function ProfilePage() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="isInfluencer"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between gap-4 rounded-md border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Influencer Mode</FormLabel>
-                          <FormDescription>
-                            Show a verified badge on your services.
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value || false}
-                            onCheckedChange={field.onChange}
-                            data-testid="switch-influencer"
-                          />
-                        </FormControl>
-                      </FormItem>
+                  <div className="rounded-md border p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <p className="text-base font-medium">Blue Checkmark</p>
+                        <p className="text-sm text-muted-foreground">
+                          {profile?.isInfluencer
+                            ? "Your X account has a verified blue checkmark."
+                            : "Check if this X account has a blue checkmark."}
+                        </p>
+                      </div>
+                      {profile?.isInfluencer ? (
+                        <Badge className="gap-1 bg-blue-500 hover:bg-blue-600 text-white shrink-0">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-muted-foreground shrink-0">
+                          Not verified
+                        </Badge>
+                      )}
+                    </div>
+                    {profile?.twitterHandle && (
+                      <Button
+                        type="button"
+                        variant={profile?.isInfluencer ? "outline" : "default"}
+                        size="sm"
+                        onClick={checkBlueCheckmark}
+                        disabled={blueLoading}
+                        className="gap-1.5"
+                      >
+                        {blueLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XIcon className="h-3.5 w-3.5" />}
+                        {profile?.isInfluencer ? "Re-check" : "Check Blue Checkmark"}
+                      </Button>
                     )}
-                  />
+                  </div>
 
                   <Button type="submit" disabled={updatePending} className="w-full" data-testid="button-save-profile">
                     {updatePending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

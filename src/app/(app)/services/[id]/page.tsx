@@ -1,35 +1,32 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useService, useCompleteAction } from "@/hooks/use-services";
+import { useService } from "@/hooks/use-services";
 import { useAuth } from "@/hooks/use-auth";
 import { PurchaseModal } from "@/components/PurchaseModal";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, ArrowLeft, Heart, Repeat, UserPlus, Users, Sparkles, DollarSign, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight } from "lucide-react";
+import { Loader2, ArrowLeft, Users, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight, Radio, Image, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
 const categoryIcons: Record<string, React.ReactNode> = {
-  repost: <Repeat className="h-4 w-4" />,
-  like: <Heart className="h-4 w-4" />,
-  follow: <UserPlus className="h-4 w-4" />,
+  content: <Image className="h-4 w-4" />,
+  space: <Radio className="h-4 w-4" />,
   ambassador: <Users className="h-4 w-4" />,
-  custom: <Sparkles className="h-4 w-4" />,
+  campaign: <TrendingUp className="h-4 w-4" />,
 };
 
 const pricingLabels: Record<string, string> = {
-  pay_per_action: "Pay Per Action",
-  full_service: "Full Service",
+  fixed: "Fixed Contract",
   payroll: "Payroll",
 };
 
 const pricingIcons: Record<string, React.ReactNode> = {
-  pay_per_action: <DollarSign className="h-4 w-4" />,
-  full_service: <Briefcase className="h-4 w-4" />,
+  fixed: <Briefcase className="h-4 w-4" />,
   payroll: <CalendarClock className="h-4 w-4" />,
 };
 
@@ -41,7 +38,6 @@ export default function ServiceDetailPage() {
   const { data: service, isLoading } = useService(id);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const { toast } = useToast();
-  const { mutate: completeAction, isPending: actionPending } = useCompleteAction();
 
   if (isLoading) {
     return (
@@ -81,7 +77,7 @@ export default function ServiceDetailPage() {
                     <Badge variant="outline" className="border-amber-500/50 text-amber-600">Request</Badge>
                   )}
                   <Badge variant="secondary" className="gap-1.5">
-                    {categoryIcons[service.category] ?? <Sparkles className="h-4 w-4" />}
+                    {categoryIcons[service.category] ?? <Image className="h-4 w-4" />}
                     <span className="capitalize">{service.category}</span>
                   </Badge>
                 </div>
@@ -127,39 +123,47 @@ export default function ServiceDetailPage() {
                 </div>
               )}
 
-              {service.pricingCategory === "pay_per_action" && service.maxActions && (
+              {service.requiredKeyword && (
                 <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Progress</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Required Keyword</span>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-4 w-4" />
-                    <span className="text-sm font-medium">{service.actionsCompleted} / {service.maxActions} actions</span>
+                    <span className="text-sm font-medium font-mono">{service.requiredKeyword}</span>
                   </div>
                 </div>
               )}
 
-              {service.pricingCategory === "pay_per_action" && service.maxActions && (
+              {service.minPostCount && (
                 <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Payout / Action</span>
-                  <div className="flex items-center gap-1.5">
-                    <DollarSign className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {(parseFloat(service.budgetCap || service.price) / service.maxActions).toFixed(4)} SOL
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {service.pricingCategory === "pay_per_action" && service.budgetCap && (
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Budget Cap</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Min Posts</span>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-4 w-4" />
-                    <span className="text-sm font-medium">{service.budgetCap} SOL</span>
+                    <span className="text-sm font-medium">{service.minPostCount} posts</span>
                   </div>
                 </div>
               )}
 
-              {service.listingType === "request" && service.deadlineDays && (
+              {service.postsPerPeriod && (
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Posts per Period</span>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarClock className="h-4 w-4" />
+                    <span className="text-sm font-medium">{service.postsPerPeriod} / {service.payrollBasis ?? "period"}</span>
+                  </div>
+                </div>
+              )}
+
+              {service.maxActions && (
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Contracts</span>
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span className="text-sm font-medium">{service.actionsCompleted} / {service.maxActions}</span>
+                  </div>
+                </div>
+              )}
+
+              {service.deadlineDays && (
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">Deadline</span>
                   <div className="flex items-center gap-1.5">
@@ -182,29 +186,6 @@ export default function ServiceDetailPage() {
             <div className="pt-4 border-t flex justify-end">
               {isOwn ? (
                 <Badge variant="outline" className="text-muted-foreground">This is your listing</Badge>
-              ) : service.pricingCategory === "pay_per_action" ? (
-                <Button
-                  disabled={actionPending}
-                  onClick={() => {
-                    if (!user) {
-                      toast({ title: "Wallet not connected", description: "Please connect your wallet to continue.", variant: "destructive" });
-                      return;
-                    }
-                    completeAction(service.id, {
-                      onSuccess: (data: any) => {
-                        toast({ title: "Action Completed", description: `Payout: ${data.payoutPerAction} SOL` });
-                      },
-                      onError: (err: any) => {
-                        toast({ title: "Error", description: err.message, variant: "destructive" });
-                      },
-                    });
-                  }}
-                  className="rounded-full px-8"
-                >
-                  {actionPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Complete Action
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Button>
               ) : (
                 <Button onClick={() => {
                   if (!user) {
@@ -213,7 +194,7 @@ export default function ServiceDetailPage() {
                   }
                   setPurchaseOpen(true);
                 }} className="rounded-full px-8">
-                  {service.listingType === "request" ? "Fulfill Request" : "Purchase Service"}
+                  {service.listingType === "request" ? "Fulfill Request" : "Take Contract"}
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Button>
               )}

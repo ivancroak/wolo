@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
+import { insertServiceSchema } from "@shared/schema";
+import { z } from "zod";
+import { checkRateLimit } from "@/server/with-rate-limit";
+
+const updateServiceSchema = insertServiceSchema.omit({ creatorId: true }).partial().omit({ active: true });
 
 export async function GET(
   _request: NextRequest,
@@ -18,6 +23,10 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rl = checkRateLimit(ip, "service-update", 20, 60000);
+  if (rl) return rl;
+
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -29,15 +38,28 @@ export async function PUT(
   if (!service) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (service.creatorId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const body = await request.json();
-  const updated = await storage.updateService(serviceId, user.id, body);
-  return NextResponse.json(updated);
+  try {
+    const body = await request.json();
+    const validated = updateServiceSchema.parse(body);
+    const updated = await storage.updateService(serviceId, user.id, validated);
+    return NextResponse.json(updated);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ message: err.errors[0].message, field: err.errors[0].path.join('.') }, { status: 400 });
+    }
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const ip = _request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rl = checkRateLimit(ip, "service-delete", 20, 60000);
+  if (rl) return rl;
+
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

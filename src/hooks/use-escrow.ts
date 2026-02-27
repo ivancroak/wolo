@@ -57,7 +57,7 @@ export function useCreateEscrow() {
         credentials: "include",
       });
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({ message: "Failed to create escrow" }));
         throw new Error(err.message || "Failed to create escrow");
       }
       return res.json();
@@ -79,11 +79,16 @@ export function useUpdateEscrowPhase() {
         body: JSON.stringify({ phase, txHash }),
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to update escrow phase");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Failed to update escrow phase" }));
+        throw new Error(err.message || "Failed to update escrow phase");
+      }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.escrow.myEscrows.path] });
+      queryClient.invalidateQueries({ queryKey: [api.escrow.get.path, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [api.escrow.getByOrder.path] });
     },
   });
 }
@@ -100,7 +105,7 @@ export function useAddMilestone() {
         credentials: "include",
       });
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({ message: "Failed to add milestone" }));
         throw new Error(err.message || "Failed to add milestone");
       }
       return res.json();
@@ -123,7 +128,10 @@ export function useUpdateMilestone() {
         body: JSON.stringify({ status, proofUrl }),
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to update milestone");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Failed to update milestone" }));
+        throw new Error(err.message || "Failed to update milestone");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -136,15 +144,15 @@ export function useUpdateMilestone() {
 export function useDisputeResolve() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ escrowId, tweetUrl, targetHandle }: { escrowId: number; tweetUrl?: string; targetHandle?: string }) => {
+    mutationFn: async ({ escrowId }: { escrowId: number }) => {
       const res = await fetch(`/api/escrow/${escrowId}/dispute-resolve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tweetUrl, targetHandle }),
+        body: JSON.stringify({}),
         credentials: "include",
       });
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({ message: "Failed to submit dispute evidence" }));
         throw new Error(err.message || "Failed to submit dispute evidence");
       }
       return res.json();

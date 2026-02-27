@@ -2,28 +2,34 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMyOrders, useMySales, useUpdateOrder } from "@/hooks/use-orders";
-import { useMyServices, useActionCompletions, useDisputeAction } from "@/hooks/use-services";
+import { useMyServices } from "@/hooks/use-services";
 import { useMyEscrows, useUpdateEscrowPhase, useDisputeResolve } from "@/hooks/use-escrow";
 import { useSolanaEscrow } from "@/hooks/use-solana-escrow";
 import { useSolanaReputation } from "@/hooks/use-solana-reputation";
 import { useMyReputation } from "@/hooks/use-reputation";
+import { useVerifyContract } from "@/hooks/use-verification";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
-import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, AlertTriangle, Send, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, AlertTriangle, Send } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatPanel } from "@/components/ChatPanel";
 import { MilestonePanel } from "@/components/MilestonePanel";
 import { RatingModal } from "@/components/RatingModal";
-import { type Order, type Service, type Escrow, type ActionCompletion } from "@shared/schema";
+import { type Order, type Service, type Escrow } from "@shared/schema";
+
+function solToLamports(sol: string): number {
+  const [whole = "0", frac = ""] = sol.split(".");
+  const paddedFrac = (frac + "000000000").slice(0, 9);
+  return Number(BigInt(whole) * BigInt(1_000_000_000) + BigInt(paddedFrac));
+}
 
 export default function DashboardPage() {
   const { user, isLoading: authLoading, isLoggingIn } = useAuth();
@@ -35,14 +41,12 @@ export default function DashboardPage() {
   const { mutate: updateOrder } = useUpdateOrder();
   const { mutate: updateEscrowPhase } = useUpdateEscrowPhase();
   const { mutate: disputeResolve, isPending: isDisputeResolving } = useDisputeResolve();
+  const { mutate: verifyContract, isPending: isVerifying } = useVerifyContract();
   const solanaEscrow = useSolanaEscrow();
   const solanaRep = useSolanaReputation();
   const { toast } = useToast();
   const [ratingTarget, setRatingTarget] = useState<{ orderId: number; escrowId?: number; targetId: string; depositorId?: string } | null>(null);
-  const [evidenceInputs, setEvidenceInputs] = useState<Record<number, { tweetUrl?: string; targetHandle?: string }>>({});
-  const [actionEvidenceInputs, setActionEvidenceInputs] = useState<Record<number, { tweetUrl?: string; targetHandle?: string }>>({});
-  const [expandedActions, setExpandedActions] = useState<Record<number, boolean>>({});
-  const { mutate: disputeAction, isPending: isActionDisputing } = useDisputeAction();
+  const [loadingEscrowId, setLoadingEscrowId] = useState<number | null>(null);
 
   const handleStatusUpdate = (orderId: number, status: "completed" | "cancelled") => {
     updateOrder({ id: orderId, status }, {
@@ -58,134 +62,6 @@ export default function DashboardPage() {
   const StatusBadge = ({ status }: { status: string }) => {
     const variant = status === "completed" ? "default" : status === "cancelled" ? "destructive" : "secondary";
     return <Badge variant={variant === "default" ? "default" : variant === "destructive" ? "destructive" : "secondary"} className="text-xs capitalize" data-testid={`badge-status-${status}`}>{status}</Badge>;
-  };
-
-  const ActionStatusBadge = ({ status }: { status: string }) => {
-    if (status === "verified") return <Badge variant="default" className="text-xs bg-green-600">verified</Badge>;
-    if (status === "rejected") return <Badge variant="destructive" className="text-xs">rejected</Badge>;
-    return <Badge variant="secondary" className="text-xs text-amber-600">completed</Badge>;
-  };
-
-  const ActionTrackingSection = ({ service }: { service: Service }) => {
-    const { data: actions, isLoading } = useActionCompletions(service.id);
-    const isExpanded = expandedActions[service.id] ?? false;
-    const completions = (actions ?? []) as ActionCompletion[];
-    const pct = service.maxActions ? Math.round((service.actionsCompleted / service.maxActions) * 100) : 0;
-
-    return (
-      <div className="space-y-3 pt-2 border-t border-border/50">
-        {/* Progress bar */}
-        <div>
-          <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>Actions</span>
-            <span>{service.actionsCompleted} / {service.maxActions ?? "∞"}{service.maxActions ? ` (${pct}%)` : ""}</span>
-          </div>
-          <Progress value={service.maxActions ? pct : 0} className="h-1.5" />
-        </div>
-
-        {/* Toggle */}
-        {isLoading ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> Loading actions…
-          </div>
-        ) : completions.length > 0 ? (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs w-full justify-between"
-              onClick={() => setExpandedActions((prev) => ({ ...prev, [service.id]: !isExpanded }))}
-            >
-              <span>{isExpanded ? "Hide" : "Show"} {completions.length} action{completions.length !== 1 ? "s" : ""}</span>
-              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </Button>
-
-            {isExpanded && (
-              <div className="space-y-2">
-                {completions.map((ac: ActionCompletion) => {
-                  const ev = actionEvidenceInputs[ac.id] ?? {};
-                  const manualOnly = service.category === "like" || service.category === "ambassador" || service.category === "custom";
-
-                  return (
-                    <div key={ac.id} className="border rounded-md p-3 space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="font-mono text-muted-foreground">
-                            {ac.userId.slice(0, 4)}…{ac.userId.slice(-4)}
-                          </span>
-                          <ActionStatusBadge status={ac.status} />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">
-                          {ac.createdAt ? format(new Date(ac.createdAt), "MMM d, HH:mm") : ""}
-                        </span>
-                      </div>
-
-                      {ac.status === "completed" && (
-                        <div className="space-y-2 pt-1">
-                          {manualOnly ? (
-                            <p className="text-xs text-muted-foreground">Manual verification only for &ldquo;{service.category}&rdquo; category.</p>
-                          ) : (
-                            <>
-                              {service.category === "repost" && (
-                                <Input
-                                  placeholder="Tweet URL (e.g. https://x.com/user/status/123)"
-                                  className="text-xs h-8"
-                                  value={ev.tweetUrl ?? ""}
-                                  onChange={(e) => setActionEvidenceInputs((prev) => ({ ...prev, [ac.id]: { ...prev[ac.id], tweetUrl: e.target.value } }))}
-                                />
-                              )}
-                              {service.category === "follow" && (
-                                <Input
-                                  placeholder="Target @handle (e.g. @elonmusk)"
-                                  className="text-xs h-8"
-                                  value={ev.targetHandle ?? ""}
-                                  onChange={(e) => setActionEvidenceInputs((prev) => ({ ...prev, [ac.id]: { ...prev[ac.id], targetHandle: e.target.value } }))}
-                                />
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-full text-xs"
-                                disabled={isActionDisputing}
-                                onClick={() => {
-                                  disputeAction(
-                                    { serviceId: service.id, actionId: ac.id, tweetUrl: ev.tweetUrl, targetHandle: ev.targetHandle },
-                                    {
-                                      onSuccess: (data: any) => {
-                                        const v = data.verification;
-                                        if (v?.status === "verified") {
-                                          toast({ title: "Verified", description: v.message });
-                                        } else if (v?.status === "not_found") {
-                                          toast({ title: "Rejected", description: v.message, variant: "destructive" });
-                                        } else {
-                                          toast({ title: "Manual Review", description: v?.message ?? "Could not auto-verify" });
-                                        }
-                                      },
-                                      onError: (err: any) => {
-                                        toast({ title: "Error", description: err?.message, variant: "destructive" });
-                                      },
-                                    }
-                                  );
-                                }}
-                              >
-                                {isActionDisputing ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-1 h-3 w-3" />}
-                                Dispute
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-xs text-muted-foreground">No actions yet.</p>
-        )}
-      </div>
-    );
   };
 
   if (authLoading || isLoggingIn) {
@@ -309,7 +185,7 @@ export default function DashboardPage() {
               <Award className="mx-auto h-5 w-5 text-purple-500 mb-1" />
               <div className="flex gap-1 justify-center flex-wrap mt-1">
                 {reputation.badges?.length > 0 ? reputation.badges.map((b: string) => (
-                  <Badge key={b} variant="secondary" className="text-[10px]">{b.replace("_", " ")}</Badge>
+                  <Badge key={b} variant="secondary" className="text-[10px]">{b.replace(/_/g, " ")}</Badge>
                 )) : <span className="text-xs text-muted-foreground">None yet</span>}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Badges</p>
@@ -338,45 +214,51 @@ export default function DashboardPage() {
           ) : (
             <div className="grid gap-4">
               <AnimatePresence>
-                {myServices.map((service: Service) => (
-                  <motion.div
-                    key={service.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card data-testid={`card-listing-${service.id}`}>
-                      <CardHeader className="pb-2 flex-row items-start justify-between gap-2 flex-wrap">
-                        <div>
-                          <CardTitle className="text-base">{service.title}</CardTitle>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {service.createdAt ? format(new Date(service.createdAt), "PPP") : ""}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge
-                            variant={service.listingType === "request" ? "outline" : "default"}
-                            className={`text-xs capitalize ${service.listingType === "request" ? "border-amber-500/50 text-amber-600" : ""}`}
-                          >
-                            {service.listingType === "request" ? "Request" : "Offer"}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs capitalize">{service.category}</Badge>
-                          <Badge variant={service.active ? "default" : "destructive"} className="text-xs">
-                            {service.active ? "Active" : "Inactive"}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{service.description}</p>
-                        <p className="text-lg font-bold font-mono">{service.price} <span className="text-xs text-muted-foreground font-sans">SOL</span></p>
-                        {service.pricingCategory === "pay_per_action" && (
-                          <ActionTrackingSection service={service} />
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
+                {myServices.map((service: Service) => {
+                  const pct = service.maxActions ? Math.round((service.actionsCompleted / service.maxActions) * 100) : 0;
+                  return (
+                    <motion.div
+                      key={service.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Card data-testid={`card-listing-${service.id}`}>
+                        <CardHeader className="pb-2 flex-row items-start justify-between gap-2 flex-wrap">
+                          <div>
+                            <CardTitle className="text-base">{service.title}</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {service.createdAt ? format(new Date(service.createdAt), "PPP") : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] capitalize gap-1"
+                            >
+                              {service.listingType === "request" ? "Request" : "Offer"} &middot; {service.category}
+                            </Badge>
+                            <span className={`h-2 w-2 rounded-full ${service.active ? "bg-green-500" : "bg-red-400"}`} title={service.active ? "Active" : "Inactive"} />
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{service.description}</p>
+                          <p className="text-lg font-bold font-mono">{service.price} <span className="text-xs text-muted-foreground font-sans">SOL</span></p>
+                          {service.maxActions && (
+                            <div className="space-y-1 pt-2 border-t border-border/50 mt-2">
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Contracts</span>
+                                <span>{service.actionsCompleted} / {service.maxActions} ({pct}%)</span>
+                              </div>
+                              <Progress value={pct} className="h-1.5" />
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
           )}
@@ -434,7 +316,7 @@ export default function DashboardPage() {
                             </p>
                           </div>
                           <Badge className={`text-xs capitalize ${phaseColors[escrow.phase] ?? ""}`}>
-                            {escrow.phase.replace("_", " ")}
+                            {escrow.phase.replace(/_/g, " ")}
                           </Badge>
                         </CardHeader>
                         <CardContent className="space-y-3">
@@ -457,13 +339,15 @@ export default function DashboardPage() {
                             <Button
                               size="sm"
                               className="rounded-full text-xs"
+                              disabled={loadingEscrowId === escrow.id}
                               onClick={async () => {
                                 if (!solanaEscrow.isReady) {
                                   toast({ title: "Wallet not connected", variant: "destructive" });
                                   return;
                                 }
+                                setLoadingEscrowId(escrow.id);
                                 try {
-                                  const amountLamports = Math.round(parseFloat(escrow.amount) * 1_000_000_000);
+                                  const amountLamports = solToLamports(escrow.amount);
                                   const txSig = await solanaEscrow.initializeAndFund(
                                     escrow.receiverId, escrow.id, amountLamports, 30
                                   );
@@ -471,9 +355,12 @@ export default function DashboardPage() {
                                   toast({ title: "Escrow Funded", description: `Tx: ${txSig.slice(0, 12)}...` });
                                 } catch (err: any) {
                                   toast({ title: "Transaction Failed", description: err?.message, variant: "destructive" });
+                                } finally {
+                                  setLoadingEscrowId(null);
                                 }
                               }}
                             >
+                              {loadingEscrowId === escrow.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                               Fund Escrow
                             </Button>
                           )}
@@ -481,19 +368,24 @@ export default function DashboardPage() {
                             <Button
                               size="sm"
                               className="rounded-full text-xs"
+                              disabled={loadingEscrowId === escrow.id}
                               onClick={async () => {
                                 if (!solanaEscrow.isReady) {
                                   toast({ title: "Wallet not connected", variant: "destructive" });
                                   return;
                                 }
+                                setLoadingEscrowId(escrow.id);
                                 try {
                                   await solanaEscrow.advancePhase(escrow.depositorId, escrow.id, "in_progress");
                                   updateEscrowPhase({ id: escrow.id, phase: "in_progress" });
                                 } catch (err: any) {
                                   toast({ title: "Transaction failed", description: err?.message, variant: "destructive" });
+                                } finally {
+                                  setLoadingEscrowId(null);
                                 }
                               }}
                             >
+                              {loadingEscrowId === escrow.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                               Start Work
                             </Button>
                           )}
@@ -501,19 +393,24 @@ export default function DashboardPage() {
                             <Button
                               size="sm"
                               className="rounded-full text-xs"
+                              disabled={loadingEscrowId === escrow.id}
                               onClick={async () => {
                                 if (!solanaEscrow.isReady) {
                                   toast({ title: "Wallet not connected", variant: "destructive" });
                                   return;
                                 }
+                                setLoadingEscrowId(escrow.id);
                                 try {
                                   await solanaEscrow.advancePhase(escrow.depositorId, escrow.id, "under_review");
                                   updateEscrowPhase({ id: escrow.id, phase: "under_review" });
                                 } catch (err: any) {
                                   toast({ title: "Transaction failed", description: err?.message, variant: "destructive" });
+                                } finally {
+                                  setLoadingEscrowId(null);
                                 }
                               }}
                             >
+                              {loadingEscrowId === escrow.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                               Submit for Review
                             </Button>
                           )}
@@ -523,149 +420,162 @@ export default function DashboardPage() {
                                 size="sm"
                                 variant="outline"
                                 className="rounded-full text-xs"
+                                disabled={loadingEscrowId === escrow.id}
                                 onClick={async () => {
                                   if (!solanaEscrow.isReady) {
                                     toast({ title: "Wallet not connected", variant: "destructive" });
                                     return;
                                   }
+                                  setLoadingEscrowId(escrow.id);
                                   try {
                                     await solanaEscrow.advancePhase(escrow.depositorId, escrow.id, "disputed");
                                     updateEscrowPhase({ id: escrow.id, phase: "disputed" });
                                     if (solanaRep.isReady && user) {
-                                      try { await solanaRep.recordDispute(user.id, escrow.id); } catch {}
+                                      try { await solanaRep.recordDispute(user.id, escrow.id); } catch (err: any) { console.error(err); }
                                     }
                                   } catch (err: any) {
                                     toast({ title: "Transaction failed", description: err?.message, variant: "destructive" });
+                                  } finally {
+                                    setLoadingEscrowId(null);
                                   }
                                 }}
                               >
-                                <XCircle className="mr-1 h-3 w-3" />
+                                {loadingEscrowId === escrow.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <XCircle className="mr-1 h-3 w-3" />}
                                 Dispute
                               </Button>
                               <Button
                                 size="sm"
                                 className="rounded-full text-xs"
+                                disabled={loadingEscrowId === escrow.id}
                                 onClick={async () => {
                                   if (!solanaEscrow.isReady) {
                                     toast({ title: "Wallet not connected", variant: "destructive" });
                                     return;
                                   }
+                                  setLoadingEscrowId(escrow.id);
                                   try {
                                     const txSig = await solanaEscrow.releaseFunds(escrow.id, escrow.receiverId);
                                     updateEscrowPhase({ id: escrow.id, phase: "released", txHash: txSig });
                                     toast({ title: "Funds Released", description: `Tx: ${txSig.slice(0, 12)}...` });
                                     if (solanaRep.isReady && user) {
-                                      const amountLamports = Math.round(parseFloat(escrow.amount) * 1_000_000_000);
-                                      try { await solanaRep.recordCompletion(user.id, escrow.id, amountLamports, isDepositor); } catch {}
+                                      const amountLamports = solToLamports(escrow.amount);
+                                      try { await solanaRep.recordCompletion(user.id, escrow.id, amountLamports, isDepositor); } catch (err: any) { console.error(err); }
                                     }
                                   } catch (err: any) {
                                     toast({ title: "Release Failed", description: err?.message, variant: "destructive" });
+                                  } finally {
+                                    setLoadingEscrowId(null);
                                   }
                                 }}
                               >
-                                <CheckCircle className="mr-1 h-3 w-3" />
+                                {loadingEscrowId === escrow.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle className="mr-1 h-3 w-3" />}
                                 Approve & Release
                               </Button>
                             </div>
                           )}
                           {escrow.phase === "disputed" && isDepositor && (() => {
                             const disputeOpenedAt = escrow.disputeOpenedAt;
-                            const canRefund = disputeOpenedAt && Date.now() / 1000 > new Date(disputeOpenedAt).getTime() / 1000 + 7 * 86400;
+                            const canRefund = disputeOpenedAt && Date.now() / 1000 > new Date(disputeOpenedAt).getTime() / 1000 + 12 * 3600;
                             return (
                               <div className="space-y-2">
                                 <p className="text-xs text-muted-foreground">
                                   {canRefund
                                     ? "Dispute window expired. You may claim a refund."
-                                    : "Seller has 7 days to submit evidence. After that, you may claim a refund."}
+                                    : "Seller has 12 hours to submit evidence. After that, you may claim a refund."}
                                 </p>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="rounded-full text-xs"
-                                  disabled={!canRefund}
-                                  onClick={async () => {
-                                    if (!solanaEscrow.isReady) {
-                                      toast({ title: "Wallet not connected", variant: "destructive" });
-                                      return;
-                                    }
-                                    try {
-                                      const txSig = await solanaEscrow.refund(escrow.depositorId, escrow.id);
-                                      updateEscrowPhase({ id: escrow.id, phase: "refunded", txHash: txSig });
-                                      toast({ title: "Refund Processed", description: `Tx: ${txSig.slice(0, 12)}...` });
-                                    } catch (err: any) {
-                                      toast({ title: "On-chain refund failed", description: err?.message, variant: "destructive" });
-                                    }
-                                  }}
-                                >
-                                  Claim Refund
-                                </Button>
-                              </div>
-                            );
-                          })()}
-                          {escrow.phase === "disputed" && !isDepositor && (() => {
-                            const cat = (escrow as any).serviceCategory as string | null;
-                            const manualOnly = !cat || cat === "like" || cat === "ambassador" || cat === "custom";
-                            const ev = evidenceInputs[escrow.id] ?? {};
-                            return (
-                              <div className="space-y-3 border border-dashed border-red-500/30 rounded-md p-3">
-                                <p className="text-xs font-medium flex items-center gap-1">
-                                  <AlertTriangle className="h-3 w-3 text-red-500" />
-                                  Dispute — Submit Evidence
-                                </p>
-                                {manualOnly ? (
-                                  <p className="text-xs text-muted-foreground">
-                                    This service category ({cat ?? "unknown"}) requires admin review. Please wait for manual resolution.
-                                  </p>
-                                ) : (
-                                  <>
-                                    {cat === "repost" && (
-                                      <Input
-                                        placeholder="Tweet URL (e.g. https://x.com/user/status/123)"
-                                        className="text-xs h-8"
-                                        value={ev.tweetUrl ?? ""}
-                                        onChange={(e) => setEvidenceInputs((prev) => ({ ...prev, [escrow.id]: { ...prev[escrow.id], tweetUrl: e.target.value } }))}
-                                      />
-                                    )}
-                                    {cat === "follow" && (
-                                      <Input
-                                        placeholder="Target @handle (e.g. @elonmusk)"
-                                        className="text-xs h-8"
-                                        value={ev.targetHandle ?? ""}
-                                        onChange={(e) => setEvidenceInputs((prev) => ({ ...prev, [escrow.id]: { ...prev[escrow.id], targetHandle: e.target.value } }))}
-                                      />
-                                    )}
-                                    <Button
-                                      size="sm"
-                                      className="rounded-full text-xs"
-                                      disabled={isDisputeResolving}
-                                      onClick={() => {
-                                        disputeResolve(
-                                          { escrowId: escrow.id, tweetUrl: ev.tweetUrl, targetHandle: ev.targetHandle },
-                                          {
-                                            onSuccess: (data: any) => {
-                                              if (data.resolution === "released") {
-                                                toast({ title: "Verified", description: "Evidence confirmed — funds released to you." });
-                                              } else if (data.resolution === "refunded") {
-                                                toast({ title: "Not Verified", description: "Evidence could not be confirmed — funds refunded to buyer.", variant: "destructive" });
-                                              } else {
-                                                toast({ title: "Manual Review", description: data.message });
-                                              }
-                                            },
-                                            onError: (err: any) => {
-                                              toast({ title: "Error", description: err?.message, variant: "destructive" });
-                                            },
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="rounded-full text-xs"
+                                    disabled={isVerifying}
+                                    onClick={() => {
+                                      verifyContract(escrow.orderId, {
+                                        onSuccess: (data: any) => {
+                                          if (data.status === "verified") {
+                                            toast({ title: "Verified", description: data.message });
+                                          } else if (data.status === "not_found" || data.status === "insufficient") {
+                                            toast({ title: "Not Verified", description: data.message, variant: "destructive" });
+                                          } else {
+                                            toast({ title: "Manual Review", description: data.message });
                                           }
-                                        );
-                                      }}
-                                    >
-                                      {isDisputeResolving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Send className="mr-1 h-3 w-3" />}
-                                      Submit Evidence
-                                    </Button>
-                                  </>
-                                )}
+                                        },
+                                        onError: (err: any) => {
+                                          toast({ title: "Error", description: err?.message, variant: "destructive" });
+                                        },
+                                      });
+                                    }}
+                                  >
+                                    {isVerifying ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-1 h-3 w-3" />}
+                                    Verify Contract
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="rounded-full text-xs"
+                                    disabled={!canRefund || loadingEscrowId === escrow.id}
+                                    onClick={async () => {
+                                      if (!solanaEscrow.isReady) {
+                                        toast({ title: "Wallet not connected", variant: "destructive" });
+                                        return;
+                                      }
+                                      setLoadingEscrowId(escrow.id);
+                                      try {
+                                        const txSig = await solanaEscrow.refund(escrow.depositorId, escrow.id);
+                                        updateEscrowPhase({ id: escrow.id, phase: "refunded", txHash: txSig });
+                                        toast({ title: "Refund Processed", description: `Tx: ${txSig.slice(0, 12)}...` });
+                                      } catch (err: any) {
+                                        toast({ title: "On-chain refund failed", description: err?.message, variant: "destructive" });
+                                      } finally {
+                                        setLoadingEscrowId(null);
+                                      }
+                                    }}
+                                  >
+                                    {loadingEscrowId === escrow.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                                    Claim Refund
+                                  </Button>
+                                </div>
                               </div>
                             );
                           })()}
+                          {escrow.phase === "disputed" && !isDepositor && (
+                            <div className="space-y-3 border border-dashed border-red-500/30 rounded-md p-3">
+                              <p className="text-xs font-medium flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3 text-red-500" />
+                                Dispute — Automatic Verification
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                The buyer can trigger automatic verification of your contract. Make sure you have posted the required keyword in your tweets.
+                              </p>
+                              <Button
+                                size="sm"
+                                className="rounded-full text-xs"
+                                disabled={isDisputeResolving}
+                                onClick={() => {
+                                  disputeResolve(
+                                    { escrowId: escrow.id },
+                                    {
+                                      onSuccess: (data: any) => {
+                                        if (data.resolution === "released") {
+                                          toast({ title: "Verified", description: "Evidence confirmed — funds released to you." });
+                                        } else if (data.resolution === "refunded") {
+                                          toast({ title: "Not Verified", description: "Evidence could not be confirmed — funds refunded to buyer.", variant: "destructive" });
+                                        } else {
+                                          toast({ title: "Manual Review", description: data.message });
+                                        }
+                                      },
+                                      onError: (err: any) => {
+                                        toast({ title: "Error", description: err?.message, variant: "destructive" });
+                                      },
+                                    }
+                                  );
+                                }}
+                              >
+                                {isDisputeResolving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Send className="mr-1 h-3 w-3" />}
+                                Submit for Verification
+                              </Button>
+                            </div>
+                          )}
                           {escrow.phase === "released" && (
                             <div className="flex gap-2">
                               <Button
@@ -691,7 +601,7 @@ export default function DashboardPage() {
                                       try {
                                         await solanaEscrow.closeEscrow(escrow.id);
                                         toast({ title: "Escrow Closed", description: "On-chain account reclaimed." });
-                                      } catch {}
+                                      } catch (err: any) { console.error(err); }
                                     }
                                   }}
                                 >

@@ -106,6 +106,7 @@ export async function PATCH(
         field: err.errors[0].path.join('.'),
       }, { status: 400 });
     }
-    throw err;
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

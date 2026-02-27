@@ -9,10 +9,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") || undefined;
+    const pricingCategory = searchParams.get("pricingCategory") || undefined;
     const listingType = searchParams.get("listingType") || undefined;
     const search = searchParams.get("search") || undefined;
     const creatorId = searchParams.get("creatorId") || undefined;
-    const services = await storage.getServices({ category, listingType, search, creatorId });
+    const services = await storage.getServices({ category, pricingCategory, listingType, search, creatorId });
     return NextResponse.json(services);
   } catch {
     return NextResponse.json(await storage.getServices());
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
         field: err.errors[0].path.join('.'),
       }, { status: 400 });
     }
-    throw err;
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

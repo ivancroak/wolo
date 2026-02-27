@@ -1,6 +1,6 @@
 -- ===========================================
--- Wolo Seed Data
--- Run this in Supabase Dashboard > SQL Editor AFTER migration.sql
+-- Wolo Seed Data (V2)
+-- Run this in Supabase Dashboard > SQL Editor AFTER migration-v2.sql
 -- ===========================================
 
 -- Seed Users
@@ -10,39 +10,29 @@ insert into users (id, first_name, created_at, updated_at) values
   ('SeedCarol333333333333333333333333333333333333', 'Carol', now(), now())
 on conflict (id) do nothing;
 
--- Seed Services
-insert into services (creator_id, title, description, price, category, listing_type, pricing_category, max_actions, budget_cap, payroll_basis, deadline_days) values
+-- Seed Services (4 categories, 2 pricing models)
+insert into services (creator_id, title, description, price, category, listing_type, pricing_category, payroll_basis, deadline_days, required_keyword, min_post_count, posts_per_period, max_actions) values
   ('SeedAlice111111111111111111111111111111111111',
-   'X Repost Campaign (100 reposts)',
-   'I will repost your X post to my 50k+ followers. Guaranteed 100 reposts from real, active accounts across crypto/DeFi niches. Includes engagement tracking report.',
-   '2.5', 'repost', 'offer', 'pay_per_action', 100, '2.5', null, null),
+   'DeFi Content Campaign (5 Posts)',
+   'I will create 5 high-quality posts about your Solana DeFi project. Each post will include the required keyword/hashtag and be published within the deadline.',
+   '2.5', 'content', 'offer', 'fixed', null, 7, '#SolanaDefi', 5, null, 10),
 
   ('SeedBob22222222222222222222222222222222222222',
-   'X Likes Package (500 likes)',
-   'Boost your X post with 500 organic likes from real accounts. Delivery within 24 hours. Ideal for product launches and brand visibility.',
-   '1.0', 'like', 'offer', 'pay_per_action', 500, '1.0', null, null),
+   'Weekly Brand Ambassador',
+   'Dedicated brand ambassador posting 3 tweets per week mentioning your project. Monthly engagement reports included.',
+   '12.0', 'ambassador', 'offer', 'payroll', 'weekly', null, '@woloprotocol', null, 3, 5),
 
   ('SeedCarol333333333333333333333333333333333333',
-   'Crypto X Follower Growth',
-   'Grow your crypto X presence with 1000 targeted followers. All followers are real accounts interested in DeFi, NFTs, and Solana ecosystem.',
-   '5.0', 'follow', 'offer', 'full_service', null, null, null, null),
+   'NFT Collection Campaign',
+   'Full campaign promoting your NFT collection across X. 10 posts including minting links, collection details, and community engagement.',
+   '5.0', 'campaign', 'offer', 'fixed', null, 14, '#WoloNFT', 10, null, null),
 
   ('SeedAlice111111111111111111111111111111111111',
-   'Brand Ambassador - Weekly Social Posts',
-   'Dedicated brand ambassador service. 3 posts per week on X promoting your project. Monthly engagement reports included.',
-   '12.0', 'ambassador', 'offer', 'payroll', null, null, 'weekly', null),
-
-  ('SeedBob22222222222222222222222222222222222222',
-   'Custom Solana Project Promo Thread',
-   'Professional thread (8-12 posts) breaking down your Solana project. Includes custom graphics, clear call-to-actions, and pinned for 7 days.',
-   '3.5', 'custom', 'offer', 'full_service', null, null, null, null),
+   'Weekly DeFi Space Host',
+   'I will host a weekly X Space discussing your DeFi protocol. Each space runs 30-60 minutes with live Q&A.',
+   '8.0', 'space', 'offer', 'payroll', 'weekly', null, '#WoloDeFi', null, 1, 3),
 
   ('SeedCarol333333333333333333333333333333333333',
-   '[REQUEST] Need 50 Quality Reposts for NFT Drop',
-   'Looking for influencers to repost our upcoming NFT collection announcement. Must have 10k+ followers in the NFT/art space. Budget is firm.',
-   '4.0', 'repost', 'request', 'pay_per_action', 50, '4.0', null, 3),
-
-  ('SeedAlice111111111111111111111111111111111111',
-   '[REQUEST] Ambassador for DeFi Protocol Launch',
-   'Seeking an experienced crypto ambassador to promote our new DeFi protocol launch. 2 weeks of daily X coverage required.',
-   '20.0', 'ambassador', 'request', 'payroll', null, null, 'daily', 14);
+   '[REQUEST] Need 20 Posts for Token Launch',
+   'Looking for influencers to post about our new token launch. Must include our handle and hashtag. Budget is firm, 5-day deadline.',
+   '4.0', 'content', 'request', 'fixed', null, 5, '@newtoken', 20, null, null);

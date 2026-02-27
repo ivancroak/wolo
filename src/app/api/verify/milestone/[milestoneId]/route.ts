@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
-import { verifyDelivery } from "@/server/verification";
-import type { ServiceCategory } from "@shared/schema";
+import { verifyContract } from "@/server/verification";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ milestoneId: string }> },
 ) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, "verify-milestone", 10, 60000);
+  if (rl) return rl;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -46,15 +50,7 @@ export async function GET(
     });
   }
 
-  const searchParams = request.nextUrl.searchParams;
-  const tweetUrl = searchParams.get("tweetUrl") ?? undefined;
-  const targetHandle = searchParams.get("targetHandle") ?? undefined;
-
-  const result = await verifyDelivery(
-    service.category as ServiceCategory,
-    sellerProfile.twitterHandle,
-    { tweetUrl, targetHandle },
-  );
+  const result = await verifyContract(service, sellerProfile.twitterHandle, order.createdAt);
 
   return NextResponse.json(result);
 }

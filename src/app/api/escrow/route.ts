@@ -37,6 +37,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Cannot create escrow for your own service" }, { status: 400 });
     }
 
+    const expectedReceiver = service.listingType === "request" ? order.buyerId : service.creatorId;
+    if (input.receiverId !== expectedReceiver) {
+      return NextResponse.json({ message: "Receiver does not match service creator" }, { status: 400 });
+    }
+
+    if (input.amount !== service.price) {
+      return NextResponse.json({ message: "Amount does not match service price" }, { status: 400 });
+    }
+
     const existingEscrow = await storage.getEscrowByOrder(input.orderId);
     if (existingEscrow) {
       return NextResponse.json({ message: "Escrow already exists for this order" }, { status: 400 });
@@ -55,6 +64,7 @@ export async function POST(request: NextRequest) {
         field: err.errors[0].path.join("."),
       }, { status: 400 });
     }
-    throw err;
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

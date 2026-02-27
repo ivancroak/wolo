@@ -1,12 +1,13 @@
 use anchor_lang::prelude::*;
 
-declare_id!("42PrQGNH4pCqyGwxrLMXnfkDzz5CTCFx71y2HjuHK9Vg");
+declare_id!("CjNEAXDzVY5aTsHQaHuLMioVkUucu4aEwFZMTWWwXxvR");
 
-const ESCROW_PROGRAM_ID: &str = "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9";
+// Compile-time constant: raw bytes of "4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM"
+const ESCROW_PROGRAM_ID: Pubkey = Pubkey::new_from_array([54, 176, 192, 230, 85, 28, 210, 138, 99, 132, 228, 136, 245, 211, 71, 163, 219, 20, 101, 71, 227, 95, 141, 134, 45, 93, 61, 99, 86, 164, 199, 114]);
 
-fn escrow_program_pubkey() -> Pubkey {
-    ESCROW_PROGRAM_ID.parse::<Pubkey>().unwrap()
-}
+// First 8 bytes of sha256("account:EscrowAccount") — Anchor discriminator
+const ESCROW_ACCOUNT_DISCRIMINATOR: [u8; 8] = [36, 69, 48, 18, 128, 225, 125, 135];
+const ESCROW_PHASE_RELEASED: u8 = 5;
 
 #[program]
 pub mod woland_reputation {
@@ -25,6 +26,7 @@ pub mod woland_reputation {
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
         if let Some(authority) = new_authority {
+            require!(authority != Pubkey::default(), WolandRepError::InvalidAddress);
             config.authority = authority;
         }
         Ok(())
@@ -106,12 +108,29 @@ pub mod woland_reputation {
 
         let escrow_info = &ctx.accounts.escrow_account;
         let escrow_data = escrow_info.try_borrow_data()?;
-        require!(escrow_data.len() > 8 + 8 + 32 + 32, WolandRepError::InvalidEscrow);
+
+        // Minimum length: disc(8) + id(8) + depositor(32) + receiver(32) + amount(8) + released(8) + phase(1)
+        require!(escrow_data.len() > 96, WolandRepError::InvalidEscrow);
+
+        // C-6 fix: validate Anchor discriminator to prevent account type confusion
+        let disc: [u8; 8] = escrow_data[0..8].try_into().unwrap();
+        require!(disc == ESCROW_ACCOUNT_DISCRIMINATOR, WolandRepError::InvalidEscrow);
+
+        // C-5 fix: validate escrow_id matches the on-chain account's id field
+        let onchain_id = u64::from_le_bytes(escrow_data[8..16].try_into().unwrap());
+        require!(onchain_id == escrow_id, WolandRepError::EscrowIdMismatch);
 
         let depositor_bytes: [u8; 32] = escrow_data[16..48].try_into().unwrap();
         let receiver_bytes: [u8; 32] = escrow_data[48..80].try_into().unwrap();
         let depositor = Pubkey::new_from_array(depositor_bytes);
         let receiver = Pubkey::new_from_array(receiver_bytes);
+
+        // Also verify the escrow PDA matches expected seeds
+        let (expected_pda, _) = Pubkey::find_program_address(
+            &[b"escrow", depositor_bytes.as_ref(), &escrow_id.to_le_bytes()],
+            &ESCROW_PROGRAM_ID,
+        );
+        require!(escrow_info.key() == expected_pda, WolandRepError::InvalidEscrow);
 
         let rater_key = ctx.accounts.rater.key();
         require!(
@@ -125,11 +144,8 @@ pub mod woland_reputation {
             WolandRepError::NotParticipant
         );
 
-        let phase_offset = 8 + 8 + 32 + 32 + 32 + 8 + 8;
-        if escrow_data.len() > phase_offset {
-            let phase = escrow_data[phase_offset];
-            require!(phase == 5, WolandRepError::EscrowNotReleased);
-        }
+        let phase = escrow_data[96]; // disc(8) + id(8) + depositor(32) + receiver(32) + amount(8) + released(8)
+        require!(phase == ESCROW_PHASE_RELEASED, WolandRepError::EscrowNotReleased);
 
         let rating = &mut ctx.accounts.rating;
         rating.escrow_id = escrow_id;
@@ -154,7 +170,9 @@ pub mod woland_reputation {
             target: rep.user,
             score,
             avg_rating_x100: if rep.rating_count > 0 {
-                ((rep.rating_sum * 100) / rep.rating_count) as u16
+                rep.rating_sum.checked_mul(100)
+                    .and_then(|v| v.checked_div(rep.rating_count))
+                    .unwrap_or(0) as u16
             } else {
                 0
             },
@@ -301,9 +319,9 @@ pub struct SubmitRating<'info> {
         bump,
     )]
     pub rating: Account<'info, RatingRecord>,
-    /// CHECK: Escrow account - must be owned by the escrow program
+    /// CHECK: Escrow account - must be owned by the escrow program, discriminator + PDA validated in instruction
     #[account(
-        constraint = escrow_account.owner == &escrow_program_pubkey() @ WolandRepError::InvalidEscrow
+        constraint = escrow_account.owner == &ESCROW_PROGRAM_ID @ WolandRepError::InvalidEscrow
     )]
     pub escrow_account: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
@@ -390,4 +408,8 @@ pub enum WolandRepError {
     EscrowNotReleased,
     #[msg("Invalid escrow account data")]
     InvalidEscrow,
+    #[msg("Escrow ID does not match on-chain account")]
+    EscrowIdMismatch,
+    #[msg("Cannot set to zero address")]
+    InvalidAddress,
 }

@@ -2,16 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getSessionUser } from "@/server/auth";
 import { storage } from "@/server/storage";
-import { verifyDelivery } from "@/server/verification";
+import { verifyContract } from "@/server/verification";
 import { WolandEscrowClient } from "@/lib/solana/escrow-client";
 import { getDeployWalletKeypair } from "@/lib/solana/deploy-wallet";
-import { z } from "zod";
-import type { ServiceCategory, EscrowPhase } from "@shared/schema";
-
-const inputSchema = z.object({
-  tweetUrl: z.string().optional(),
-  targetHandle: z.string().optional(),
-});
+import type { EscrowPhase } from "@shared/schema";
 
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT = 5;
@@ -56,9 +50,6 @@ export async function POST(
   }
 
   try {
-    const body = await request.json();
-    const input = inputSchema.parse(body);
-
     const escrow = await storage.getEscrow(escrowId);
     if (!escrow) {
       return NextResponse.json({ message: "Escrow not found" }, { status: 404 });
@@ -71,9 +62,9 @@ export async function POST(
       );
     }
 
-    if (user.id !== escrow.receiverId) {
+    if (user.id !== escrow.receiverId && user.id !== escrow.depositorId) {
       return NextResponse.json(
-        { message: "Only the receiver (seller) can submit dispute evidence" },
+        { message: "Only the depositor or receiver can submit dispute evidence" },
         { status: 403 },
       );
     }
@@ -96,13 +87,9 @@ export async function POST(
       );
     }
 
-    const category = service.category as ServiceCategory;
-    const result = await verifyDelivery(category, profile.twitterHandle, {
-      tweetUrl: input.tweetUrl,
-      targetHandle: input.targetHandle,
-    });
+    const result = await verifyContract(service, profile.twitterHandle, order.createdAt);
 
-    if (result.status === "verified" || result.status === "not_found") {
+    if (result.status === "verified" || result.status === "not_found" || result.status === "insufficient") {
       const feeVaultStr = process.env.NEXT_PUBLIC_FEE_VAULT;
       if (!feeVaultStr) {
         return NextResponse.json(
@@ -142,7 +129,8 @@ export async function POST(
         message: result.message,
         resolution: newPhase,
         signature: sig,
-        details: result.details,
+        matchingPosts: result.matchingPosts,
+        requiredPosts: result.requiredPosts,
       });
     }
 
@@ -150,15 +138,11 @@ export async function POST(
       status: result.status,
       message: result.message,
       resolution: "pending",
-      details: result.details,
+      matchingPosts: result.matchingPosts,
+      requiredPosts: result.requiredPosts,
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: err.errors[0].message, field: err.errors[0].path.join(".") },
-        { status: 400 },
-      );
-    }
-    throw err;
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

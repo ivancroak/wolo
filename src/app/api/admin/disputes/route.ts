@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/server/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-const ADMIN_WALLET = "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
+const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS || "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
 
 export async function GET() {
   const user = await getSessionUser();

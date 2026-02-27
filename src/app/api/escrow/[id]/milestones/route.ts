@@ -31,6 +31,17 @@ export async function POST(
   try {
     const body = await request.json();
     const input = api.escrow.addMilestone.input.parse(body);
+
+    // Validate that total milestone amounts don't exceed escrow amount
+    const existingMilestones = await storage.getMilestones(escrow.id);
+    const existingTotal = existingMilestones.reduce((sum, m) => sum + Number(m.amount), 0);
+    const newAmount = Number(input.amount);
+    if (existingTotal + newAmount > Number(escrow.amount)) {
+      return NextResponse.json({
+        message: `Total milestone amounts (${existingTotal + newAmount}) would exceed escrow amount (${escrow.amount})`,
+      }, { status: 400 });
+    }
+
     const milestone = await storage.addMilestone({
       ...input,
       escrowId: escrow.id,
@@ -43,6 +54,7 @@ export async function POST(
         field: err.errors[0].path.join("."),
       }, { status: 400 });
     }
-    throw err;
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

@@ -6,7 +6,7 @@ import { WolandEscrowClient } from "@/lib/solana/escrow-client";
 import { getDeployWalletKeypair } from "@/lib/solana/deploy-wallet";
 import { z } from "zod";
 
-const ADMIN_WALLET = "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
+const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS || "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
 
 const resolveSchema = z.object({
   depositorShareBps: z.number().int().min(0).max(10000),
@@ -82,7 +82,8 @@ export async function POST(
     const sig = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(sig, "confirmed");
 
-    const updated = await storage.updateEscrowPhase(escrowId, "released", sig);
+    const resolvedPhase = depositorShareBps >= 10000 ? "refunded" as const : "released" as const;
+    const updated = await storage.updateEscrowPhase(escrowId, resolvedPhase, sig);
 
     return NextResponse.json({ ...updated, depositorShareBps, signature: sig });
   } catch (err) {
@@ -92,6 +93,7 @@ export async function POST(
         { status: 400 },
       );
     }
-    throw err;
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

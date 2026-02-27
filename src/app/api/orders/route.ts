@@ -29,6 +29,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Cannot purchase your own service" }, { status: 400 });
     }
 
+    if (!service.active) {
+      return NextResponse.json({ message: "This service is no longer active" }, { status: 400 });
+    }
+
+    if (service.maxActions != null && service.actionsCompleted >= service.maxActions) {
+      return NextResponse.json({ message: "All contracts for this service have been taken" }, { status: 400 });
+    }
+
+    const hasExisting = await storage.hasActiveOrder(input.serviceId, user.id);
+    if (hasExisting) {
+      return NextResponse.json({ message: "You already have a contract for this service" }, { status: 400 });
+    }
+
+    // Require verified profile to purchase
+    const profile = await storage.getProfile(user.id);
+    if (!profile?.walletAddress || !profile?.twitterHandle || !profile?.twitterVerified) {
+      return NextResponse.json(
+        { message: "Complete your profile (wallet address + verified X handle) before purchasing." },
+        { status: 403 }
+      );
+    }
+
     const order = await storage.createOrder({
       ...input,
       buyerId: user.id,
@@ -50,6 +72,7 @@ export async function POST(request: NextRequest) {
         field: err.errors[0].path.join('.'),
       }, { status: 400 });
     }
-    throw err;
+    console.error("Route error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

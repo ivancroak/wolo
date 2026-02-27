@@ -271,7 +271,7 @@ export default function OrderDetailPage() {
                     )}
                     {escrow.phase === "disputed" && (() => {
                       const disputeOpenedAt = escrow.disputeOpenedAt;
-                      const canRefund = disputeOpenedAt && Date.now() / 1000 > new Date(disputeOpenedAt).getTime() / 1000 + 7 * 86400;
+                      const canRefund = disputeOpenedAt && Date.now() / 1000 > new Date(disputeOpenedAt).getTime() / 1000 + 12 * 3600;
                       return (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-sm text-destructive">
@@ -280,7 +280,7 @@ export default function OrderDetailPage() {
                           <p className="text-xs text-muted-foreground">
                             {canRefund
                               ? "Dispute window expired. You may claim a refund."
-                              : "Seller has 7 days to submit evidence. After that, you may claim a refund."}
+                              : "Seller has 12 hours to submit evidence. After that, you may claim a refund."}
                           </p>
                           {isDepositor && (
                             <Button size="sm" variant="outline" className="rounded-full"

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { getClientIp, checkRateLimit } from "@/server/with-rate-limit";
-import { getUserTweets } from "@/server/twitter-client";
+import { getUserTweets, getUserInfo } from "@/server/twitter-client";
 import crypto from "crypto";
 
 function generateVerificationCode(userId: string, handle: string): string {
-  const secret = process.env.SESSION_SECRET || "wolo-verify";
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET env var is required");
   const hash = crypto
     .createHmac("sha256", secret)
     .update(`${userId}:${handle.toLowerCase()}`)
@@ -74,16 +75,33 @@ export async function POST(request: NextRequest) {
 
     if (found) {
       await storage.setTwitterVerified(user.id, true);
-      return NextResponse.json({ verified: true, message: "X account verified!" });
+
+      // Check blue checkmark status
+      let isBlueVerified = false;
+      try {
+        const userInfo = await getUserInfo(profile.twitterHandle);
+        isBlueVerified = !!userInfo?.isBlueVerified;
+      } catch {}
+      if (isBlueVerified) {
+        await storage.updateProfile(user.id, { isInfluencer: true }, true);
+      }
+
+      return NextResponse.json({
+        verified: true,
+        isBlueVerified,
+        message: isBlueVerified
+          ? "X account verified with blue checkmark!"
+          : "X account verified!",
+      });
     }
 
     return NextResponse.json({
       verified: false,
       message: "Verification tweet not found. Make sure you tweeted the exact code and try again.",
     });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
-      { message: `Failed to check tweets: ${err.message}` },
+      { message: "Failed to check tweets. Please try again later." },
       { status: 502 }
     );
   }

@@ -24,7 +24,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/services' as const,
       input: z.object({
-        category: z.enum(["repost", "like", "follow", "ambassador", "custom"]).optional(),
+        category: z.enum(["content", "space", "ambassador", "campaign"]).optional(),
         listingType: z.enum(["offer", "request"]).optional(),
         search: z.string().optional(),
       }).optional(),
@@ -111,7 +111,7 @@ export const api = {
     update: {
       method: 'PUT' as const,
       path: '/api/profiles/me' as const,
-      input: insertProfileSchema.omit({ userId: true }),
+      input: insertProfileSchema.omit({ userId: true, isInfluencer: true }),
       responses: {
         200: z.custom<Profile>(),
         401: errorSchemas.unauthorized,

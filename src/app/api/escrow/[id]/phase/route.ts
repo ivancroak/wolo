@@ -28,8 +28,8 @@ const VALID_TRANSITIONS: Record<string, { phases: EscrowPhase[]; by: "depositor"
     { phases: ["disputed"], by: "depositor" },
   ],
   disputed: [
-    { phases: ["refunded"], by: "depositor" },
-    { phases: ["released"], by: "depositor" },
+    // Only admin/arbiter can resolve disputes — handled by /api/admin/disputes/[id]/resolve
+    // and /api/escrow/[id]/dispute-resolve routes. No self-service transitions allowed.
   ],
   released: [],
   refunded: [],
@@ -98,6 +98,7 @@ export async function PATCH(
     if (err instanceof z.ZodError) {
       return NextResponse.json({ message: err.errors[0].message }, { status: 400 });
     }
-    throw err;
+    console.error("Phase update error:", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
