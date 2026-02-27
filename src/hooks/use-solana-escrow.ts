@@ -34,7 +34,6 @@ export function useSolanaEscrow() {
 
   const initializeAndFund = useCallback(async (
     receiverAddress: string,
-    mintAddress: string,
     escrowId: number,
     amountLamports: number,
     expiresInDays: number,
@@ -42,14 +41,12 @@ export function useSolanaEscrow() {
     if (!client || !publicKey) throw new Error("Wallet not connected");
 
     const receiver = new PublicKey(receiverAddress);
-    const mint = new PublicKey(mintAddress);
     const expiresAt = Math.floor(Date.now() / 1000) + expiresInDays * 86400;
 
-    const initIx = await client.buildInitializeEscrowIx(
-      receiver, mint, escrowId, amountLamports, expiresAt
+    const ix = await client.buildInitializeEscrowIx(
+      receiver, escrowId, amountLamports, expiresAt
     );
-    const fundIx = await client.buildFundEscrowIx(escrowId, mint);
-    const tx = await client.buildTransaction([initIx, fundIx]);
+    const tx = await client.buildTransaction([ix]);
 
     const sig = await sendTransaction(tx, connection);
     await connection.confirmTransaction(sig, "confirmed");
@@ -78,14 +75,12 @@ export function useSolanaEscrow() {
   const releaseFunds = useCallback(async (
     escrowId: number,
     receiverAddress: string,
-    mintAddress: string,
   ) => {
     if (!client || !publicKey) throw new Error("Wallet not connected");
     if (!feeVault) throw new Error("Fee vault not configured. Set NEXT_PUBLIC_FEE_VAULT in .env");
 
     const receiver = new PublicKey(receiverAddress);
-    const mint = new PublicKey(mintAddress);
-    const ix = await client.buildReleaseFundsIx(escrowId, receiver, mint, feeVault);
+    const ix = await client.buildReleaseFundsIx(escrowId, receiver, feeVault);
     const tx = await client.buildTransaction([ix]);
 
     const sig = await sendTransaction(tx, connection);
@@ -96,15 +91,13 @@ export function useSolanaEscrow() {
   const releaseMilestone = useCallback(async (
     escrowId: number,
     receiverAddress: string,
-    mintAddress: string,
     milestoneIdx: number,
   ) => {
     if (!client || !publicKey) throw new Error("Wallet not connected");
     if (!feeVault) throw new Error("Fee vault not configured");
 
     const receiver = new PublicKey(receiverAddress);
-    const mint = new PublicKey(mintAddress);
-    const ix = await client.buildReleaseMilestoneIx(escrowId, receiver, mint, feeVault, milestoneIdx);
+    const ix = await client.buildReleaseMilestoneIx(escrowId, receiver, feeVault, milestoneIdx);
     const tx = await client.buildTransaction([ix]);
 
     const sig = await sendTransaction(tx, connection);
@@ -165,13 +158,11 @@ export function useSolanaEscrow() {
   const refund = useCallback(async (
     depositorAddress: string,
     escrowId: number,
-    mintAddress: string,
   ) => {
     if (!client || !publicKey) throw new Error("Wallet not connected");
 
     const depositor = new PublicKey(depositorAddress);
-    const mint = new PublicKey(mintAddress);
-    const ix = await client.buildRefundIx(depositor, escrowId, mint);
+    const ix = await client.buildRefundIx(depositor, escrowId);
     const tx = await client.buildTransaction([ix]);
 
     const sig = await sendTransaction(tx, connection);
@@ -183,7 +174,6 @@ export function useSolanaEscrow() {
     depositorAddress: string,
     escrowId: number,
     receiverAddress: string,
-    mintAddress: string,
     depositorShareBps: number,
   ) => {
     if (!client || !publicKey) throw new Error("Wallet not connected");
@@ -191,8 +181,7 @@ export function useSolanaEscrow() {
 
     const depositor = new PublicKey(depositorAddress);
     const receiver = new PublicKey(receiverAddress);
-    const mint = new PublicKey(mintAddress);
-    const ix = await client.buildArbiterResolveIx(depositor, escrowId, receiver, mint, feeVault, depositorShareBps);
+    const ix = await client.buildArbiterResolveIx(depositor, escrowId, receiver, feeVault, depositorShareBps);
     const tx = await client.buildTransaction([ix]);
 
     const sig = await sendTransaction(tx, connection);
@@ -228,6 +217,5 @@ export function useSolanaEscrow() {
     arbiterResolve,
     closeEscrow,
     getEscrowPDA: (escrowId: number) => client?.getEscrowPDA(escrowId)?.toBase58(),
-    getVaultPDA: (escrowId: number) => client?.getVaultPDA(escrowId)?.toBase58(),
   };
 }

@@ -71,6 +71,7 @@ export interface IStorage {
   hasCompletedAction(serviceId: number, userId: string): Promise<boolean>;
   getActionCompletion(id: number): Promise<ActionCompletion | undefined>;
   updateActionCompletionStatus(id: number, status: ActionCompletionStatus): Promise<ActionCompletion>;
+  markActionPaid(id: number, txHash: string, payoutAmount: string): Promise<ActionCompletion>;
 }
 
 function toUser(row: any): User {
@@ -150,6 +151,7 @@ function toEscrow(row: any): Escrow {
     phase: row.phase,
     depositTxHash: row.deposit_tx_hash,
     releaseTxHash: row.release_tx_hash,
+    disputeOpenedAt: row.dispute_opened_at ? new Date(row.dispute_opened_at) : null,
     expiresAt: row.expires_at ? new Date(row.expires_at) : null,
     createdAt: row.created_at ? new Date(row.created_at) : null,
     updatedAt: row.updated_at ? new Date(row.updated_at) : null,
@@ -196,6 +198,19 @@ function toReputation(row: any): Reputation {
     avgRating: row.avg_rating ? Number(row.avg_rating) : null,
     badges: row.badges ?? [],
     updatedAt: row.updated_at ? new Date(row.updated_at) : null,
+  };
+}
+
+function toActionCompletion(row: any): ActionCompletion {
+  return {
+    id: row.id,
+    serviceId: row.service_id,
+    userId: row.user_id,
+    status: row.status,
+    payoutAmount: row.payout_amount ?? null,
+    payoutTxHash: row.payout_tx_hash ?? null,
+    paidAt: row.paid_at ? new Date(row.paid_at) : null,
+    createdAt: row.created_at ? new Date(row.created_at) : null,
   };
 }
 
@@ -582,6 +597,7 @@ class SupabaseStorage implements IStorage {
     const updateObj: any = { phase, updated_at: new Date().toISOString() };
     if (phase === "funded" && txHash) updateObj.deposit_tx_hash = txHash;
     if (phase === "released" && txHash) updateObj.release_tx_hash = txHash;
+    if (phase === "disputed") updateObj.dispute_opened_at = new Date().toISOString();
     const { data, error } = await supabaseAdmin
       .from("escrows")
       .update(updateObj)
@@ -639,7 +655,8 @@ class SupabaseStorage implements IStorage {
     const { data, error } = await supabaseAdmin
       .from("milestones")
       .select("*")
-      .eq("escrow_id", escrowId);
+      .eq("escrow_id", escrowId)
+      .order("id", { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []).map(toMilestone);
   }
@@ -843,13 +860,7 @@ class SupabaseStorage implements IStorage {
         .eq("id", serviceId);
     }
 
-    return {
-      id: data.id,
-      serviceId: data.service_id,
-      userId: data.user_id,
-      status: data.status,
-      createdAt: data.created_at ? new Date(data.created_at) : null,
-    };
+    return toActionCompletion(data);
   }
 
   async getActionCompletions(serviceId: number): Promise<ActionCompletion[]> {
@@ -859,13 +870,7 @@ class SupabaseStorage implements IStorage {
       .eq("service_id", serviceId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (data ?? []).map((row: any) => ({
-      id: row.id,
-      serviceId: row.service_id,
-      userId: row.user_id,
-      status: row.status,
-      createdAt: row.created_at ? new Date(row.created_at) : null,
-    }));
+    return (data ?? []).map(toActionCompletion);
   }
 
   async hasCompletedAction(serviceId: number, userId: string): Promise<boolean> {
@@ -885,13 +890,7 @@ class SupabaseStorage implements IStorage {
       .eq("id", id)
       .single();
     if (!data) return undefined;
-    return {
-      id: data.id,
-      serviceId: data.service_id,
-      userId: data.user_id,
-      status: data.status,
-      createdAt: data.created_at ? new Date(data.created_at) : null,
-    };
+    return toActionCompletion(data);
   }
 
   async updateActionCompletionStatus(id: number, status: ActionCompletionStatus): Promise<ActionCompletion> {
@@ -921,13 +920,22 @@ class SupabaseStorage implements IStorage {
       }
     }
 
-    return {
-      id: data.id,
-      serviceId: data.service_id,
-      userId: data.user_id,
-      status: data.status,
-      createdAt: data.created_at ? new Date(data.created_at) : null,
-    };
+    return toActionCompletion(data);
+  }
+
+  async markActionPaid(id: number, txHash: string, payoutAmount: string): Promise<ActionCompletion> {
+    const { data, error } = await supabaseAdmin
+      .from("action_completions")
+      .update({
+        payout_tx_hash: txHash,
+        payout_amount: payoutAmount,
+        paid_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return toActionCompletion(data);
   }
 }
 

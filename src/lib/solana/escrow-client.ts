@@ -2,14 +2,9 @@ import {
   Connection,
   PublicKey,
   SystemProgram,
-  SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
   Transaction,
 } from "@solana/web3.js";
-import {
-  TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddress,
-} from "@solana/spl-token";
 import { ESCROW_PROGRAM_ID } from "./idl";
 
 const programId = new PublicKey(ESCROW_PROGRAM_ID);
@@ -23,13 +18,6 @@ function findEscrowPDA(depositor: PublicKey, escrowId: number): [PublicKey, numb
   idBuf.writeBigUInt64LE(BigInt(escrowId));
   return PublicKey.findProgramAddressSync(
     [Buffer.from("escrow"), depositor.toBuffer(), idBuf],
-    programId
-  );
-}
-
-function findVaultPDA(escrowPDA: PublicKey): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("vault"), escrowPDA.toBuffer()],
     programId
   );
 }
@@ -72,13 +60,11 @@ export class WolandEscrowClient {
 
   async buildInitializeEscrowIx(
     receiverPubkey: PublicKey,
-    mintPubkey: PublicKey,
     escrowId: number,
     amountLamports: number,
     expiresAt: number,
   ): Promise<TransactionInstruction> {
     const [escrowPDA] = findEscrowPDA(this.walletPubkey, escrowId);
-    const [vaultPDA] = findVaultPDA(escrowPDA);
     const [configPDA] = findConfigPDA();
     const disc = await getDiscriminator("initialize_escrow");
 
@@ -93,40 +79,12 @@ export class WolandEscrowClient {
       keys: [
         { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
         { pubkey: receiverPubkey, isSigner: false, isWritable: false },
-        { pubkey: mintPubkey, isSigner: false, isWritable: false },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
-        { pubkey: vaultPDA, isSigner: false, isWritable: true },
         { pubkey: configPDA, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-        { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       ],
       programId,
       data,
-    });
-  }
-
-  async buildFundEscrowIx(
-    escrowId: number,
-    mintPubkey: PublicKey,
-  ): Promise<TransactionInstruction> {
-    const [escrowPDA] = findEscrowPDA(this.walletPubkey, escrowId);
-    const [vaultPDA] = findVaultPDA(escrowPDA);
-    const [configPDA] = findConfigPDA();
-    const depositorATA = await getAssociatedTokenAddress(mintPubkey, this.walletPubkey);
-    const disc = await getDiscriminator("fund_escrow");
-
-    return new TransactionInstruction({
-      keys: [
-        { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
-        { pubkey: escrowPDA, isSigner: false, isWritable: true },
-        { pubkey: vaultPDA, isSigner: false, isWritable: true },
-        { pubkey: depositorATA, isSigner: false, isWritable: true },
-        { pubkey: configPDA, isSigner: false, isWritable: true },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-      ],
-      programId,
-      data: disc,
     });
   }
 
@@ -218,24 +176,19 @@ export class WolandEscrowClient {
   async buildReleaseFundsIx(
     escrowId: number,
     receiverPubkey: PublicKey,
-    mintPubkey: PublicKey,
     feeVaultPubkey: PublicKey,
   ): Promise<TransactionInstruction> {
     const [escrowPDA] = findEscrowPDA(this.walletPubkey, escrowId);
-    const [vaultPDA] = findVaultPDA(escrowPDA);
     const [configPDA] = findConfigPDA();
-    const receiverATA = await getAssociatedTokenAddress(mintPubkey, receiverPubkey);
     const disc = await getDiscriminator("release_funds");
 
     return new TransactionInstruction({
       keys: [
         { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
-        { pubkey: vaultPDA, isSigner: false, isWritable: true },
-        { pubkey: receiverATA, isSigner: false, isWritable: true },
+        { pubkey: receiverPubkey, isSigner: false, isWritable: true },
         { pubkey: feeVaultPubkey, isSigner: false, isWritable: true },
         { pubkey: configPDA, isSigner: false, isWritable: false },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       ],
       programId,
       data: disc,
@@ -245,14 +198,11 @@ export class WolandEscrowClient {
   async buildReleaseMilestoneIx(
     escrowId: number,
     receiverPubkey: PublicKey,
-    mintPubkey: PublicKey,
     feeVaultPubkey: PublicKey,
     milestoneIdx: number,
   ): Promise<TransactionInstruction> {
     const [escrowPDA] = findEscrowPDA(this.walletPubkey, escrowId);
-    const [vaultPDA] = findVaultPDA(escrowPDA);
     const [configPDA] = findConfigPDA();
-    const receiverATA = await getAssociatedTokenAddress(mintPubkey, receiverPubkey);
     const disc = await getDiscriminator("release_milestone");
     const data = Buffer.concat([disc, Buffer.from([milestoneIdx])]);
 
@@ -260,11 +210,9 @@ export class WolandEscrowClient {
       keys: [
         { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
-        { pubkey: vaultPDA, isSigner: false, isWritable: true },
-        { pubkey: receiverATA, isSigner: false, isWritable: true },
+        { pubkey: receiverPubkey, isSigner: false, isWritable: true },
         { pubkey: feeVaultPubkey, isSigner: false, isWritable: true },
         { pubkey: configPDA, isSigner: false, isWritable: false },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       ],
       programId,
       data,
@@ -274,20 +222,15 @@ export class WolandEscrowClient {
   async buildRefundIx(
     depositorPubkey: PublicKey,
     escrowId: number,
-    mintPubkey: PublicKey,
   ): Promise<TransactionInstruction> {
     const [escrowPDA] = findEscrowPDA(depositorPubkey, escrowId);
-    const [vaultPDA] = findVaultPDA(escrowPDA);
-    const depositorATA = await getAssociatedTokenAddress(mintPubkey, depositorPubkey);
     const disc = await getDiscriminator("refund");
 
     return new TransactionInstruction({
       keys: [
         { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
-        { pubkey: vaultPDA, isSigner: false, isWritable: true },
-        { pubkey: depositorATA, isSigner: false, isWritable: true },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: depositorPubkey, isSigner: false, isWritable: true },
       ],
       programId,
       data: disc,
@@ -298,15 +241,11 @@ export class WolandEscrowClient {
     depositorPubkey: PublicKey,
     escrowId: number,
     receiverPubkey: PublicKey,
-    mintPubkey: PublicKey,
     feeVaultPubkey: PublicKey,
     depositorShareBps: number,
   ): Promise<TransactionInstruction> {
     const [escrowPDA] = findEscrowPDA(depositorPubkey, escrowId);
-    const [vaultPDA] = findVaultPDA(escrowPDA);
     const [configPDA] = findConfigPDA();
-    const depositorATA = await getAssociatedTokenAddress(mintPubkey, depositorPubkey);
-    const receiverATA = await getAssociatedTokenAddress(mintPubkey, receiverPubkey);
     const disc = await getDiscriminator("arbiter_resolve");
     const data = Buffer.concat([disc, encodeU16(depositorShareBps)]);
 
@@ -314,12 +253,35 @@ export class WolandEscrowClient {
       keys: [
         { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
-        { pubkey: vaultPDA, isSigner: false, isWritable: true },
-        { pubkey: depositorATA, isSigner: false, isWritable: true },
-        { pubkey: receiverATA, isSigner: false, isWritable: true },
+        { pubkey: depositorPubkey, isSigner: false, isWritable: true },
+        { pubkey: receiverPubkey, isSigner: false, isWritable: true },
         { pubkey: feeVaultPubkey, isSigner: false, isWritable: true },
         { pubkey: configPDA, isSigner: false, isWritable: false },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ],
+      programId,
+      data,
+    });
+  }
+
+  async buildReleaseActionPayoutIx(
+    depositorPubkey: PublicKey,
+    escrowId: number,
+    completerPubkey: PublicKey,
+    feeVaultPubkey: PublicKey,
+    amount: number,
+  ): Promise<TransactionInstruction> {
+    const [escrowPDA] = findEscrowPDA(depositorPubkey, escrowId);
+    const [configPDA] = findConfigPDA();
+    const disc = await getDiscriminator("release_action_payout");
+    const data = Buffer.concat([disc, encodeU64(amount)]);
+
+    return new TransactionInstruction({
+      keys: [
+        { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
+        { pubkey: escrowPDA, isSigner: false, isWritable: true },
+        { pubkey: completerPubkey, isSigner: false, isWritable: true },
+        { pubkey: feeVaultPubkey, isSigner: false, isWritable: true },
+        { pubkey: configPDA, isSigner: false, isWritable: false },
       ],
       programId,
       data,
@@ -336,13 +298,11 @@ export class WolandEscrowClient {
     const disc = await getDiscriminator("update_config");
 
     const parts: Buffer[] = [disc];
-    // Option<Pubkey>: 1 byte tag + 32 bytes if Some
     if (newArbiter) {
       parts.push(Buffer.from([1]), newArbiter.toBuffer());
     } else {
       parts.push(Buffer.from([0]));
     }
-    // Option<u16>
     if (newFeeBps !== null) {
       const buf = Buffer.alloc(3);
       buf[0] = 1;
@@ -351,13 +311,11 @@ export class WolandEscrowClient {
     } else {
       parts.push(Buffer.from([0]));
     }
-    // Option<Pubkey>
     if (newAuthority) {
       parts.push(Buffer.from([1]), newAuthority.toBuffer());
     } else {
       parts.push(Buffer.from([0]));
     }
-    // Option<Pubkey>
     if (newFeeVault) {
       parts.push(Buffer.from([1]), newFeeVault.toBuffer());
     } else {
@@ -378,15 +336,12 @@ export class WolandEscrowClient {
     escrowId: number,
   ): Promise<TransactionInstruction> {
     const [escrowPDA] = findEscrowPDA(this.walletPubkey, escrowId);
-    const [vaultPDA] = findVaultPDA(escrowPDA);
     const disc = await getDiscriminator("close_escrow");
 
     return new TransactionInstruction({
       keys: [
         { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
-        { pubkey: vaultPDA, isSigner: false, isWritable: true },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       ],
       programId,
       data: disc,
@@ -410,12 +365,6 @@ export class WolandEscrowClient {
   getEscrowPDA(escrowId: number): PublicKey {
     const [pda] = findEscrowPDA(this.walletPubkey, escrowId);
     return pda;
-  }
-
-  getVaultPDA(escrowId: number): PublicKey {
-    const [escrowPDA] = findEscrowPDA(this.walletPubkey, escrowId);
-    const [vaultPDA] = findVaultPDA(escrowPDA);
-    return vaultPDA;
   }
 
   static getEscrowPDAForDepositor(depositor: PublicKey, escrowId: number): PublicKey {

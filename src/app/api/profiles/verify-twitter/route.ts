@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { getClientIp, checkRateLimit } from "@/server/with-rate-limit";
 import { getUserTweets } from "@/server/twitter-client";
 import crypto from "crypto";
 
@@ -16,7 +16,11 @@ function generateVerificationCode(userId: string, handle: string): string {
 }
 
 // GET: returns the verification code for the user to tweet
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, "verify-twitter-get", 20, 60000);
+  if (rl) return rl;
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -34,15 +38,14 @@ export async function GET() {
   return NextResponse.json({
     code,
     handle: profile.twitterHandle,
-    tweetText: `Verifying my Wolo account: ${code}`,
+    tweetText: `I am with @wolo_xyz ${code}`,
     verified: profile.twitterVerified,
   });
 }
 
 // POST: check if user has tweeted the verification code
 export async function POST(request: NextRequest) {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rl = checkRateLimit(ip, "verify-twitter", 5, 60000);
   if (rl) return rl;
 

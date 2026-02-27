@@ -6,7 +6,7 @@ import { verifyDelivery } from "@/server/verification";
 import { WolandEscrowClient } from "@/lib/solana/escrow-client";
 import { getDeployWalletKeypair } from "@/lib/solana/deploy-wallet";
 import { z } from "zod";
-import type { ServiceCategory } from "@shared/schema";
+import type { ServiceCategory, EscrowPhase } from "@shared/schema";
 
 const inputSchema = z.object({
   tweetUrl: z.string().optional(),
@@ -78,7 +78,6 @@ export async function POST(
       );
     }
 
-    // Look up the order → service to get the category
     const order = await storage.getOrder(escrow.orderId);
     if (!order) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
@@ -89,7 +88,6 @@ export async function POST(
       return NextResponse.json({ message: "Service not found" }, { status: 404 });
     }
 
-    // Look up seller's X handle from their profile
     const profile = await storage.getProfile(escrow.receiverId);
     if (!profile?.twitterHandle) {
       return NextResponse.json(
@@ -104,35 +102,29 @@ export async function POST(
       targetHandle: input.targetHandle,
     });
 
-    // Auto-resolve only for verified / not_found
     if (result.status === "verified" || result.status === "not_found") {
-      const mintStr = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT;
       const feeVaultStr = process.env.NEXT_PUBLIC_FEE_VAULT;
-      if (!mintStr || !feeVaultStr) {
+      if (!feeVaultStr) {
         return NextResponse.json(
-          { message: "SPL_TOKEN_MINT or FEE_VAULT env not set" },
+          { message: "FEE_VAULT env not set" },
           { status: 500 },
         );
       }
 
       const connection = getConnection();
       const deployWallet = getDeployWalletKeypair();
-      const mint = new PublicKey(mintStr);
       const feeVault = new PublicKey(feeVaultStr);
       const depositorPubkey = new PublicKey(escrow.depositorId);
       const receiverPubkey = new PublicKey(escrow.receiverId);
 
-      // verified → 100% to seller (depositorShareBps=0)
-      // not_found → 100% to buyer (depositorShareBps=10000)
       const depositorShareBps = result.status === "verified" ? 0 : 10000;
-      const newPhase = result.status === "verified" ? "released" : "refunded";
+      const newPhase: EscrowPhase = result.status === "verified" ? "released" : "refunded";
 
       const client = new WolandEscrowClient(connection, deployWallet.publicKey);
       const ix = await client.buildArbiterResolveIx(
         depositorPubkey,
         escrowId,
         receiverPubkey,
-        mint,
         feeVault,
         depositorShareBps,
       );
@@ -154,7 +146,6 @@ export async function POST(
       });
     }
 
-    // manual_only or error → no on-chain action, stays disputed
     return NextResponse.json({
       status: result.status,
       message: result.message,

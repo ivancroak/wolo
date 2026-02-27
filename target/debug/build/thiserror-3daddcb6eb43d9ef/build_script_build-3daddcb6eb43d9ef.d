@@ -1,5 +1,0 @@
-/Users/matveidanisheuski/Woland/target/debug/build/thiserror-3daddcb6eb43d9ef/build_script_build-3daddcb6eb43d9ef.d: /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-1.0.69/build.rs
-
-/Users/matveidanisheuski/Woland/target/debug/build/thiserror-3daddcb6eb43d9ef/build_script_build-3daddcb6eb43d9ef: /Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-1.0.69/build.rs
-
-/Users/matveidanisheuski/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-1.0.69/build.rs:

@@ -14,7 +14,7 @@ import { Loader2, Plus, CheckCircle, XCircle, Target, Search } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import type { ServiceCategory } from "@shared/schema";
 
-const MINT = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT || "";
+const SOL_DECIMALS = 9;
 
 interface MilestonePanelProps {
   escrowId: number;
@@ -57,7 +57,7 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
       return;
     }
     try {
-      const amountLamports = Math.round(parseFloat(amount) * 1_000_000);
+      const amountLamports = Math.round(parseFloat(amount) * Math.pow(10, SOL_DECIMALS));
       await solanaEscrow.addMilestone(escrow.depositorId, escrowId, title, amountLamports, 0);
       addMilestone({ escrowId, title, amount, description: "" }, {
         onSuccess: () => {
@@ -103,12 +103,12 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
   };
 
   const handleApprove = async (milestone: any, idx: number) => {
-    if (!solanaEscrow.isReady || !MINT) {
-      toast({ title: "Wallet not connected or token not configured", variant: "destructive" });
+    if (!solanaEscrow.isReady) {
+      toast({ title: "Wallet not connected", variant: "destructive" });
       return;
     }
     try {
-      await solanaEscrow.releaseMilestone(escrowId, escrow.receiverId, MINT, idx);
+      await solanaEscrow.releaseMilestone(escrowId, escrow.receiverId, idx);
       updateMilestone({ id: milestone.id, status: "approved" }, {
         onSuccess: () => toast({ title: "Milestone Approved" }),
       });

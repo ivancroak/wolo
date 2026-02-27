@@ -117,6 +117,7 @@ export interface Escrow {
   phase: EscrowPhase;
   depositTxHash: string | null;
   releaseTxHash: string | null;
+  disputeOpenedAt: Date | null;
   expiresAt: Date | null;
   createdAt: Date | null;
   updatedAt: Date | null;
@@ -208,6 +209,7 @@ export type InsertRating = z.infer<typeof insertRatingSchema>;
 
 export type NotificationType =
   | "order_created"
+  | "escrow_created"
   | "escrow_funded"
   | "escrow_released"
   | "escrow_disputed"
@@ -234,6 +236,9 @@ export interface ActionCompletion {
   serviceId: number;
   userId: string;
   status: ActionCompletionStatus;
+  payoutAmount: string | null;
+  payoutTxHash: string | null;
+  paidAt: Date | null;
   createdAt: Date | null;
 }
 

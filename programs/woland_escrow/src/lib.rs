@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
+use anchor_lang::system_program;
 
 declare_id!("9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9");
 
@@ -65,20 +65,31 @@ pub mod woland_escrow {
         escrow.id = escrow_id;
         escrow.depositor = ctx.accounts.depositor.key();
         escrow.receiver = ctx.accounts.receiver.key();
-        escrow.mint = ctx.accounts.mint.key();
         escrow.amount = amount;
         escrow.released = 0;
-        escrow.phase = EscrowPhase::AwaitingDeposit;
+        escrow.phase = EscrowPhase::Funded;
         escrow.expires_at = expires_at;
         escrow.created_at = clock.unix_timestamp;
         escrow.dispute_opened_at = 0;
         escrow.milestone_count = 0;
         escrow.fee_bps = ctx.accounts.config.fee_bps;
         escrow.bump = ctx.bumps.escrow;
-        escrow.vault_bump = ctx.bumps.vault;
+
+        system_program::transfer(
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {
+                    from: ctx.accounts.depositor.to_account_info(),
+                    to: ctx.accounts.escrow.to_account_info(),
+                },
+            ),
+            amount,
+        )?;
 
         let config = &mut ctx.accounts.config;
         config.total_escrows = config.total_escrows.checked_add(1)
+            .ok_or(WolandError::Overflow)?;
+        config.total_volume = config.total_volume.checked_add(amount)
             .ok_or(WolandError::Overflow)?;
 
         emit!(EscrowCreated {
@@ -87,33 +98,6 @@ pub mod woland_escrow {
             receiver: ctx.accounts.receiver.key(),
             amount,
             expires_at,
-        });
-
-        Ok(())
-    }
-
-    pub fn fund_escrow(ctx: Context<FundEscrow>) -> Result<()> {
-        let escrow = &mut ctx.accounts.escrow;
-        require!(escrow.phase == EscrowPhase::AwaitingDeposit, WolandError::InvalidPhase);
-        require!(ctx.accounts.depositor.key() == escrow.depositor, WolandError::Unauthorized);
-
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.depositor_token.to_account_info(),
-            to: ctx.accounts.vault.to_account_info(),
-            authority: ctx.accounts.depositor.to_account_info(),
-        };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
-        token::transfer(cpi_ctx, escrow.amount)?;
-
-        escrow.phase = EscrowPhase::Funded;
-
-        let config = &mut ctx.accounts.config;
-        config.total_volume = config.total_volume.checked_add(escrow.amount)
-            .ok_or(WolandError::Overflow)?;
-
-        emit!(EscrowFunded {
-            escrow_id: escrow.id,
-            amount: escrow.amount,
         });
 
         Ok(())
@@ -227,43 +211,14 @@ pub mod woland_escrow {
         let net_amount = release_amount.checked_sub(fee)
             .ok_or(WolandError::Overflow)?;
 
-        let escrow_id_bytes = escrow.id.to_le_bytes();
-        let bump = escrow.bump;
-        let depositor_key = escrow.depositor;
-        let seeds = &[
-            b"escrow" as &[u8],
-            depositor_key.as_ref(),
-            &escrow_id_bytes,
-            &[bump],
-        ];
-        let signer_seeds = &[&seeds[..]];
-
         if net_amount > 0 {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.vault.to_account_info(),
-                to: ctx.accounts.receiver_token.to_account_info(),
-                authority: ctx.accounts.escrow.to_account_info(),
-            };
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                cpi_accounts,
-                signer_seeds,
-            );
-            token::transfer(cpi_ctx, net_amount)?;
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= net_amount;
+            **ctx.accounts.receiver.to_account_info().try_borrow_mut_lamports()? += net_amount;
         }
 
         if fee > 0 {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.vault.to_account_info(),
-                to: ctx.accounts.fee_vault.to_account_info(),
-                authority: ctx.accounts.escrow.to_account_info(),
-            };
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                cpi_accounts,
-                signer_seeds,
-            );
-            token::transfer(cpi_ctx, fee)?;
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= fee;
+            **ctx.accounts.fee_vault.to_account_info().try_borrow_mut_lamports()? += fee;
         }
 
         let escrow_mut = &mut ctx.accounts.escrow;
@@ -304,46 +259,18 @@ pub mod woland_escrow {
         let net_amount = amount.checked_sub(fee)
             .ok_or(WolandError::Overflow)?;
 
-        let escrow_id_bytes = escrow.id.to_le_bytes();
-        let bump = escrow.bump;
-        let depositor_key = escrow.depositor;
         let prev_released = escrow.released;
         let total_amount = escrow.amount;
         let escrow_id = escrow.id;
-        let seeds = &[
-            b"escrow" as &[u8],
-            depositor_key.as_ref(),
-            &escrow_id_bytes,
-            &[bump],
-        ];
-        let signer_seeds = &[&seeds[..]];
 
         if net_amount > 0 {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.vault.to_account_info(),
-                to: ctx.accounts.receiver_token.to_account_info(),
-                authority: ctx.accounts.escrow.to_account_info(),
-            };
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                cpi_accounts,
-                signer_seeds,
-            );
-            token::transfer(cpi_ctx, net_amount)?;
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= net_amount;
+            **ctx.accounts.receiver.to_account_info().try_borrow_mut_lamports()? += net_amount;
         }
 
         if fee > 0 {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.vault.to_account_info(),
-                to: ctx.accounts.fee_vault.to_account_info(),
-                authority: ctx.accounts.escrow.to_account_info(),
-            };
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                cpi_accounts,
-                signer_seeds,
-            );
-            token::transfer(cpi_ctx, fee)?;
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= fee;
+            **ctx.accounts.fee_vault.to_account_info().try_borrow_mut_lamports()? += fee;
         }
 
         let escrow_mut = &mut ctx.accounts.escrow;
@@ -450,30 +377,12 @@ pub mod woland_escrow {
             .ok_or(WolandError::InsufficientFunds)?;
         require!(remaining > 0, WolandError::NothingToRelease);
 
-        let escrow_id_bytes = escrow.id.to_le_bytes();
-        let bump = escrow.bump;
-        let depositor_key = escrow.depositor;
         let total_amount = escrow.amount;
         let escrow_id = escrow.id;
-        let seeds = &[
-            b"escrow" as &[u8],
-            depositor_key.as_ref(),
-            &escrow_id_bytes,
-            &[bump],
-        ];
-        let signer_seeds = &[&seeds[..]];
+        let depositor_key = escrow.depositor;
 
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.vault.to_account_info(),
-            to: ctx.accounts.depositor_token.to_account_info(),
-            authority: ctx.accounts.escrow.to_account_info(),
-        };
-        let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            cpi_accounts,
-            signer_seeds,
-        );
-        token::transfer(cpi_ctx, remaining)?;
+        **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= remaining;
+        **ctx.accounts.depositor.to_account_info().try_borrow_mut_lamports()? += remaining;
 
         let escrow_mut = &mut ctx.accounts.escrow;
         escrow_mut.released = total_amount;
@@ -511,59 +420,22 @@ pub mod woland_escrow {
         let receiver_amount = distributable.checked_sub(depositor_amount)
             .ok_or(WolandError::Overflow)?;
 
-        let escrow_id_bytes = escrow.id.to_le_bytes();
-        let bump = escrow.bump;
-        let depositor_key = escrow.depositor;
         let escrow_id = escrow.id;
         let total_amount = escrow.amount;
-        let seeds = &[
-            b"escrow" as &[u8],
-            depositor_key.as_ref(),
-            &escrow_id_bytes,
-            &[bump],
-        ];
-        let signer_seeds = &[&seeds[..]];
 
         if depositor_amount > 0 {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.vault.to_account_info(),
-                to: ctx.accounts.depositor_token.to_account_info(),
-                authority: ctx.accounts.escrow.to_account_info(),
-            };
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                cpi_accounts,
-                signer_seeds,
-            );
-            token::transfer(cpi_ctx, depositor_amount)?;
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= depositor_amount;
+            **ctx.accounts.depositor.to_account_info().try_borrow_mut_lamports()? += depositor_amount;
         }
 
         if receiver_amount > 0 {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.vault.to_account_info(),
-                to: ctx.accounts.receiver_token.to_account_info(),
-                authority: ctx.accounts.escrow.to_account_info(),
-            };
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                cpi_accounts,
-                signer_seeds,
-            );
-            token::transfer(cpi_ctx, receiver_amount)?;
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= receiver_amount;
+            **ctx.accounts.receiver.to_account_info().try_borrow_mut_lamports()? += receiver_amount;
         }
 
         if fee > 0 {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.vault.to_account_info(),
-                to: ctx.accounts.fee_vault.to_account_info(),
-                authority: ctx.accounts.escrow.to_account_info(),
-            };
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                cpi_accounts,
-                signer_seeds,
-            );
-            token::transfer(cpi_ctx, fee)?;
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= fee;
+            **ctx.accounts.fee_vault.to_account_info().try_borrow_mut_lamports()? += fee;
         }
 
         let escrow_mut = &mut ctx.accounts.escrow;
@@ -576,6 +448,57 @@ pub mod woland_escrow {
             depositor_amount,
             receiver_amount,
             fee,
+        });
+
+        Ok(())
+    }
+
+    pub fn release_action_payout(
+        ctx: Context<ReleaseActionPayout>,
+        amount: u64,
+    ) -> Result<()> {
+        let escrow = &ctx.accounts.escrow;
+        require!(
+            escrow.phase == EscrowPhase::Funded || escrow.phase == EscrowPhase::InProgress,
+            WolandError::InvalidPhase
+        );
+        require!(amount > 0, WolandError::ZeroAmount);
+
+        let remaining = escrow.amount.checked_sub(escrow.released)
+            .ok_or(WolandError::InsufficientFunds)?;
+        require!(amount <= remaining, WolandError::InsufficientFunds);
+
+        let fee = calculate_fee(amount, escrow.fee_bps)?;
+        let net_amount = amount.checked_sub(fee)
+            .ok_or(WolandError::Overflow)?;
+
+        let escrow_id = escrow.id;
+        let total_amount = escrow.amount;
+
+        if net_amount > 0 {
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= net_amount;
+            **ctx.accounts.completer.to_account_info().try_borrow_mut_lamports()? += net_amount;
+        }
+
+        if fee > 0 {
+            **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= fee;
+            **ctx.accounts.fee_vault.to_account_info().try_borrow_mut_lamports()? += fee;
+        }
+
+        let escrow_mut = &mut ctx.accounts.escrow;
+        escrow_mut.released = escrow_mut.released.checked_add(amount)
+            .ok_or(WolandError::Overflow)?;
+
+        if escrow_mut.released >= total_amount {
+            escrow_mut.phase = EscrowPhase::Released;
+        }
+
+        emit!(ActionPayoutReleased {
+            escrow_id,
+            completer: ctx.accounts.completer.key(),
+            net_amount,
+            fee,
+            total_released: escrow_mut.released,
         });
 
         Ok(())
@@ -620,7 +543,8 @@ pub struct InitializeConfig<'info> {
         bump,
     )]
     pub config: Account<'info, PlatformConfig>,
-    pub fee_vault: Account<'info, TokenAccount>,
+    /// CHECK: fee vault — any valid SOL wallet address
+    pub fee_vault: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -641,13 +565,12 @@ pub struct UpdateConfig<'info> {
 pub struct InitializeEscrow<'info> {
     #[account(mut)]
     pub depositor: Signer<'info>,
-    /// CHECK: receiver pubkey - must not be zero address or same as depositor
+    /// CHECK: receiver pubkey — must not be zero address or same as depositor
     #[account(
         constraint = receiver.key() != Pubkey::default() @ WolandError::InvalidReceiver,
         constraint = receiver.key() != depositor.key() @ WolandError::InvalidReceiver,
     )]
     pub receiver: UncheckedAccount<'info>,
-    pub mint: Account<'info, Mint>,
     #[account(
         init,
         payer = depositor,
@@ -657,54 +580,12 @@ pub struct InitializeEscrow<'info> {
     )]
     pub escrow: Account<'info, EscrowAccount>,
     #[account(
-        init,
-        payer = depositor,
-        token::mint = mint,
-        token::authority = escrow,
-        seeds = [b"vault", escrow.key().as_ref()],
-        bump,
-    )]
-    pub vault: Account<'info, TokenAccount>,
-    #[account(
         mut,
         seeds = [b"config"],
         bump = config.bump,
     )]
     pub config: Account<'info, PlatformConfig>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
-    pub rent: Sysvar<'info, Rent>,
-}
-
-#[derive(Accounts)]
-pub struct FundEscrow<'info> {
-    #[account(mut)]
-    pub depositor: Signer<'info>,
-    #[account(
-        mut,
-        seeds = [b"escrow", escrow.depositor.as_ref(), &escrow.id.to_le_bytes()],
-        bump = escrow.bump,
-    )]
-    pub escrow: Account<'info, EscrowAccount>,
-    #[account(
-        mut,
-        seeds = [b"vault", escrow.key().as_ref()],
-        bump = escrow.vault_bump,
-    )]
-    pub vault: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = depositor_token.owner == depositor.key() @ WolandError::Unauthorized,
-        constraint = depositor_token.mint == escrow.mint @ WolandError::MintMismatch,
-    )]
-    pub depositor_token: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        seeds = [b"config"],
-        bump = config.bump,
-    )]
-    pub config: Account<'info, PlatformConfig>,
-    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -762,27 +643,20 @@ pub struct ReleaseFunds<'info> {
         constraint = depositor.key() == escrow.depositor @ WolandError::Unauthorized,
     )]
     pub escrow: Box<Account<'info, EscrowAccount>>,
+    /// CHECK: receiver — validated against escrow.receiver
     #[account(
         mut,
-        seeds = [b"vault", escrow.key().as_ref()],
-        bump = escrow.vault_bump,
+        constraint = receiver.key() == escrow.receiver @ WolandError::Unauthorized,
     )]
-    pub vault: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = receiver_token.owner == escrow.receiver @ WolandError::Unauthorized,
-        constraint = receiver_token.mint == escrow.mint @ WolandError::MintMismatch,
-    )]
-    pub receiver_token: Account<'info, TokenAccount>,
+    pub receiver: UncheckedAccount<'info>,
+    /// CHECK: fee vault — validated against config
     #[account(
         mut,
         constraint = fee_vault.key() == config.fee_vault @ WolandError::InvalidFeeVault,
-        constraint = fee_vault.mint == escrow.mint @ WolandError::MintMismatch,
     )]
-    pub fee_vault: Account<'info, TokenAccount>,
+    pub fee_vault: UncheckedAccount<'info>,
     #[account(seeds = [b"config"], bump = config.bump)]
     pub config: Account<'info, PlatformConfig>,
-    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -796,27 +670,20 @@ pub struct ReleaseMilestone<'info> {
         constraint = depositor.key() == escrow.depositor @ WolandError::Unauthorized,
     )]
     pub escrow: Box<Account<'info, EscrowAccount>>,
+    /// CHECK: receiver — validated against escrow.receiver
     #[account(
         mut,
-        seeds = [b"vault", escrow.key().as_ref()],
-        bump = escrow.vault_bump,
+        constraint = receiver.key() == escrow.receiver @ WolandError::Unauthorized,
     )]
-    pub vault: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = receiver_token.owner == escrow.receiver @ WolandError::Unauthorized,
-        constraint = receiver_token.mint == escrow.mint @ WolandError::MintMismatch,
-    )]
-    pub receiver_token: Account<'info, TokenAccount>,
+    pub receiver: UncheckedAccount<'info>,
+    /// CHECK: fee vault — validated against config
     #[account(
         mut,
         constraint = fee_vault.key() == config.fee_vault @ WolandError::InvalidFeeVault,
-        constraint = fee_vault.mint == escrow.mint @ WolandError::MintMismatch,
     )]
-    pub fee_vault: Account<'info, TokenAccount>,
+    pub fee_vault: UncheckedAccount<'info>,
     #[account(seeds = [b"config"], bump = config.bump)]
     pub config: Account<'info, PlatformConfig>,
-    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -829,19 +696,12 @@ pub struct Refund<'info> {
         bump = escrow.bump,
     )]
     pub escrow: Account<'info, EscrowAccount>,
+    /// CHECK: depositor — validated against escrow.depositor
     #[account(
         mut,
-        seeds = [b"vault", escrow.key().as_ref()],
-        bump = escrow.vault_bump,
+        constraint = depositor.key() == escrow.depositor @ WolandError::Unauthorized,
     )]
-    pub vault: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = depositor_token.owner == escrow.depositor @ WolandError::Unauthorized,
-        constraint = depositor_token.mint == escrow.mint @ WolandError::MintMismatch,
-    )]
-    pub depositor_token: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
+    pub depositor: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -854,33 +714,52 @@ pub struct ArbiterResolve<'info> {
         bump = escrow.bump,
     )]
     pub escrow: Box<Account<'info, EscrowAccount>>,
+    /// CHECK: depositor — validated against escrow.depositor
     #[account(
         mut,
-        seeds = [b"vault", escrow.key().as_ref()],
-        bump = escrow.vault_bump,
+        constraint = depositor.key() == escrow.depositor @ WolandError::Unauthorized,
     )]
-    pub vault: Account<'info, TokenAccount>,
+    pub depositor: UncheckedAccount<'info>,
+    /// CHECK: receiver — validated against escrow.receiver
     #[account(
         mut,
-        constraint = depositor_token.owner == escrow.depositor @ WolandError::Unauthorized,
-        constraint = depositor_token.mint == escrow.mint @ WolandError::MintMismatch,
+        constraint = receiver.key() == escrow.receiver @ WolandError::Unauthorized,
     )]
-    pub depositor_token: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        constraint = receiver_token.owner == escrow.receiver @ WolandError::Unauthorized,
-        constraint = receiver_token.mint == escrow.mint @ WolandError::MintMismatch,
-    )]
-    pub receiver_token: Account<'info, TokenAccount>,
+    pub receiver: UncheckedAccount<'info>,
+    /// CHECK: fee vault — validated against config
     #[account(
         mut,
         constraint = fee_vault.key() == config.fee_vault @ WolandError::InvalidFeeVault,
-        constraint = fee_vault.mint == escrow.mint @ WolandError::MintMismatch,
     )]
-    pub fee_vault: Account<'info, TokenAccount>,
+    pub fee_vault: UncheckedAccount<'info>,
     #[account(seeds = [b"config"], bump = config.bump)]
     pub config: Account<'info, PlatformConfig>,
-    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct ReleaseActionPayout<'info> {
+    #[account(constraint = arbiter.key() == config.arbiter @ WolandError::Unauthorized)]
+    pub arbiter: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"escrow", escrow.depositor.as_ref(), &escrow.id.to_le_bytes()],
+        bump = escrow.bump,
+    )]
+    pub escrow: Box<Account<'info, EscrowAccount>>,
+    /// CHECK: completer wallet — receives payout.
+    /// SECURITY: completer address is caller-supplied; arbiter trust required.
+    /// No on-chain validation exists for this account — the arbiter (deploy wallet)
+    /// is solely responsible for passing the correct completer address.
+    #[account(mut)]
+    pub completer: UncheckedAccount<'info>,
+    /// CHECK: fee vault — validated against config
+    #[account(
+        mut,
+        constraint = fee_vault.key() == config.fee_vault @ WolandError::InvalidFeeVault,
+    )]
+    pub fee_vault: UncheckedAccount<'info>,
+    #[account(seeds = [b"config"], bump = config.bump)]
+    pub config: Account<'info, PlatformConfig>,
 }
 
 #[derive(Accounts)]
@@ -895,14 +774,6 @@ pub struct CloseEscrow<'info> {
         constraint = depositor.key() == escrow.depositor @ WolandError::Unauthorized,
     )]
     pub escrow: Account<'info, EscrowAccount>,
-    #[account(
-        mut,
-        close = depositor,
-        seeds = [b"vault", escrow.key().as_ref()],
-        bump = escrow.vault_bump,
-    )]
-    pub vault: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
 }
 
 // --- State ---
@@ -925,7 +796,6 @@ pub struct EscrowAccount {
     pub id: u64,
     pub depositor: Pubkey,
     pub receiver: Pubkey,
-    pub mint: Pubkey,
     pub amount: u64,
     pub released: u64,
     pub phase: EscrowPhase,
@@ -936,7 +806,6 @@ pub struct EscrowAccount {
     pub milestone_count: u8,
     pub milestones: [MilestoneData; 10],
     pub bump: u8,
-    pub vault_bump: u8,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace, Default)]
@@ -997,12 +866,6 @@ pub struct EscrowCreated {
     pub receiver: Pubkey,
     pub amount: u64,
     pub expires_at: i64,
-}
-
-#[event]
-pub struct EscrowFunded {
-    pub escrow_id: u64,
-    pub amount: u64,
 }
 
 #[event]
@@ -1067,6 +930,15 @@ pub struct DisputeResolved {
 }
 
 #[event]
+pub struct ActionPayoutReleased {
+    pub escrow_id: u64,
+    pub completer: Pubkey,
+    pub net_amount: u64,
+    pub fee: u64,
+    pub total_released: u64,
+}
+
+#[event]
 pub struct EscrowClosed {
     pub escrow_id: u64,
 }
@@ -1113,8 +985,6 @@ pub enum WolandError {
     EscrowNotSettled,
     #[msg("Invalid share basis points")]
     InvalidShareBps,
-    #[msg("Token mint does not match escrow mint")]
-    MintMismatch,
     #[msg("Invalid receiver address")]
     InvalidReceiver,
 }

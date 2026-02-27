@@ -29,8 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const MINT = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT || "";
-const TOKEN_DECIMALS = 6;
+const SOL_DECIMALS = 9;
 
 import { type Service } from "@shared/schema";
 
@@ -94,10 +93,10 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
         expiresInDays: 30,
       });
 
-      if (escrowReady && MINT) {
+      if (escrowReady) {
         try {
-          const amountLamports = Math.round(parseFloat(service.price) * Math.pow(10, TOKEN_DECIMALS));
-          const txSig = await initializeAndFund(receiverId, MINT, escrowRes.id, amountLamports, 30);
+          const amountLamports = Math.round(parseFloat(service.price) * Math.pow(10, SOL_DECIMALS));
+          const txSig = await initializeAndFund(receiverId, escrowRes.id, amountLamports, 30);
           await updateEscrowPhase({ id: escrowRes.id, phase: "funded", txHash: txSig });
           toast({
             title: "Escrow Funded On-Chain",

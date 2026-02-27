@@ -53,18 +53,16 @@ export async function POST(
       );
     }
 
-    const mintStr = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT;
     const feeVaultStr = process.env.NEXT_PUBLIC_FEE_VAULT;
-    if (!mintStr || !feeVaultStr) {
+    if (!feeVaultStr) {
       return NextResponse.json(
-        { message: "SPL_TOKEN_MINT or FEE_VAULT env not set" },
+        { message: "FEE_VAULT env not set" },
         { status: 500 },
       );
     }
 
     const connection = getConnection();
     const deployWallet = getDeployWalletKeypair();
-    const mint = new PublicKey(mintStr);
     const feeVault = new PublicKey(feeVaultStr);
     const depositorPubkey = new PublicKey(escrow.depositorId);
     const receiverPubkey = new PublicKey(escrow.receiverId);
@@ -74,7 +72,6 @@ export async function POST(
       depositorPubkey,
       escrowId,
       receiverPubkey,
-      mint,
       feeVault,
       depositorShareBps,
     );

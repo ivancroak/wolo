@@ -91,17 +91,16 @@ export default function OrderDetailPage() {
 
   const handleRelease = async () => {
     if (!escrow) return;
-    const mint = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT;
-    if (!solanaEscrow.isReady || !mint) {
+    if (!solanaEscrow.isReady) {
       toast({ title: "Wallet not connected", variant: "destructive" });
       return;
     }
     try {
-      const txSig = await solanaEscrow.releaseFunds(escrow.id, escrow.receiverId, mint);
+      const txSig = await solanaEscrow.releaseFunds(escrow.id, escrow.receiverId);
       updateEscrowPhase({ id: escrow.id, phase: "released", txHash: txSig });
       toast({ title: "Funds Released", description: `Tx: ${txSig.slice(0, 16)}...` });
       if (solanaRep.isReady && user) {
-        const amountLamports = Math.round(parseFloat(escrow.amount) * 1_000_000);
+        const amountLamports = Math.round(parseFloat(escrow.amount) * 1_000_000_000);
         try { await solanaRep.recordCompletion(user.id, escrow.id, amountLamports, isDepositor ?? true); } catch {}
       }
     } catch (err: any) {
@@ -270,32 +269,41 @@ export default function OrderDetailPage() {
                         <Star className="mr-1 h-3 w-3" /> Rate Transaction
                       </Button>
                     )}
-                    {escrow.phase === "disputed" && (
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 text-sm text-destructive">
-                          <AlertTriangle className="h-4 w-4" /> Disputed
+                    {escrow.phase === "disputed" && (() => {
+                      const disputeOpenedAt = escrow.disputeOpenedAt;
+                      const canRefund = disputeOpenedAt && Date.now() / 1000 > new Date(disputeOpenedAt).getTime() / 1000 + 7 * 86400;
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm text-destructive">
+                            <AlertTriangle className="h-4 w-4" /> Disputed
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {canRefund
+                              ? "Dispute window expired. You may claim a refund."
+                              : "Seller has 7 days to submit evidence. After that, you may claim a refund."}
+                          </p>
+                          {isDepositor && (
+                            <Button size="sm" variant="outline" className="rounded-full"
+                              disabled={!canRefund}
+                              onClick={async () => {
+                                if (!solanaEscrow.isReady) {
+                                  toast({ title: "Wallet not connected", variant: "destructive" });
+                                  return;
+                                }
+                                try {
+                                  const txSig = await solanaEscrow.refund(escrow.depositorId, escrow.id);
+                                  updateEscrowPhase({ id: escrow.id, phase: "refunded", txHash: txSig });
+                                  toast({ title: "Refund Processed", description: `Tx: ${txSig.slice(0, 12)}...` });
+                                } catch (err: any) {
+                                  toast({ title: "On-chain refund failed", description: err?.message, variant: "destructive" });
+                                }
+                              }}>
+                              Claim Refund
+                            </Button>
+                          )}
                         </div>
-                        {isDepositor && (
-                          <Button size="sm" variant="outline" className="rounded-full"
-                            onClick={async () => {
-                              const mint = process.env.NEXT_PUBLIC_SPL_TOKEN_MINT;
-                              if (!solanaEscrow.isReady || !mint) {
-                                toast({ title: "Wallet not connected", variant: "destructive" });
-                                return;
-                              }
-                              try {
-                                const txSig = await solanaEscrow.refund(escrow.depositorId, escrow.id, mint);
-                                updateEscrowPhase({ id: escrow.id, phase: "refunded", txHash: txSig });
-                                toast({ title: "Refund Processed", description: `Tx: ${txSig.slice(0, 12)}...` });
-                              } catch (err: any) {
-                                toast({ title: "On-chain refund failed", description: err?.message, variant: "destructive" });
-                              }
-                            }}>
-                            Claim Refund
-                          </Button>
-                        )}
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>

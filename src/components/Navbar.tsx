@@ -27,12 +27,10 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
+    { href: "/dashboard", label: "Dashboard" },
     { href: "/marketplace", label: "Marketplace" },
-    ...(user ? [
-      { href: "/dashboard", label: "Dashboard" },
-      { href: "/watchlist", label: "Watchlist" },
-      { href: "/profile", label: "Profile" },
-    ] : []),
+    { href: "/watchlist", label: "Watchlist" },
+    { href: "/profile", label: "Profile" },
   ];
 
   return (
@@ -43,20 +41,22 @@ export function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-lg"
       data-testid="navbar"
     >
-      <div className="container mx-auto px-6 h-16 flex items-center justify-between gap-4">
-        <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer group" data-testid="link-home">
-            <TransparentLogo className="h-12 w-auto transition-transform duration-300 group-hover:scale-105" />
-          </div>
-        </Link>
+      <div className="container mx-auto px-6 h-16 flex items-center gap-4">
+        <div className="flex-1 flex items-center">
+          <Link href="/">
+            <div className="flex items-center gap-3 cursor-pointer group" data-testid="link-home">
+              <TransparentLogo className="h-12 w-auto transition-transform duration-300 group-hover:scale-105" />
+            </div>
+          </Link>
+        </div>
 
-        <div className="hidden md:flex items-center gap-8 flex-wrap">
+        <div className="hidden md:flex items-center gap-8">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               data-testid={`link-${item.label.toLowerCase()}`}
-              className={`cursor-pointer text-sm font-medium tracking-wide uppercase transition-all duration-300 ${
+              className={`cursor-pointer text-sm font-medium tracking-wide uppercase transition-all duration-300 whitespace-nowrap ${
                 pathname === item.href
                   ? 'text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -67,7 +67,7 @@ export function Navbar() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex-1 flex items-center justify-end gap-2">
           <ThemeToggle />
           {user && <NotificationBell />}
           <ConnectWallet variant="outline" size="sm" className="rounded-full" />
