@@ -1,6 +1,6 @@
 -- ===========================================
--- Wolo Seed Data (V2)
--- Run this in Supabase Dashboard > SQL Editor AFTER migration-v2.sql
+-- Wolo Seed Data (V3)
+-- Run this in Supabase Dashboard > SQL Editor AFTER migration-v3.sql
 -- ===========================================
 
 -- Seed Users
@@ -10,7 +10,7 @@ insert into users (id, first_name, created_at, updated_at) values
   ('SeedCarol333333333333333333333333333333333333', 'Carol', now(), now())
 on conflict (id) do nothing;
 
--- Seed Services (4 categories, 2 pricing models)
+-- Seed Services (content category only, fixed + payroll pricing)
 insert into services (creator_id, title, description, price, category, listing_type, pricing_category, payroll_basis, deadline_days, required_keyword, min_post_count, posts_per_period, max_actions) values
   ('SeedAlice111111111111111111111111111111111111',
    'DeFi Content Campaign (5 Posts)',
@@ -18,19 +18,9 @@ insert into services (creator_id, title, description, price, category, listing_t
    '2.5', 'content', 'offer', 'fixed', null, 7, '#SolanaDefi', 5, null, 10),
 
   ('SeedBob22222222222222222222222222222222222222',
-   'Weekly Brand Ambassador',
-   'Dedicated brand ambassador posting 3 tweets per week mentioning your project. Monthly engagement reports included.',
-   '12.0', 'ambassador', 'offer', 'payroll', 'weekly', null, '@woloprotocol', null, 3, 5),
-
-  ('SeedCarol333333333333333333333333333333333333',
-   'NFT Collection Campaign',
-   'Full campaign promoting your NFT collection across X. 10 posts including minting links, collection details, and community engagement.',
-   '5.0', 'campaign', 'offer', 'fixed', null, 14, '#WoloNFT', 10, null, null),
-
-  ('SeedAlice111111111111111111111111111111111111',
-   'Weekly DeFi Space Host',
-   'I will host a weekly X Space discussing your DeFi protocol. Each space runs 30-60 minutes with live Q&A.',
-   '8.0', 'space', 'offer', 'payroll', 'weekly', null, '#WoloDeFi', null, 1, 3),
+   'Weekly Content Creator',
+   'Dedicated content creator posting 3 tweets per week mentioning your project. Monthly engagement reports included.',
+   '12.0', 'content', 'offer', 'payroll', 'weekly', null, '@woloprotocol', null, 3, 5),
 
   ('SeedCarol333333333333333333333333333333333333',
    '[REQUEST] Need 20 Posts for Token Launch',

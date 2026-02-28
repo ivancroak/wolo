@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import type { User } from "@shared/models/auth";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -11,8 +12,12 @@ async function fetchUser(): Promise<User | null> {
   return response.json();
 }
 
+// Module-level singleton — prevents multiple hook instances from firing login concurrently
+let loginInFlight = false;
+
 export function useAuth() {
   const queryClient = useQueryClient();
+
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
@@ -37,9 +42,22 @@ export function useAuth() {
       return res.json();
     },
     onSuccess: (data) => {
+      loginInFlight = false;
       queryClient.setQueryData(["/api/auth/user"], data);
     },
+    onError: () => {
+      loginInFlight = false;
+    },
   });
+
+  const login = useCallback(
+    (args: { walletAddress: string; signMessage: (message: Uint8Array) => Promise<Uint8Array> }) => {
+      if (loginInFlight) return;
+      loginInFlight = true;
+      loginMutation.mutate(args);
+    },
+    [loginMutation],
+  );
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -54,7 +72,7 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
-    login: loginMutation.mutate,
+    login,
     isLoggingIn: loginMutation.isPending,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,

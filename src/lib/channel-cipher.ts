@@ -39,15 +39,16 @@ export function sealMessage(
 ): SealedEnvelope {
   const message = util.decodeUTF8(plaintext);
   const recipientPub = util.decodeBase64(recipientPubKeyBase64);
-  const ephemeral = nacl.box.keyPair();
+  const senderSecret = util.decodeBase64(senderSecretKeyBase64);
+  const senderKp = nacl.box.keyPair.fromSecretKey(senderSecret);
   const nonce = nacl.randomBytes(nacl.box.nonceLength);
 
-  const encrypted = nacl.box(message, nonce, recipientPub, ephemeral.secretKey);
+  const encrypted = nacl.box(message, nonce, recipientPub, senderSecret);
   if (!encrypted) throw new Error("Encryption failed");
 
   return {
     ciphertext: util.encodeBase64(encrypted),
-    ephemeralPub: util.encodeBase64(ephemeral.publicKey),
+    ephemeralPub: util.encodeBase64(senderKp.publicKey),
     nonce: util.encodeBase64(nonce),
   };
 }

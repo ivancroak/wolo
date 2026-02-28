@@ -9,7 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Users, ArrowUpRight, Eye, EyeOff, Briefcase, CalendarClock, ShieldCheck, Clock, Radio, Image, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Eye, EyeOff, Briefcase, CalendarClock, ShieldCheck, Clock, Image } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -30,15 +30,7 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
     router.push(`/services/${service.id}`);
   };
 
-  const getIcon = (category: string) => {
-    switch (category) {
-      case "content": return <Image className="h-3.5 w-3.5" />;
-      case "space": return <Radio className="h-3.5 w-3.5" />;
-      case "ambassador": return <Users className="h-3.5 w-3.5" />;
-      case "campaign": return <TrendingUp className="h-3.5 w-3.5" />;
-      default: return <Image className="h-3.5 w-3.5" />;
-    }
-  };
+  const getIcon = () => <Image className="h-3.5 w-3.5" />;
 
   const getPricingLabel = (pricingCategory: string, payrollBasis: string | null) => {
     switch (pricingCategory) {
@@ -74,10 +66,14 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
             <div className="flex items-center gap-2 mt-1.5">
               <Avatar className="h-5 w-5">
                 <AvatarFallback className="text-[9px] bg-foreground text-background font-bold">
-                  {service.creatorId.slice(0, 2).toUpperCase()}
+                  {service.creatorTwitterHandle ? service.creatorTwitterHandle.slice(0, 2).toUpperCase() : service.creatorId.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-xs text-muted-foreground font-mono">{service.creatorId.slice(0, 8)}</span>
+              {service.creatorTwitterHandle ? (
+                <span className="text-xs text-muted-foreground">@{service.creatorTwitterHandle}</span>
+              ) : (
+                <span className="text-xs text-muted-foreground font-mono">{service.creatorId.slice(0, 8)}</span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -108,7 +104,7 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
               </Badge>
             )}
             <Badge variant="secondary" className="gap-1 text-xs" data-testid={`badge-category-${service.id}`}>
-              {getIcon(service.category)}
+              {getIcon()}
               <span className="capitalize">{service.category}</span>
             </Badge>
           </div>
@@ -130,11 +126,16 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
                 {getPricingLabel(service.pricingCategory, service.payrollBasis)}
               </Badge>
             )}
+            {service.contentType && (
+              <Badge variant="outline" className="text-[10px] mt-1 capitalize">
+                {service.contentType === "mixed" ? "Posts + Threads" : service.contentType}
+              </Badge>
+            )}
             {service.requiredKeyword && (
               <div className="flex items-center gap-1 mt-1">
                 <ShieldCheck className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[10px] text-muted-foreground">
-                  Keyword: {service.requiredKeyword}
+                  {service.listingType === "request" ? "Required Keyword" : "Keywords"}: {service.requiredKeyword}
                 </span>
               </div>
             )}
@@ -142,7 +143,7 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
               <div className="flex items-center gap-1 mt-1">
                 <ShieldCheck className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[10px] text-muted-foreground">
-                  {service.actionsCompleted}/{service.maxActions} contracts
+                  {service.actionsCompleted}/{service.maxActions} buyers
                 </span>
               </div>
             )}
@@ -163,7 +164,7 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
           >
             {isOwnService
               ? "View"
-              : service.listingType === "request" ? "Fulfill" : "Take Contract"}
+              : service.listingType === "request" ? "Fulfill" : "Accept Offer"}
             <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         </CardFooter>

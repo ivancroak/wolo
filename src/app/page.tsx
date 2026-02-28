@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
-import { ArrowRight, Zap, Shield, Globe, Repeat, Heart, UserPlus, Handshake, Sparkles } from "lucide-react";
+import { ArrowRight, Zap, Shield, Globe, Repeat, Heart, UserPlus, Sparkles } from "lucide-react";
 import { SiX } from "react-icons/si";
 import { useRef, useEffect, useState } from "react";
 import { TransparentLogo } from "@/components/TransparentLogo";
@@ -118,8 +118,7 @@ export default function LandingPage() {
     { icon: Repeat, label: "Reposts", desc: "Amplify reach on X with targeted reposts" },
     { icon: Heart, label: "Likes", desc: "Boost engagement on your X posts" },
     { icon: UserPlus, label: "Follows", desc: "Grow your X audience organically" },
-    { icon: Handshake, label: "Ambassadorships", desc: "Long-term X brand partnerships" },
-    { icon: Sparkles, label: "Custom Work", desc: "Tailored X promotional campaigns" },
+    { icon: Sparkles, label: "Content", desc: "Keyword-verified posts and threads on X" },
   ];
 
   const [particles, setParticles] = useState<{ delay: number; x: string; y: string }[]>([]);
@@ -199,8 +198,8 @@ export default function LandingPage() {
               className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-14 leading-relaxed"
               data-testid="text-hero-subtitle"
             >
-              The trustless marketplace for X influence. Reposts, likes, follows,
-              ambassadorships, and custom campaigns &mdash; all settled on-chain.
+              The trustless marketplace for X influence. Content creation,
+              reposts, likes, and follows &mdash; all settled on-chain.
             </motion.p>
 
             <motion.div variants={heroItem} className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -248,7 +247,7 @@ export default function LandingPage() {
               Every Type of X Influence
             </motion.h2>
             <motion.p variants={heroItem} className="text-muted-foreground max-w-lg mx-auto text-lg">
-              From quick X engagements to long-term ambassador deals.
+              From quick X engagements to ongoing content contracts.
             </motion.p>
           </motion.div>
 
@@ -304,7 +303,7 @@ export default function LandingPage() {
             {[
               { icon: <Zap className="h-6 w-6" />, title: "Instant Settlement", desc: "Smart contracts ensure creators get paid immediately upon completion. No delays, no disputes.", step: "01" },
               { icon: <Shield className="h-6 w-6" />, title: "Trustless Escrow", desc: "Funds are held securely on-chain until requirements are met. Zero middlemen involved.", step: "02" },
-              { icon: <Globe className="h-6 w-6" />, title: "Global X Network", desc: "Access a worldwide network of X influencers and ambassadors without boundaries or gatekeepers.", step: "03" },
+              { icon: <Globe className="h-6 w-6" />, title: "Global X Network", desc: "Access a worldwide network of X influencers and creators without boundaries or gatekeepers.", step: "03" },
             ].map((feature, i) => (
               <motion.div
                 key={i}

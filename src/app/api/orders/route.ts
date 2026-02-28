@@ -51,9 +51,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let requiredKeyword: string | null = null;
+    if (service.listingType === "offer") {
+      if (!input.requiredKeyword?.trim()) {
+        return NextResponse.json({ message: "Required keyword is mandatory for offers", field: "requiredKeyword" }, { status: 400 });
+      }
+      requiredKeyword = input.requiredKeyword.trim();
+    } else {
+      requiredKeyword = service.requiredKeyword ?? null;
+    }
+
     const order = await storage.createOrder({
       ...input,
       buyerId: user.id,
+      requiredKeyword,
     });
 
     await notify(

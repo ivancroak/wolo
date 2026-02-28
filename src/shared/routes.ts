@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { insertServiceSchema, insertOrderSchema, insertProfileSchema, insertEscrowSchema, insertMilestoneSchema, insertSecureMessageSchema, insertRatingSchema } from './schema';
-import type { Service, Order, Profile, Watchlist, Escrow, Milestone, SecureMessage, Reputation, OrderRating, Notification } from './schema';
+import { insertServiceSchema, insertOrderSchema, insertProfileSchema, insertEscrowSchema, insertMilestoneSchema, insertSecureMessageSchema, insertRatingSchema, insertDealProposalSchema, patchDealProposalSchema } from './schema';
+import type { Service, Order, Profile, Watchlist, Escrow, Milestone, SecureMessage, Reputation, OrderRating, Notification, DealProposal } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -24,7 +24,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/services' as const,
       input: z.object({
-        category: z.enum(["content", "space", "ambassador", "campaign"]).optional(),
+        category: z.enum(["content"]).optional(),
         listingType: z.enum(["offer", "request"]).optional(),
         search: z.string().optional(),
       }).optional(),
@@ -332,6 +332,57 @@ export const api = {
       responses: {
         200: z.object({ message: z.string() }),
         401: errorSchemas.unauthorized,
+      },
+    },
+  },
+  conversations: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/my-conversations' as const,
+      responses: {
+        200: z.array(z.object({
+          orderId: z.number(),
+          serviceId: z.number(),
+          serviceTitle: z.string(),
+          counterpartyId: z.string(),
+          counterpartyHandle: z.string().nullable(),
+          role: z.enum(["buyer", "seller"]),
+          orderStatus: z.string(),
+          createdAt: z.string().nullable(),
+        })),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
+  proposals: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/orders/:id/proposals' as const,
+      responses: {
+        200: z.array(z.custom<DealProposal>()),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/orders/:id/proposals' as const,
+      input: insertDealProposalSchema.omit({ orderId: true }),
+      responses: {
+        201: z.custom<DealProposal>(),
+        401: errorSchemas.unauthorized,
+        400: errorSchemas.validation,
+        409: errorSchemas.validation,
+      },
+    },
+    patch: {
+      method: 'PATCH' as const,
+      path: '/api/orders/:id/proposals/:proposalId' as const,
+      input: patchDealProposalSchema,
+      responses: {
+        200: z.custom<DealProposal>(),
+        401: errorSchemas.unauthorized,
+        400: errorSchemas.validation,
+        403: errorSchemas.unauthorized,
       },
     },
   },

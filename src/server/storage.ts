@@ -21,6 +21,9 @@ import {
   type Reputation,
   type OrderRating,
   type InsertRating,
+  type DealProposal,
+  type InsertDealProposal,
+  type ProposalStatus,
 } from "@shared/schema";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -66,6 +69,11 @@ export interface IStorage {
   getNotifications(userId: string): Promise<any[]>;
   markNotificationsRead(userId: string, ids?: number[]): Promise<void>;
   hasActiveOrder(serviceId: number, buyerId: string): Promise<boolean>;
+  createProposal(proposal: InsertDealProposal & { proposerId: string }): Promise<DealProposal>;
+  getProposals(orderId: number): Promise<DealProposal[]>;
+  getPendingProposal(orderId: number): Promise<DealProposal | undefined>;
+  updateProposalStatus(id: number, status: ProposalStatus): Promise<DealProposal>;
+  applyProposalToOrder(orderId: number, proposal: DealProposal): Promise<Order>;
 }
 
 function toUser(row: any): User {
@@ -89,10 +97,16 @@ function toProfile(row: any): Profile {
     twitterHandle: row.twitter_handle,
     twitterVerified: row.twitter_verified ?? false,
     isInfluencer: row.is_influencer,
+    email: row.email ?? null,
+    emailVerified: row.email_verified ?? false,
+    emailNotifications: row.email_notifications ?? true,
   };
 }
 
 function toService(row: any): Service {
+  const showHandle = row.show_twitter_handle ?? true;
+  const isOffer = row.listing_type === "offer";
+  const rawHandle = row._twitter_handle ?? null;
   return {
     id: row.id,
     creatorId: row.creator_id,
@@ -103,14 +117,18 @@ function toService(row: any): Service {
     listingType: row.listing_type,
     pricingCategory: row.pricing_category,
     payrollBasis: row.payroll_basis,
+    contentType: row.content_type ?? "posts",
     maxActions: row.max_actions,
     deadlineDays: row.deadline_days,
     requiredKeyword: row.required_keyword ?? null,
     minPostCount: row.min_post_count ?? null,
     postsPerPeriod: row.posts_per_period ?? null,
+    threadsPerPeriod: row.threads_per_period ?? null,
     imageUrl: row.image_url,
     active: row.active,
     actionsCompleted: row.actions_completed ?? 0,
+    showTwitterHandle: showHandle,
+    creatorTwitterHandle: (isOffer || showHandle) ? rawHandle : null,
     createdAt: row.created_at ? new Date(row.created_at) : null,
   };
 }
@@ -123,8 +141,35 @@ function toOrder(row: any): Order {
     status: row.status,
     txHash: row.tx_hash,
     requirements: row.requirements,
+    requiredKeyword: row.required_keyword ?? null,
     escrowId: row.escrow_id,
+    negotiatedPrice: row.negotiated_price ?? null,
+    negotiatedDeadlineDays: row.negotiated_deadline_days ?? null,
+    negotiatedMinPostCount: row.negotiated_min_post_count ?? null,
+    negotiatedPostsPerPeriod: row.negotiated_posts_per_period ?? null,
+    negotiatedThreadsPerPeriod: row.negotiated_threads_per_period ?? null,
+    negotiatedContentType: row.negotiated_content_type ?? null,
+    negotiatedRequiredKeyword: row.negotiated_required_keyword ?? null,
     createdAt: row.created_at ? new Date(row.created_at) : null,
+  };
+}
+
+function toDealProposal(row: any): DealProposal {
+  return {
+    id: row.id,
+    orderId: row.order_id,
+    proposerId: row.proposer_id,
+    status: row.status,
+    proposedPrice: row.proposed_price ?? null,
+    proposedDeadlineDays: row.proposed_deadline_days ?? null,
+    proposedMinPostCount: row.proposed_min_post_count ?? null,
+    proposedPostsPerPeriod: row.proposed_posts_per_period ?? null,
+    proposedThreadsPerPeriod: row.proposed_threads_per_period ?? null,
+    proposedContentType: row.proposed_content_type ?? null,
+    proposedRequiredKeyword: row.proposed_required_keyword ?? null,
+    message: row.message ?? null,
+    createdAt: row.created_at ? new Date(row.created_at) : null,
+    updatedAt: row.updated_at ? new Date(row.updated_at) : null,
   };
 }
 
@@ -286,6 +331,13 @@ class SupabaseStorage implements IStorage {
       }
     }
     if (internal && profileData.isInfluencer !== undefined) updateObj.is_influencer = profileData.isInfluencer;
+    if (profileData.email !== undefined) {
+      updateObj.email = profileData.email;
+      if (profileData.email !== existing.email) {
+        updateObj.email_verified = false;
+      }
+    }
+    if (profileData.emailNotifications !== undefined) updateObj.email_notifications = profileData.emailNotifications;
 
     const { data, error } = await supabaseAdmin
       .from("profiles")
@@ -305,6 +357,20 @@ class SupabaseStorage implements IStorage {
     if (error) throw new Error(error.message);
   }
 
+  private async enrichWithHandles(rows: any[]): Promise<any[]> {
+    if (rows.length === 0) return rows;
+    const ids = Array.from(new Set(rows.map((r: any) => r.creator_id)));
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("user_id, twitter_handle")
+      .in("user_id", ids);
+    const handleMap = new Map<string, string>();
+    for (const p of profiles ?? []) {
+      if (p.twitter_handle) handleMap.set(p.user_id, p.twitter_handle);
+    }
+    return rows.map((r: any) => ({ ...r, _twitter_handle: handleMap.get(r.creator_id) ?? null }));
+  }
+
   async getServices(filters?: { category?: string; pricingCategory?: string; search?: string; listingType?: string; creatorId?: string }): Promise<Service[]> {
     let query = supabaseAdmin.from("services").select("*").eq("active", true);
     if (filters?.category) query = query.eq("category", filters.category);
@@ -320,7 +386,8 @@ class SupabaseStorage implements IStorage {
     query = query.order("created_at", { ascending: false });
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    return (data ?? []).map(toService);
+    const enriched = await this.enrichWithHandles(data ?? []);
+    return enriched.map(toService);
   }
 
   async getServicesByCreator(creatorId: string): Promise<Service[]> {
@@ -330,7 +397,8 @@ class SupabaseStorage implements IStorage {
       .eq("creator_id", creatorId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (data ?? []).map(toService);
+    const enriched = await this.enrichWithHandles(data ?? []);
+    return enriched.map(toService);
   }
 
   async getService(id: number): Promise<Service | undefined> {
@@ -339,7 +407,9 @@ class SupabaseStorage implements IStorage {
       .select("*")
       .eq("id", id)
       .single();
-    return data ? toService(data) : undefined;
+    if (!data) return undefined;
+    const enriched = await this.enrichWithHandles([data]);
+    return toService(enriched[0]);
   }
 
   async createService(service: InsertService): Promise<Service> {
@@ -354,13 +424,16 @@ class SupabaseStorage implements IStorage {
         listing_type: service.listingType ?? "offer",
         pricing_category: service.pricingCategory,
         payroll_basis: service.pricingCategory === "payroll" ? (service.payrollBasis ?? null) : null,
+        content_type: service.contentType ?? "posts",
         max_actions: service.maxActions ?? null,
         deadline_days: service.deadlineDays ?? null,
         required_keyword: service.requiredKeyword ?? null,
         min_post_count: service.minPostCount ?? null,
         posts_per_period: service.postsPerPeriod ?? null,
+        threads_per_period: service.threadsPerPeriod ?? null,
         image_url: service.imageUrl ?? null,
         active: service.active ?? true,
+        show_twitter_handle: service.showTwitterHandle ?? true,
       })
       .select()
       .single();
@@ -376,11 +449,13 @@ class SupabaseStorage implements IStorage {
     if (updates.category !== undefined) updateObj.category = updates.category;
     if (updates.pricingCategory !== undefined) updateObj.pricing_category = updates.pricingCategory;
     if (updates.payrollBasis !== undefined) updateObj.payroll_basis = updates.payrollBasis;
+    if (updates.contentType !== undefined) updateObj.content_type = updates.contentType;
     if (updates.maxActions !== undefined) updateObj.max_actions = updates.maxActions;
     if (updates.deadlineDays !== undefined) updateObj.deadline_days = updates.deadlineDays;
     if (updates.requiredKeyword !== undefined) updateObj.required_keyword = updates.requiredKeyword;
     if (updates.minPostCount !== undefined) updateObj.min_post_count = updates.minPostCount;
     if (updates.postsPerPeriod !== undefined) updateObj.posts_per_period = updates.postsPerPeriod;
+    if (updates.threadsPerPeriod !== undefined) updateObj.threads_per_period = updates.threadsPerPeriod;
     if (updates.imageUrl !== undefined) updateObj.image_url = updates.imageUrl;
     if (updates.active !== undefined) updateObj.active = updates.active;
 
@@ -424,6 +499,7 @@ class SupabaseStorage implements IStorage {
         status: order.status ?? "pending",
         tx_hash: order.txHash ?? null,
         requirements: order.requirements ?? null,
+        required_keyword: order.requiredKeyword ?? null,
       })
       .select()
       .single();
@@ -858,7 +934,12 @@ class SupabaseStorage implements IStorage {
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(50);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message.includes("schema cache") || error.code === "PGRST204") {
+        return [];
+      }
+      throw new Error(error.message);
+    }
     return (data ?? []).map((n: any) => ({
       id: n.id,
       userId: n.user_id,
@@ -880,7 +961,12 @@ class SupabaseStorage implements IStorage {
       query = query.in("id", ids);
     }
     const { error } = await query;
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message.includes("schema cache") || error.code === "PGRST204") {
+        return;
+      }
+      throw new Error(error.message);
+    }
   }
 
   async hasActiveOrder(serviceId: number, buyerId: string): Promise<boolean> {
@@ -893,6 +979,81 @@ class SupabaseStorage implements IStorage {
       .limit(1)
       .maybeSingle();
     return !!data;
+  }
+
+  // --- Deal Proposals ---
+
+  async createProposal(proposal: InsertDealProposal & { proposerId: string }): Promise<DealProposal> {
+    const { data, error } = await supabaseAdmin
+      .from("deal_proposals")
+      .insert({
+        order_id: proposal.orderId,
+        proposer_id: proposal.proposerId,
+        proposed_price: proposal.proposedPrice ?? null,
+        proposed_deadline_days: proposal.proposedDeadlineDays ?? null,
+        proposed_min_post_count: proposal.proposedMinPostCount ?? null,
+        proposed_posts_per_period: proposal.proposedPostsPerPeriod ?? null,
+        proposed_threads_per_period: proposal.proposedThreadsPerPeriod ?? null,
+        proposed_content_type: proposal.proposedContentType ?? null,
+        proposed_required_keyword: proposal.proposedRequiredKeyword ?? null,
+        message: proposal.message ?? null,
+        status: "pending",
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return toDealProposal(data);
+  }
+
+  async getProposals(orderId: number): Promise<DealProposal[]> {
+    const { data, error } = await supabaseAdmin
+      .from("deal_proposals")
+      .select("*")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(toDealProposal);
+  }
+
+  async getPendingProposal(orderId: number): Promise<DealProposal | undefined> {
+    const { data } = await supabaseAdmin
+      .from("deal_proposals")
+      .select("*")
+      .eq("order_id", orderId)
+      .eq("status", "pending")
+      .maybeSingle();
+    return data ? toDealProposal(data) : undefined;
+  }
+
+  async updateProposalStatus(id: number, status: ProposalStatus): Promise<DealProposal> {
+    const { data, error } = await supabaseAdmin
+      .from("deal_proposals")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return toDealProposal(data);
+  }
+
+  async applyProposalToOrder(orderId: number, proposal: DealProposal): Promise<Order> {
+    const updateObj: any = {};
+    if (proposal.proposedPrice != null) updateObj.negotiated_price = proposal.proposedPrice;
+    if (proposal.proposedDeadlineDays != null) updateObj.negotiated_deadline_days = proposal.proposedDeadlineDays;
+    if (proposal.proposedMinPostCount != null) updateObj.negotiated_min_post_count = proposal.proposedMinPostCount;
+    if (proposal.proposedPostsPerPeriod != null) updateObj.negotiated_posts_per_period = proposal.proposedPostsPerPeriod;
+    if (proposal.proposedThreadsPerPeriod != null) updateObj.negotiated_threads_per_period = proposal.proposedThreadsPerPeriod;
+    if (proposal.proposedContentType != null) updateObj.negotiated_content_type = proposal.proposedContentType;
+    if (proposal.proposedRequiredKeyword != null) updateObj.negotiated_required_keyword = proposal.proposedRequiredKeyword;
+
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .update(updateObj)
+      .eq("id", orderId)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return toOrder(data);
   }
 }
 

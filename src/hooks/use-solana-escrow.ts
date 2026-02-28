@@ -40,6 +40,38 @@ export function useSolanaEscrow() {
   ) => {
     if (!client || !publicKey) throw new Error("Wallet not connected");
 
+    // Pre-flight: verify on-chain config PDA is initialized
+    const configPDA = client.getConfigPDA();
+    const configInfo = await connection.getAccountInfo(configPDA);
+    if (!configInfo) {
+      throw new Error(
+        "Escrow program config is not initialized on-chain. " +
+        "An admin must call POST /api/admin/init-config first."
+      );
+    }
+
+    // Pre-flight: verify escrow PDA doesn't already exist (from a prior attempt)
+    const escrowPDA = client.getEscrowPDA(escrowId);
+    const escrowPDAKey = new PublicKey(escrowPDA!);
+    const escrowInfo = await connection.getAccountInfo(escrowPDAKey);
+    if (escrowInfo) {
+      throw new Error(
+        "Escrow account already exists on-chain. " +
+        "This escrow may have been partially initialized in a previous attempt. " +
+        "Try syncing via the API or contact support."
+      );
+    }
+
+    // Pre-flight: check SOL balance
+    const balance = await connection.getBalance(publicKey);
+    const requiredLamports = amountLamports + 5_000_000; // escrow amount + ~0.005 SOL for rent + fees
+    if (balance < requiredLamports) {
+      throw new Error(
+        `Insufficient SOL balance. You have ${(balance / 1e9).toFixed(4)} SOL ` +
+        `but need ~${(requiredLamports / 1e9).toFixed(4)} SOL (amount + rent + fees).`
+      );
+    }
+
     const receiver = new PublicKey(receiverAddress);
     const expiresAt = Math.floor(Date.now() / 1000) + expiresInDays * 86400;
 

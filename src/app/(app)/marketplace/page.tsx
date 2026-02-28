@@ -19,9 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 const categories = [
   { value: "all", label: "All" },
   { value: "content", label: "Content" },
-  { value: "space", label: "Space" },
-  { value: "ambassador", label: "Ambassador" },
-  { value: "campaign", label: "Campaign" },
 ];
 
 const pricingModels = [

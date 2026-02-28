@@ -25,6 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Loader2, Shield, Lock, Clock, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -43,6 +44,7 @@ import { type Service } from "@shared/schema";
 
 const formSchema = z.object({
   requirements: z.string().min(10, "Please provide detailed requirements"),
+  requiredKeyword: z.string().optional(),
 });
 
 interface PurchaseModalProps {
@@ -65,7 +67,10 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { requirements: "" },
+    defaultValues: {
+      requirements: "",
+      requiredKeyword: isRequest ? (service?.requiredKeyword ?? "") : "",
+    },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -95,12 +100,22 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
       onOpenChange(false);
       return;
     }
+    if (!isRequest && !values.requiredKeyword?.trim()) {
+      toast({
+        title: "Required keyword missing",
+        description: "Please enter a keyword for tweet verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const orderRes = await createOrder({
         serviceId: service.id,
         requirements: values.requirements,
+        requiredKeyword: isRequest ? (service.requiredKeyword ?? undefined) : (values.requiredKeyword?.trim() || undefined),
       });
 
       const receiverId = isRequest ? user.id : service.creatorId;
@@ -186,6 +201,28 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               )}
             />
 
+            {!isRequest && (
+              <FormField
+                control={form.control}
+                name="requiredKeyword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Required Keyword *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. #SolanaDefi or @woloprotocol"
+                        {...field}
+                        value={field.value ?? ""}
+                        data-testid="input-order-keyword"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">This keyword will be verified in the seller&apos;s tweets.</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <div className="space-y-2">
               {(service.requiredKeyword || service.minPostCount || service.postsPerPeriod || service.deadlineDays) && (
                 <div className="flex items-start gap-3 p-3 rounded-md bg-muted text-sm">
@@ -234,7 +271,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} data-testid="button-cancel-purchase">Cancel</Button>
               <Button type="submit" disabled={isSubmitting || orderPending} data-testid="button-confirm-purchase">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isRequest ? "Submit & Lock Escrow" : "Take Contract & Lock Escrow"}
+                {isRequest ? "Submit & Lock Escrow" : "Accept Offer & Lock Escrow"}
               </Button>
             </div>
           </form>

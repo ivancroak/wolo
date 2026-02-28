@@ -12,7 +12,10 @@ import { RatingModal } from "@/components/RatingModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, CheckCircle, XCircle, Star, Shield, Clock, DollarSign, AlertTriangle } from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle, XCircle, Star, Shield, Clock, AlertTriangle, FileText } from "lucide-react";
+import { ProposeChangesModal } from "@/components/ProposeChangesModal";
+import { useDealProposals } from "@/hooks/use-deal-proposals";
+import type { DealProposal } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -29,6 +32,53 @@ const phaseColors: Record<string, string> = {
   disputed: "bg-red-500/10 text-red-600",
 };
 
+function DealTermsCard({ order, service }: { order: any; service: any }) {
+  const rows: { label: string; value: string; negotiated: boolean }[] = [];
+
+  const addRow = (label: string, negotiatedVal: any, serviceVal: any, suffix = "") => {
+    const isNegotiated = negotiatedVal != null;
+    const val = negotiatedVal ?? serviceVal;
+    if (val != null) {
+      rows.push({ label, value: `${val}${suffix}`, negotiated: isNegotiated });
+    }
+  };
+
+  addRow("Price", order.negotiatedPrice, service.price, " SOL");
+  addRow("Deadline", order.negotiatedDeadlineDays, service.deadlineDays, " days");
+  addRow("Min Posts", order.negotiatedMinPostCount, service.minPostCount);
+  addRow("Posts / Period", order.negotiatedPostsPerPeriod, service.postsPerPeriod);
+  addRow("Threads / Period", order.negotiatedThreadsPerPeriod, service.threadsPerPeriod);
+  addRow("Content Type", order.negotiatedContentType, service.contentType);
+  addRow("Keyword", order.negotiatedRequiredKeyword, order.requiredKeyword ?? service.requiredKeyword);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <FileText className="h-3.5 w-3.5" /> Deal Terms
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-1.5">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">{row.label}</span>
+            <span className="flex items-center gap-1.5 font-medium">
+              {row.value}
+              {row.negotiated && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-500/50 text-amber-600">
+                  Negotiated
+                </Badge>
+              )}
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -38,7 +88,9 @@ export default function OrderDetailPage() {
   const solanaEscrow = useSolanaEscrow();
   const solanaRep = useSolanaReputation();
   const { mutate: updateEscrowPhase } = useUpdateEscrowPhase();
+  const { data: proposals } = useDealProposals(orderId);
   const [ratingOpen, setRatingOpen] = useState(false);
+  const [proposeOpen, setProposeOpen] = useState(false);
 
   const { data: order, isLoading: orderLoading } = useQuery({
     queryKey: ["/api/orders", orderId],
@@ -65,6 +117,8 @@ export default function OrderDetailPage() {
   const isLoading = orderLoading || escrowLoading;
   const escrow = escrowData?.escrow;
   const milestones = escrowData?.milestones ?? [];
+  const hasPendingProposal = (proposals ?? []).some((p: DealProposal) => p.status === "pending");
+  const orderClosed = order?.status === "completed" || order?.status === "cancelled";
 
   if (isLoading) {
     return (
@@ -205,16 +259,16 @@ export default function OrderDetailPage() {
                       Expires {new Date(escrow.expiresAt).toLocaleDateString()}
                     </div>
                   )}
-                  {escrow.depositTxHash && (
-                    <div className="text-xs">
-                      <span className="text-muted-foreground">Deposit Tx: </span>
-                      <span className="font-mono break-all">{escrow.depositTxHash}</span>
-                    </div>
-                  )}
                   {escrow.releaseTxHash && (
                     <div className="text-xs">
                       <span className="text-muted-foreground">Release Tx: </span>
                       <span className="font-mono break-all">{escrow.releaseTxHash}</span>
+                    </div>
+                  )}
+                  {order.negotiatedPrice && order.negotiatedPrice !== escrow.amount && (
+                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-500/10 rounded-md px-3 py-2">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      Escrow amount ({escrow.amount} SOL) doesn&apos;t match deal price ({order.negotiatedPrice} SOL). Depositor needs to adjust funds.
                     </div>
                   )}
 
@@ -320,10 +374,30 @@ export default function OrderDetailPage() {
             )}
           </div>
 
-          {/* Right column: Chat */}
+          {/* Right column: Deal Terms + Chat */}
           <div className="space-y-6">
+            {service && order && (
+              <DealTermsCard order={order} service={service} />
+            )}
+            {service && order && !orderClosed && !hasPendingProposal && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full rounded-full"
+                onClick={() => setProposeOpen(true)}
+              >
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                Propose Changes
+              </Button>
+            )}
             {escrow && counterpartyId && (
-              <ChatPanel orderId={orderId} recipientId={counterpartyId} />
+              <ChatPanel
+                orderId={orderId}
+                recipientId={counterpartyId}
+                service={service}
+                order={order}
+                escrowPhase={escrow.phase}
+              />
             )}
           </div>
         </div>
@@ -337,6 +411,15 @@ export default function OrderDetailPage() {
           depositorId={escrow.depositorId}
           open={ratingOpen}
           onOpenChange={setRatingOpen}
+        />
+      )}
+      {service && order && (
+        <ProposeChangesModal
+          open={proposeOpen}
+          onOpenChange={setProposeOpen}
+          order={order}
+          service={service}
+          escrowPhase={escrow?.phase}
         />
       )}
     </div>

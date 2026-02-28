@@ -14,12 +14,9 @@ export async function verifyContract(
   service: Service,
   sellerHandle: string,
   _contractStartDate?: Date | null,
+  keywordOverride?: string | null,
 ): Promise<VerificationResult> {
-  if (service.category === "space") {
-    return { status: "manual_only", message: "Space services require manual verification.", matchingPosts: 0, requiredPosts: 0 };
-  }
-
-  const keyword = service.requiredKeyword;
+  const keyword = keywordOverride ?? service.requiredKeyword;
   if (!keyword) {
     return { status: "manual_only", message: "No required keyword set for this service.", matchingPosts: 0, requiredPosts: 0 };
   }

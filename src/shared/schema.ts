@@ -1,10 +1,11 @@
 import { z } from "zod";
 export * from "./models/auth";
 
-export type ServiceCategory = "content" | "space" | "ambassador" | "campaign";
+export type ServiceCategory = "content";
 export type ListingType = "offer" | "request";
 export type PricingCategory = "fixed" | "payroll";
 export type PayrollBasis = "weekly" | "monthly";
+export type ContentType = "posts" | "threads" | "mixed";
 export type OrderStatus = "pending" | "completed" | "disputed" | "cancelled";
 
 export type EscrowPhase =
@@ -27,6 +28,9 @@ export interface Profile {
   twitterHandle: string | null;
   twitterVerified: boolean;
   isInfluencer: boolean | null;
+  email: string | null;
+  emailVerified: boolean;
+  emailNotifications: boolean;
 }
 
 export interface Service {
@@ -39,14 +43,18 @@ export interface Service {
   listingType: ListingType;
   pricingCategory: PricingCategory;
   payrollBasis: PayrollBasis | null;
+  contentType: ContentType;
   maxActions: number | null;
   deadlineDays: number | null;
   requiredKeyword: string | null;
   minPostCount: number | null;
   postsPerPeriod: number | null;
+  threadsPerPeriod: number | null;
   imageUrl: string | null;
   active: boolean;
   actionsCompleted: number;
+  showTwitterHandle: boolean;
+  creatorTwitterHandle: string | null;
   createdAt: Date | null;
 }
 
@@ -57,7 +65,15 @@ export interface Order {
   status: OrderStatus;
   txHash: string | null;
   requirements: string | null;
+  requiredKeyword: string | null;
   escrowId: number | null;
+  negotiatedPrice: string | null;
+  negotiatedDeadlineDays: number | null;
+  negotiatedMinPostCount: number | null;
+  negotiatedPostsPerPeriod: number | null;
+  negotiatedThreadsPerPeriod: number | null;
+  negotiatedContentType: ContentType | null;
+  negotiatedRequiredKeyword: string | null;
   createdAt: Date | null;
 }
 
@@ -74,6 +90,8 @@ export const insertProfileSchema = z.object({
   bio: z.string().nullable().optional(),
   twitterHandle: z.string().nullable().optional(),
   isInfluencer: z.boolean().nullable().optional(),
+  email: z.string().email().nullable().optional(),
+  emailNotifications: z.boolean().optional(),
 });
 
 export const insertServiceSchema = z.object({
@@ -81,17 +99,20 @@ export const insertServiceSchema = z.object({
   title: z.string(),
   description: z.string(),
   price: z.string().refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: "Price must be a positive number" }),
-  category: z.enum(["content", "space", "ambassador", "campaign"]),
+  category: z.enum(["content"]),
   listingType: z.enum(["offer", "request"]).default("offer"),
   pricingCategory: z.enum(["fixed", "payroll"]),
   payrollBasis: z.enum(["weekly", "monthly"]).nullable().optional(),
+  contentType: z.enum(["posts", "threads", "mixed"]).default("posts"),
   maxActions: z.number().int().min(1).nullable().optional(),
   deadlineDays: z.number().int().min(1).nullable().optional(),
   requiredKeyword: z.string().nullable().optional(),
   minPostCount: z.number().int().min(1).nullable().optional(),
   postsPerPeriod: z.number().int().min(1).nullable().optional(),
+  threadsPerPeriod: z.number().int().min(1).nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   active: z.boolean().optional(),
+  showTwitterHandle: z.boolean().optional(),
 });
 
 export const insertOrderSchema = z.object({
@@ -100,6 +121,7 @@ export const insertOrderSchema = z.object({
   status: z.enum(["pending", "completed", "disputed", "cancelled"]).optional(),
   txHash: z.string().nullable().optional(),
   requirements: z.string().nullable().optional(),
+  requiredKeyword: z.string().nullable().optional(),
 });
 
 export const insertWatchlistSchema = z.object({
@@ -211,6 +233,44 @@ export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
 export type InsertSecureMessage = z.infer<typeof insertSecureMessageSchema>;
 export type InsertRating = z.infer<typeof insertRatingSchema>;
 
+export type ProposalStatus = "pending" | "accepted" | "rejected" | "withdrawn";
+
+export interface DealProposal {
+  id: number;
+  orderId: number;
+  proposerId: string;
+  status: ProposalStatus;
+  proposedPrice: string | null;
+  proposedDeadlineDays: number | null;
+  proposedMinPostCount: number | null;
+  proposedPostsPerPeriod: number | null;
+  proposedThreadsPerPeriod: number | null;
+  proposedContentType: ContentType | null;
+  proposedRequiredKeyword: string | null;
+  message: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
+
+export const insertDealProposalSchema = z.object({
+  orderId: z.number(),
+  proposedPrice: z.string().refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: "Price must be a positive number" }).nullable().optional(),
+  proposedDeadlineDays: z.number().int().min(1).nullable().optional(),
+  proposedMinPostCount: z.number().int().min(1).nullable().optional(),
+  proposedPostsPerPeriod: z.number().int().min(1).nullable().optional(),
+  proposedThreadsPerPeriod: z.number().int().min(1).nullable().optional(),
+  proposedContentType: z.enum(["posts", "threads", "mixed"]).nullable().optional(),
+  proposedRequiredKeyword: z.string().nullable().optional(),
+  message: z.string().max(500).nullable().optional(),
+});
+
+export const patchDealProposalSchema = z.object({
+  action: z.enum(["accept", "reject", "withdraw"]),
+});
+
+export type InsertDealProposal = z.infer<typeof insertDealProposalSchema>;
+export type PatchDealProposal = z.infer<typeof patchDealProposalSchema>;
+
 export type NotificationType =
   | "order_created"
   | "escrow_created"
@@ -220,7 +280,10 @@ export type NotificationType =
   | "milestone_submitted"
   | "milestone_approved"
   | "rating_received"
-  | "message_received";
+  | "message_received"
+  | "proposal_created"
+  | "proposal_accepted"
+  | "proposal_rejected";
 
 export interface Notification {
   id: number;

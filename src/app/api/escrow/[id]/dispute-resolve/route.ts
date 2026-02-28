@@ -87,7 +87,15 @@ export async function POST(
       );
     }
 
-    const result = await verifyContract(service, profile.twitterHandle, order.createdAt);
+    const effectiveKeyword = order.negotiatedRequiredKeyword ?? order.requiredKeyword;
+    const effectiveService = {
+      ...service,
+      minPostCount: order.negotiatedMinPostCount ?? service.minPostCount,
+      postsPerPeriod: order.negotiatedPostsPerPeriod ?? service.postsPerPeriod,
+      threadsPerPeriod: order.negotiatedThreadsPerPeriod ?? service.threadsPerPeriod,
+    };
+
+    const result = await verifyContract(effectiveService, profile.twitterHandle, order.createdAt, effectiveKeyword);
 
     if (result.status === "verified" || result.status === "not_found" || result.status === "insufficient") {
       const feeVaultStr = process.env.NEXT_PUBLIC_FEE_VAULT;
@@ -104,8 +112,20 @@ export async function POST(
       const depositorPubkey = new PublicKey(escrow.depositorId);
       const receiverPubkey = new PublicKey(escrow.receiverId);
 
-      const depositorShareBps = result.status === "verified" ? 0 : 10000;
-      const newPhase: EscrowPhase = result.status === "verified" ? "released" : "refunded";
+      let depositorShareBps: number;
+      let newPhase: EscrowPhase;
+
+      if (result.status === "verified") {
+        depositorShareBps = 0;
+        newPhase = "released";
+      } else if (result.status === "insufficient" && result.requiredPosts > 0 && result.matchingPosts > 0) {
+        const sellerShareBps = Math.round((result.matchingPosts / result.requiredPosts) * 10000);
+        depositorShareBps = 10000 - sellerShareBps;
+        newPhase = "released";
+      } else {
+        depositorShareBps = 10000;
+        newPhase = "refunded";
+      }
 
       const client = new WolandEscrowClient(connection, deployWallet.publicKey);
       const ix = await client.buildArbiterResolveIx(

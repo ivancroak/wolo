@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -39,24 +40,35 @@ const offerSchema = insertServiceSchema.omit({ creatorId: true }).extend({
   price: z.coerce.number().min(0.001, "Price must be positive"),
   pricingCategory: z.enum(["fixed", "payroll"]),
   payrollBasis: z.enum(["weekly", "monthly"]).nullable().optional(),
+  contentType: z.enum(["posts", "threads", "mixed"]),
   maxActions: z.coerce.number().int().min(1, "Must be at least 1").nullable().optional(),
   requiredKeyword: z.string().nullable().optional(),
   minPostCount: z.coerce.number().int().min(1).nullable().optional(),
   postsPerPeriod: z.coerce.number().int().min(1).nullable().optional(),
+  threadsPerPeriod: z.coerce.number().int().min(1).nullable().optional(),
 }).refine(
   (data) => data.pricingCategory !== "payroll" || data.payrollBasis != null,
-  { message: "Please select a payroll basis", path: ["payrollBasis"] }
+  { message: "Please select a payroll basis (period)", path: ["payrollBasis"] }
+).refine(
+  (data) => data.pricingCategory === "payroll" || data.contentType !== "mixed",
+  { message: "Mixed content is only available for payroll pricing", path: ["contentType"] }
 );
 
 const requestSchema = insertServiceSchema.omit({ creatorId: true }).extend({
   price: z.coerce.number().min(0.001, "Budget must be positive"),
   pricingCategory: z.enum(["fixed", "payroll"]),
   payrollBasis: z.enum(["weekly", "monthly"]).nullable().optional(),
+  contentType: z.enum(["posts", "threads", "mixed"]),
   deadlineDays: z.coerce.number().int().min(1, "Must be at least 1 day").nullable().optional(),
-  requiredKeyword: z.string().nullable().optional(),
+  requiredKeyword: z.string().min(1, "Required keyword is mandatory"),
   minPostCount: z.coerce.number().int().min(1).nullable().optional(),
   postsPerPeriod: z.coerce.number().int().min(1).nullable().optional(),
-});
+  threadsPerPeriod: z.coerce.number().int().min(1).nullable().optional(),
+  showTwitterHandle: z.boolean().optional(),
+}).refine(
+  (data) => data.pricingCategory === "payroll" || data.contentType !== "mixed",
+  { message: "Mixed content is only available for payroll pricing", path: ["contentType"] }
+);
 
 interface CreateServiceModalProps {
   listingType?: "offer" | "request";
@@ -81,10 +93,12 @@ function OfferServiceModal() {
       listingType: "offer",
       pricingCategory: "fixed",
       payrollBasis: null,
+      contentType: "posts",
       maxActions: null,
       requiredKeyword: null,
       minPostCount: null,
       postsPerPeriod: null,
+      threadsPerPeriod: null,
       deadlineDays: null,
       price: 0,
       imageUrl: "",
@@ -106,6 +120,7 @@ function OfferServiceModal() {
   }
 
   const pricingCategory = form.watch("pricingCategory");
+  const contentType = form.watch("contentType");
 
   const priceLabel = pricingCategory === "payroll" ? "Rate per Period (SOL)" : "Contract Price (SOL)";
 
@@ -117,7 +132,7 @@ function OfferServiceModal() {
           List Service
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]" data-testid="modal-create-service">
+      <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto" data-testid="modal-create-service">
         <DialogHeader>
           <DialogTitle className="text-lg">Create New Service</DialogTitle>
           <DialogDescription>Offer your social influence to the marketplace.</DialogDescription>
@@ -141,30 +156,6 @@ function OfferServiceModal() {
 
             <FormField
               control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger data-testid="select-category">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="content">Content</SelectItem>
-                      <SelectItem value="space">Space</SelectItem>
-                      <SelectItem value="ambassador">Ambassador</SelectItem>
-                      <SelectItem value="campaign">Campaign</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="pricingCategory"
               render={({ field }) => (
                 <FormItem>
@@ -175,6 +166,9 @@ function OfferServiceModal() {
                       if (value !== "payroll") {
                         form.setValue("payrollBasis", null);
                         form.setValue("postsPerPeriod", null);
+                        form.setValue("threadsPerPeriod", null);
+                        const ct = form.getValues("contentType");
+                        if (ct === "mixed") form.setValue("contentType", "posts");
                       }
                       if (value !== "fixed") {
                         form.setValue("minPostCount", null);
@@ -190,6 +184,38 @@ function OfferServiceModal() {
                     <SelectContent>
                       <SelectItem value="fixed">Fixed Contract</SelectItem>
                       <SelectItem value="payroll">Payroll</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="contentType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Content Type *</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value === "posts") form.setValue("threadsPerPeriod", null);
+                      if (value === "threads") form.setValue("postsPerPeriod", null);
+                    }}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-content-type">
+                        <SelectValue placeholder="Select content type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="posts">Posts</SelectItem>
+                      <SelectItem value="threads">Threads</SelectItem>
+                      {pricingCategory === "payroll" && (
+                        <SelectItem value="mixed">Mixed</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -217,11 +243,11 @@ function OfferServiceModal() {
                 name="payrollBasis"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Payroll Basis</FormLabel>
+                    <FormLabel>Payroll Basis (Period)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                       <FormControl>
                         <SelectTrigger data-testid="select-payroll-basis">
-                          <SelectValue placeholder="Select payroll basis" />
+                          <SelectValue placeholder="Select payroll basis (period)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -240,10 +266,10 @@ function OfferServiceModal() {
               name="requiredKeyword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Required Keyword</FormLabel>
+                  <FormLabel>Keywords (Optional)</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="e.g. #SolanaDefi or @woloprotocol"
+                      placeholder="e.g. DeFi, Solana, NFT"
                       {...field}
                       value={field.value ?? ""}
                       onChange={(e) => field.onChange(e.target.value || null)}
@@ -262,7 +288,7 @@ function OfferServiceModal() {
                   name="minPostCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Min Post Count</FormLabel>
+                      <FormLabel>{contentType === "threads" ? "Min Thread Count" : "Min Post Count"}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -306,28 +332,54 @@ function OfferServiceModal() {
 
             {pricingCategory === "payroll" && (
               <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="postsPerPeriod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Posts per Period</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          step="1"
-                          placeholder="e.g. 3"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                          data-testid="input-posts-per-period"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {(contentType === "posts" || contentType === "mixed") && (
+                  <FormField
+                    control={form.control}
+                    name="postsPerPeriod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Posts per Period</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="e.g. 3"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                            data-testid="input-posts-per-period"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {(contentType === "threads" || contentType === "mixed") && (
+                  <FormField
+                    control={form.control}
+                    name="threadsPerPeriod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Threads per Period</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="e.g. 2"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                            data-testid="input-threads-per-period"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormField
                   control={form.control}
                   name="deadlineDays"
@@ -358,7 +410,7 @@ function OfferServiceModal() {
               name="maxActions"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Max Contracts (Optional)</FormLabel>
+                  <FormLabel>Max Buyers of the Service (Optional)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -437,17 +489,21 @@ function RequestServiceModal() {
       listingType: "request",
       pricingCategory: "fixed",
       payrollBasis: null,
+      contentType: "posts",
       price: 0,
       deadlineDays: null,
-      requiredKeyword: null,
+      requiredKeyword: "",
       minPostCount: null,
       postsPerPeriod: null,
+      threadsPerPeriod: null,
       imageUrl: "",
       active: true,
+      showTwitterHandle: false,
     },
   });
 
   const pricingCategory = form.watch("pricingCategory");
+  const contentType = form.watch("contentType");
 
   function onSubmit(values: z.infer<typeof requestSchema>) {
     createService(values as any, {
@@ -470,7 +526,7 @@ function RequestServiceModal() {
           Request Service
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]" data-testid="modal-request-service">
+      <DialogContent className="sm:max-w-[480px] max-h-[85vh] overflow-y-auto" data-testid="modal-request-service">
         <DialogHeader>
           <DialogTitle className="text-lg">Request a Service</DialogTitle>
           <DialogDescription>Describe the service you need from the marketplace.</DialogDescription>
@@ -494,30 +550,6 @@ function RequestServiceModal() {
 
             <FormField
               control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger data-testid="select-category">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="content">Content</SelectItem>
-                      <SelectItem value="space">Space</SelectItem>
-                      <SelectItem value="ambassador">Ambassador</SelectItem>
-                      <SelectItem value="campaign">Campaign</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="pricingCategory"
               render={({ field }) => (
                 <FormItem>
@@ -528,6 +560,9 @@ function RequestServiceModal() {
                       if (value !== "payroll") {
                         form.setValue("payrollBasis", null);
                         form.setValue("postsPerPeriod", null);
+                        form.setValue("threadsPerPeriod", null);
+                        const ct = form.getValues("contentType");
+                        if (ct === "mixed") form.setValue("contentType", "posts");
                       }
                     }}
                     value={field.value}
@@ -540,6 +575,38 @@ function RequestServiceModal() {
                     <SelectContent>
                       <SelectItem value="fixed">Fixed Contract</SelectItem>
                       <SelectItem value="payroll">Payroll</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="contentType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Content Type *</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value === "posts") form.setValue("threadsPerPeriod", null);
+                      if (value === "threads") form.setValue("postsPerPeriod", null);
+                    }}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-content-type">
+                        <SelectValue placeholder="Select content type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="posts">Posts</SelectItem>
+                      <SelectItem value="threads">Threads</SelectItem>
+                      {pricingCategory === "payroll" && (
+                        <SelectItem value="mixed">Mixed</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -593,11 +660,11 @@ function RequestServiceModal() {
                   name="payrollBasis"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payroll Basis</FormLabel>
+                      <FormLabel>Payroll Basis (Period)</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-payroll-basis">
-                            <SelectValue placeholder="Select basis" />
+                            <SelectValue placeholder="Select basis (period)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -609,28 +676,54 @@ function RequestServiceModal() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="postsPerPeriod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Posts per Period</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          step="1"
-                          placeholder="e.g. 3"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                          data-testid="input-posts-per-period"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {(contentType === "posts" || contentType === "mixed") && (
+                  <FormField
+                    control={form.control}
+                    name="postsPerPeriod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Posts per Period</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="e.g. 3"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                            data-testid="input-posts-per-period"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {(contentType === "threads" || contentType === "mixed") && (
+                  <FormField
+                    control={form.control}
+                    name="threadsPerPeriod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Threads per Period</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="e.g. 2"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                            data-testid="input-threads-per-period"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             )}
 
@@ -639,13 +732,13 @@ function RequestServiceModal() {
               name="requiredKeyword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Required Keyword</FormLabel>
+                  <FormLabel>Required Keyword *</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="e.g. #SolanaDefi or @woloprotocol"
                       {...field}
                       value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value || null)}
+                      onChange={(e) => field.onChange(e.target.value)}
                       data-testid="input-required-keyword"
                     />
                   </FormControl>
@@ -660,7 +753,7 @@ function RequestServiceModal() {
                 name="minPostCount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Min Post Count</FormLabel>
+                    <FormLabel>{contentType === "threads" ? "Min Thread Count" : "Min Post Count"}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -708,6 +801,22 @@ function RequestServiceModal() {
                     <Input placeholder="https://x.com/post/..." {...field} value={field.value || ""} data-testid="input-image-url" />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="showTwitterHandle"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm">Show my X handle</FormLabel>
+                    <p className="text-xs text-muted-foreground">Display your @username publicly on this request</p>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
                 </FormItem>
               )}
             />

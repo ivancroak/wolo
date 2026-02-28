@@ -10,10 +10,7 @@ export function useNotifications() {
     queryKey: [api.notifications.list.path],
     queryFn: async () => {
       const res = await fetch(api.notifications.list.path, { credentials: "include" });
-      if (!res.ok) {
-        if (res.status === 401) return [];
-        throw new Error("Failed to fetch notifications");
-      }
+      if (!res.ok) return [];
       return res.json();
     },
     refetchInterval: 30000,

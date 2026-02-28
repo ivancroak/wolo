@@ -145,7 +145,7 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
   };
 
   const needsTweetUrl = serviceCategory === "content";
-  const needsTargetHandle = serviceCategory === "ambassador" || serviceCategory === "space";
+  const needsTargetHandle = false;
 
   const statusColors: Record<string, string> = {
     pending: "bg-yellow-500/10 text-yellow-600",

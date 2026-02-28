@@ -12,6 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuBadge,
   SidebarHeader,
   SidebarFooter,
   SidebarSeparator,
@@ -21,7 +22,8 @@ import { Store, LayoutDashboard, User, Eye, LogOut } from "lucide-react";
 import { TransparentLogo } from "@/components/TransparentLogo";
 import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ConnectWallet";
-import { useState, useEffect } from "react";
+import { useNotifications } from "@/hooks/use-notifications";
+import { useState, useEffect, useMemo } from "react";
 
 const navItems = [
   { href: "/marketplace", label: "Marketplace", icon: Store },
@@ -35,6 +37,12 @@ export function AppSidebar() {
   const { user, logout } = useAuth();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const { data: notifications } = useNotifications();
+  const unreadMessageCount = useMemo(
+    () => (notifications ?? []).filter((n) => !n.read && n.type === "message_received").length,
+    [notifications],
+  );
 
   return (
     <Sidebar>
@@ -57,7 +65,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.href}
+                    isActive={pathname === item.href || pathname?.startsWith(item.href + "/")}
                     data-testid={`sidebar-link-${item.label.toLowerCase()}`}
                   >
                     <Link href={item.href}>
@@ -65,6 +73,11 @@ export function AppSidebar() {
                       <span>{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
+                  {item.href === "/dashboard" && unreadMessageCount > 0 && (
+                    <SidebarMenuBadge className="bg-red-500 text-white text-[10px] h-4 min-w-4 rounded-full flex items-center justify-center">
+                      {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Wallet, ExternalLink, CheckCircle2, Copy } from "lucide-react";
+import { Loader2, Save, Wallet, ExternalLink, CheckCircle2, Copy, Mail, Bell, BellOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 const XIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -46,6 +47,7 @@ const formSchema = insertProfileSchema.omit({ userId: true }).extend({
       { message: "Handle must be 1-15 characters: letters, numbers, or underscores only" }
     )
     .transform((val) => (val ? val.replace(/^@/, "") : val)),
+  email: z.string().email("Invalid email address").nullable().optional().or(z.literal("")),
 });
 
 export default function ProfilePage() {
@@ -61,6 +63,7 @@ export default function ProfilePage() {
       walletAddress: "",
       bio: "",
       twitterHandle: "",
+      email: "",
     },
   });
 
@@ -70,6 +73,7 @@ export default function ProfilePage() {
         walletAddress: profile.walletAddress || "",
         bio: profile.bio || "",
         twitterHandle: profile.twitterHandle || "",
+        email: profile.email || "",
       });
     }
   }, [profile, form]);
@@ -84,12 +88,17 @@ export default function ProfilePage() {
   }, [walletConnected, walletAddress, form]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    updateProfile(values, {
+    const payload = { ...values, email: values.email?.trim() || null };
+    updateProfile(payload, {
       onSuccess: () => {
         toast({ title: "Profile Updated", description: "Your settings have been saved." });
+        if (payload.email && !profile?.emailVerified) {
+          setEmailCodeSent(false);
+          setEmailCode("");
+        }
       },
-      onError: () => {
-        toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
+      onError: (err) => {
+        toast({ title: "Error", description: err?.message || "Failed to update profile.", variant: "destructive" });
       },
     });
   };
@@ -98,6 +107,9 @@ export default function ProfilePage() {
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyCopied, setVerifyCopied] = useState(false);
   const [blueLoading, setBlueLoading] = useState(false);
+  const [emailVerifyLoading, setEmailVerifyLoading] = useState(false);
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
 
   const checkBlueCheckmark = async () => {
     setBlueLoading(true);
@@ -170,6 +182,67 @@ export default function ProfilePage() {
     }
   };
 
+  const sendEmailVerification = async () => {
+    setEmailVerifyLoading(true);
+    try {
+      const res = await fetch("/api/profiles/verify-email", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+        return;
+      }
+      if (data.verified) {
+        toast({ title: "Already Verified", description: "Your email is already verified." });
+        return;
+      }
+      setEmailCodeSent(true);
+      toast({ title: "Code Sent", description: "Check your inbox for the verification code." });
+    } catch {
+      toast({ title: "Error", description: "Failed to send verification email", variant: "destructive" });
+    } finally {
+      setEmailVerifyLoading(false);
+    }
+  };
+
+  const checkEmailVerification = async () => {
+    setEmailVerifyLoading(true);
+    try {
+      const res = await fetch("/api/profiles/verify-email", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: emailCode }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.verified) {
+        toast({ title: "Verified!", description: "Your email has been verified." });
+        setEmailCodeSent(false);
+        setEmailCode("");
+        window.location.reload();
+      } else {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Verification check failed", variant: "destructive" });
+    } finally {
+      setEmailVerifyLoading(false);
+    }
+  };
+
+  const toggleEmailNotifications = (enabled: boolean) => {
+    updateProfile({ emailNotifications: enabled } as any, {
+      onSuccess: () => {
+        toast({
+          title: enabled ? "Notifications Enabled" : "Notifications Disabled",
+          description: enabled ? "You will receive email notifications." : "Email notifications turned off.",
+        });
+      },
+      onError: () => {
+        toast({ title: "Error", description: "Failed to update preference.", variant: "destructive" });
+      },
+    });
+  };
+
   if (authLoading || isLoggingIn) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -201,6 +274,15 @@ export default function ProfilePage() {
       >
         Profile Settings
       </motion.h1>
+
+      {profile && (!profile.email || !profile.emailVerified) && (
+        <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+          <Mail className="h-4 w-4 shrink-0" />
+          {!profile.email
+            ? "Add your email to receive notifications when you get messages."
+            : "Verify your email to start receiving notifications."}
+        </div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 15 }}
@@ -350,6 +432,116 @@ export default function ProfilePage() {
                                 Check Verification
                               </Button>
                             </div>
+                          </div>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center gap-2">
+                          <FormLabel className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5" /> Email
+                          </FormLabel>
+                          {profile?.emailVerified && (
+                            <Badge variant="outline" className="gap-1 text-green-600 border-green-500/50">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Verified
+                            </Badge>
+                          )}
+                        </div>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="you@example.com"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-email"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {profile?.emailVerified
+                            ? "Your email is verified. Save to update email (re-verification required)."
+                            : "Enter your email, save, then verify to receive notifications."}
+                        </FormDescription>
+                        <FormMessage />
+
+                        {profile?.email && !profile.emailVerified && !emailCodeSent && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={sendEmailVerification}
+                            disabled={emailVerifyLoading}
+                            className="mt-2 gap-1.5"
+                          >
+                            {emailVerifyLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                            Verify Email
+                          </Button>
+                        )}
+
+                        {emailCodeSent && (
+                          <div className="mt-3 space-y-3 rounded-md border p-3 bg-muted/50">
+                            <p className="text-xs text-muted-foreground">
+                              Enter the 6-digit code sent to your email:
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={6}
+                                placeholder="000000"
+                                value={emailCode}
+                                onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                className="font-mono text-center text-lg tracking-widest w-36"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={checkEmailVerification}
+                                disabled={emailVerifyLoading || emailCode.length !== 6}
+                                className="gap-1.5"
+                              >
+                                {emailVerifyLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                                Verify
+                              </Button>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={sendEmailVerification}
+                              disabled={emailVerifyLoading}
+                              className="text-xs text-muted-foreground"
+                            >
+                              Resend code
+                            </Button>
+                          </div>
+                        )}
+
+                        {profile?.emailVerified && (
+                          <div className="mt-3 flex items-center justify-between rounded-md border p-3">
+                            <div className="flex items-center gap-2">
+                              {profile.emailNotifications ? (
+                                <Bell className="h-4 w-4 text-foreground" />
+                              ) : (
+                                <BellOff className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <div>
+                                <p className="text-sm font-medium">Email Notifications</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {profile.emailNotifications ? "You will receive emails for new messages" : "Email notifications are off"}
+                                </p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={profile.emailNotifications}
+                              onCheckedChange={toggleEmailNotifications}
+                            />
                           </div>
                         )}
                       </FormItem>

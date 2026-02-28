@@ -8,16 +8,13 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, ArrowLeft, Users, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight, Radio, Image, TrendingUp } from "lucide-react";
+import { Loader2, ArrowLeft, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight, Image } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   content: <Image className="h-4 w-4" />,
-  space: <Radio className="h-4 w-4" />,
-  ambassador: <Users className="h-4 w-4" />,
-  campaign: <TrendingUp className="h-4 w-4" />,
 };
 
 const pricingLabels: Record<string, string> = {
@@ -85,10 +82,22 @@ export default function ServiceDetailPage() {
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
                     <AvatarFallback className="text-[10px] bg-foreground text-background font-bold">
-                      {service.creatorId.slice(0, 2).toUpperCase()}
+                      {service.creatorTwitterHandle ? service.creatorTwitterHandle.slice(0, 2).toUpperCase() : service.creatorId.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm text-muted-foreground font-mono">{service.creatorId.slice(0, 16)}...</span>
+                  {service.creatorTwitterHandle ? (
+                    <a
+                      href={`https://x.com/${service.creatorTwitterHandle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      @{service.creatorTwitterHandle}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-muted-foreground font-mono">{service.creatorId.slice(0, 16)}...</span>
+                  )}
                 </div>
               </div>
 
@@ -123,9 +132,22 @@ export default function ServiceDetailPage() {
                 </div>
               )}
 
+              {service.contentType && (
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Content Type</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium capitalize">
+                      {service.contentType === "mixed" ? "Posts + Threads" : service.contentType}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {service.requiredKeyword && (
                 <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Required Keyword</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                    {service.listingType === "request" ? "Required Keyword" : "Keywords"}
+                  </span>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-4 w-4" />
                     <span className="text-sm font-medium font-mono">{service.requiredKeyword}</span>
@@ -135,10 +157,14 @@ export default function ServiceDetailPage() {
 
               {service.minPostCount && (
                 <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Min Posts</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                    {service.contentType === "threads" ? "Min Threads" : "Min Posts"}
+                  </span>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-4 w-4" />
-                    <span className="text-sm font-medium">{service.minPostCount} posts</span>
+                    <span className="text-sm font-medium">
+                      {service.minPostCount} {service.contentType === "threads" ? "threads" : "posts"}
+                    </span>
                   </div>
                 </div>
               )}
@@ -153,9 +179,19 @@ export default function ServiceDetailPage() {
                 </div>
               )}
 
+              {service.threadsPerPeriod && (
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Threads per Period</span>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarClock className="h-4 w-4" />
+                    <span className="text-sm font-medium">{service.threadsPerPeriod} / {service.payrollBasis ?? "period"}</span>
+                  </div>
+                </div>
+              )}
+
               {service.maxActions && (
                 <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Contracts</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Max Buyers</span>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-4 w-4" />
                     <span className="text-sm font-medium">{service.actionsCompleted} / {service.maxActions}</span>
@@ -194,7 +230,7 @@ export default function ServiceDetailPage() {
                   }
                   setPurchaseOpen(true);
                 }} className="rounded-full px-8">
-                  {service.listingType === "request" ? "Fulfill Request" : "Take Contract"}
+                  {service.listingType === "request" ? "Fulfill Request" : "Accept Offer"}
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Button>
               )}

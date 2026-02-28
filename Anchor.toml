@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-woland_escrow = "4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM"
+woland_escrow = "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9"
 woland_reputation = "CjNEAXDzVY5aTsHQaHuLMioVkUucu4aEwFZMTWWwXxvR"
 
 [registry]

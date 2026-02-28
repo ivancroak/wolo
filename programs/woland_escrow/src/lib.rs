@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM");
+declare_id!("9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9");
 
 const MAX_MILESTONES: usize = 10;
 const MAX_FEE_BPS: u16 = 1000; // 10% cap

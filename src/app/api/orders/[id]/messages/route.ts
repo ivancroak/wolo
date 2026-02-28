@@ -72,12 +72,16 @@ export async function POST(
       orderId: Number(id),
       senderId: user.id,
     });
+
+    const recipientProfile = await storage.getProfile(recipientId);
     await notify(
       recipientId,
       "message_received",
       "New Message",
       "You have a new encrypted message",
       `/orders/${check.order.id}`,
+      recipientProfile?.email ?? undefined,
+      recipientProfile?.emailVerified && recipientProfile?.emailNotifications,
     );
 
     return NextResponse.json(msg, { status: 201 });

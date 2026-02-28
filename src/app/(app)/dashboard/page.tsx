@@ -13,10 +13,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, AlertTriangle, Send } from "lucide-react";
+import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, AlertTriangle, Send, MessageSquare, ArrowLeft, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useNotifications, useMarkRead } from "@/hooks/use-notifications";
+import { useMyConversations, type Conversation } from "@/hooks/use-conversations";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,8 +47,38 @@ export default function DashboardPage() {
   const solanaEscrow = useSolanaEscrow();
   const solanaRep = useSolanaReputation();
   const { toast } = useToast();
+  const { data: conversations, isLoading: convsLoading } = useMyConversations();
+  const { data: notifications } = useNotifications();
+  const { mutate: markRead } = useMarkRead();
   const [ratingTarget, setRatingTarget] = useState<{ orderId: number; escrowId?: number; targetId: string; depositorId?: string } | null>(null);
   const [loadingEscrowId, setLoadingEscrowId] = useState<number | null>(null);
+  const [openChat, setOpenChat] = useState<number | null>(null);
+
+  const unreadByOrderId = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const n of notifications ?? []) {
+      if (n.type !== "message_received" || n.read) continue;
+      const match = n.linkUrl?.match(/\/orders\/(\d+)/);
+      if (!match) continue;
+      const orderId = Number(match[1]);
+      const arr = map.get(orderId) ?? [];
+      arr.push(n.id);
+      map.set(orderId, arr);
+    }
+    return map;
+  }, [notifications]);
+
+  const unreadMessageCount = useMemo(() => {
+    let count = 0;
+    unreadByOrderId.forEach((ids) => { count += ids.length; });
+    return count;
+  }, [unreadByOrderId]);
+
+  useEffect(() => {
+    if (openChat === null) return;
+    const ids = unreadByOrderId.get(openChat);
+    if (ids?.length) markRead(ids);
+  }, [openChat, unreadByOrderId, markRead]);
 
   const handleStatusUpdate = (orderId: number, status: "completed" | "cancelled") => {
     updateOrder({ id: orderId, status }, {
@@ -195,11 +227,20 @@ export default function DashboardPage() {
       )}
 
       <Tabs defaultValue="listings" className="w-full">
-        <TabsList className="mb-8 w-full max-w-lg grid grid-cols-4">
+        <TabsList className="mb-8 w-full max-w-2xl grid grid-cols-5">
           <TabsTrigger value="listings" data-testid="tab-listings">Listings</TabsTrigger>
           <TabsTrigger value="escrows" data-testid="tab-escrows">Escrows</TabsTrigger>
           <TabsTrigger value="buying" data-testid="tab-buying">Buying</TabsTrigger>
           <TabsTrigger value="selling" data-testid="tab-selling">Selling</TabsTrigger>
+          <TabsTrigger value="chat" data-testid="tab-chat" className="relative" onClick={() => setOpenChat(null)}>
+            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+            Chat
+            {unreadMessageCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadMessageCount}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="listings">
@@ -254,6 +295,9 @@ export default function DashboardPage() {
                               <Progress value={pct} className="h-1.5" />
                             </div>
                           )}
+                          <Link href={`/services/${service.id}`} className="inline-block text-xs text-muted-foreground hover:text-foreground hover:underline mt-2">
+                            View Details &rarr;
+                          </Link>
                         </CardContent>
                       </Card>
                     </motion.div>
@@ -312,7 +356,7 @@ export default function DashboardPage() {
                           <div>
                             <CardTitle className="text-base">Escrow #{escrow.id}</CardTitle>
                             <p className="text-xs text-muted-foreground mt-1">
-                              Order #{escrow.orderId} &middot; {isDepositor ? "You deposited" : "You receive"}
+                              <Link href={`/orders/${escrow.orderId}`} className="hover:underline">Order #{escrow.orderId}</Link> &middot; {isDepositor ? "You deposited" : "You receive"}
                             </p>
                           </div>
                           <Badge className={`text-xs capitalize ${phaseColors[escrow.phase] ?? ""}`}>
@@ -354,7 +398,9 @@ export default function DashboardPage() {
                                   updateEscrowPhase({ id: escrow.id, phase: "funded", txHash: txSig });
                                   toast({ title: "Escrow Funded", description: `Tx: ${txSig.slice(0, 12)}...` });
                                 } catch (err: any) {
-                                  toast({ title: "Transaction Failed", description: err?.message, variant: "destructive" });
+                                  const msg = err?.message || "Unexpected error";
+                                  console.error("[Fund Escrow]", err);
+                                  toast({ title: "Transaction Failed", description: msg, variant: "destructive" });
                                 } finally {
                                   setLoadingEscrowId(null);
                                 }
@@ -556,10 +602,13 @@ export default function DashboardPage() {
                                     { escrowId: escrow.id },
                                     {
                                       onSuccess: (data: any) => {
-                                        if (data.resolution === "released") {
+                                        if (data.resolution === "released" && data.matchingPosts >= data.requiredPosts) {
                                           toast({ title: "Verified", description: "Evidence confirmed — funds released to you." });
+                                        } else if (data.resolution === "released" && data.matchingPosts > 0) {
+                                          const pct = Math.round((data.matchingPosts / data.requiredPosts) * 100);
+                                          toast({ title: "Partial Delivery", description: `${data.matchingPosts} of ${data.requiredPosts} posts verified — ${pct}% released to seller, rest refunded.` });
                                         } else if (data.resolution === "refunded") {
-                                          toast({ title: "Not Verified", description: "Evidence could not be confirmed — funds refunded to buyer.", variant: "destructive" });
+                                          toast({ title: "Not Verified", description: "No matching posts found — funds refunded to buyer.", variant: "destructive" });
                                         } else {
                                           toast({ title: "Manual Review", description: data.message });
                                         }
@@ -665,6 +714,97 @@ export default function DashboardPage() {
                 {sales?.map((order: Order) => (
                   <OrderCard key={order.id} order={order} isSeller />
                 ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="chat">
+          {convsLoading ? (
+            <div className="flex justify-center py-16"><Loader2 className="animate-spin h-6 w-6 text-muted-foreground" /></div>
+          ) : openChat !== null ? (() => {
+            const conv = conversations?.find((c: Conversation) => c.orderId === openChat);
+            if (!conv) return null;
+            return (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setOpenChat(null)}>
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                  </Button>
+                  <div>
+                    <p className="text-sm font-medium">{conv.serviceTitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {conv.counterpartyHandle ? `@${conv.counterpartyHandle}` : conv.counterpartyId.slice(0, 8) + "..."}
+                      {" "}&middot; You are the {conv.role}
+                    </p>
+                  </div>
+                </div>
+                <ChatPanel orderId={openChat} recipientId={conv.counterpartyId} />
+              </motion.div>
+            );
+          })() : !conversations?.length ? (
+            <div className="text-center py-20 border border-dashed rounded-md" data-testid="text-no-conversations">
+              <MessageSquare className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-bold mb-2">No conversations yet</h3>
+              <p className="text-muted-foreground text-sm">Conversations appear here when you buy or sell a service.</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              <AnimatePresence>
+                {conversations.map((conv: Conversation) => {
+                  const unreadIds = unreadByOrderId.get(conv.orderId);
+                  const unreadCount = unreadIds?.length ?? 0;
+                  return (
+                    <motion.div
+                      key={conv.orderId}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Card
+                        className={`cursor-pointer transition-colors hover:bg-muted/50 ${unreadCount > 0 ? "border-red-500/40" : ""}`}
+                        onClick={() => setOpenChat(conv.orderId)}
+                        data-testid={`card-conversation-${conv.orderId}`}
+                      >
+                        <CardContent className="py-4 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{conv.serviceTitle}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {conv.counterpartyHandle ? `@${conv.counterpartyHandle}` : conv.counterpartyId.slice(0, 8) + "..."}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="secondary" className="text-[10px] capitalize">{conv.role}</Badge>
+                            <StatusBadge status={conv.orderStatus} />
+                            {unreadCount > 0 && (
+                              <span className="h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                {unreadCount}
+                              </span>
+                            )}
+                            <Link
+                              href={`/orders/${conv.orderId}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+                              title="Open order"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Link>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
           )}

@@ -42,7 +42,15 @@ export async function POST(
     return NextResponse.json({ message: "Seller does not have a verified X handle" }, { status: 400 });
   }
 
-  const result = await verifyContract(service, sellerProfile.twitterHandle, order.createdAt);
+  const effectiveKeyword = order.negotiatedRequiredKeyword ?? order.requiredKeyword;
+  const effectiveService = {
+    ...service,
+    minPostCount: order.negotiatedMinPostCount ?? service.minPostCount,
+    postsPerPeriod: order.negotiatedPostsPerPeriod ?? service.postsPerPeriod,
+    threadsPerPeriod: order.negotiatedThreadsPerPeriod ?? service.threadsPerPeriod,
+  };
+
+  const result = await verifyContract(effectiveService, sellerProfile.twitterHandle, order.createdAt, effectiveKeyword);
 
   return NextResponse.json(result);
 }
