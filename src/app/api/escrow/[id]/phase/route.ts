@@ -5,7 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import type { EscrowPhase } from "@shared/schema";
 import { notify } from "@/server/notifications";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 const VALID_TRANSITIONS: Record<string, { phases: EscrowPhase[]; by: "depositor" | "receiver" | "both" }[]> = {
   awaiting_deposit: [{ phases: ["funded"], by: "depositor" }],
@@ -39,7 +39,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rl = checkRateLimit(ip, "update-escrow-phase", 20, 60000);
   if (rl) return rl;
 

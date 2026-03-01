@@ -1,4 +1,4 @@
-export const ESCROW_PROGRAM_ID = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM";
+export const ESCROW_PROGRAM_ID = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9";
 export const REPUTATION_PROGRAM_ID = process.env.NEXT_PUBLIC_REPUTATION_PROGRAM_ID || "CjNEAXDzVY5aTsHQaHuLMioVkUucu4aEwFZMTWWwXxvR";
 
 // Generated IDLs from anchor build (target/idl/)

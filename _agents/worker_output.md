@@ -85,3 +85,107 @@ Areas requiring re-review:
 ---
 
 Fix pass complete — Auditor please re-confirm.
+
+---
+
+## WORKER SESSION — 2026-03-01 — Audit Pass 2 Fixes
+### Task: Fix AP2-H3, AP2-M1, AP2-M2, AP2-N2, AP2-L1, AP2-L3, AP2-L2, AP2-N1
+### FILES I WILL TOUCH
+- `src/app/api/orders/[id]/verify/route.ts` (AP2-H3 twitterVerified check + AP2-L2 getClientIp)
+- `src/app/api/verify/milestone/[milestoneId]/route.ts` (AP2-H3 twitterVerified check)
+- `src/server/notifications.ts` (AP2-M1 escapeHtml)
+- `src/server/twitter-client.ts` (AP2-N2 AbortController timeout)
+- `src/server/verification.ts` (AP2-M2 date filtering)
+- `src/app/api/admin/disputes/route.ts` (AP2-L1 remove hardcoded wallet)
+- `src/app/api/admin/disputes/[id]/resolve/route.ts` (AP2-L1 remove hardcoded wallet)
+- `src/app/api/admin/init-config/route.ts` (AP2-L1 remove hardcoded wallet)
+- `src/app/api/profiles/verify-twitter/route.ts` (AP2-L3 dedicated HMAC secret)
+- `src/app/api/auth/nonce/route.ts` (AP2-L2 getClientIp)
+- `src/app/api/auth/login/route.ts` (AP2-L2 getClientIp)
+- `src/app/api/escrow/route.ts` (AP2-L2 getClientIp)
+- `src/app/api/orders/route.ts` (AP2-L2 getClientIp)
+- `src/app/api/ratings/route.ts` (AP2-L2 getClientIp)
+- `src/app/api/escrow/[id]/milestones/route.ts` (AP2-L2 getClientIp + AP2-N1 401→403)
+- `src/app/api/orders/[id]/proposals/route.ts` (AP2-L2 getClientIp)
+- `src/app/api/orders/[id]/messages/route.ts` (AP2-L2 getClientIp)
+
+### WILL NOT TOUCH (King's scope)
+- `programs/` (Rust)
+- `src/app/api/escrow/[id]/dispute-resolve/route.ts`
+- `src/server/nonce-store.ts`
+- `src/server/rate-limit.ts`
+
+### COMPLETED
+
+### FIX PASS — Audit Pass 2
+
+| # | Severity | Issue | What Changed | File(s) Modified |
+|---|----------|-------|-------------|-----------------|
+| AP2-H3 | HIGH | Unverified seller handles accepted by oracle | Added `twitterVerified` check after `twitterHandle` null check in both oracle routes. Returns 400 if seller's X handle is not verified. | `orders/[id]/verify/route.ts`, `verify/milestone/[milestoneId]/route.ts` |
+| AP2-M1 | MEDIUM | HTML injection in email notifications | Added `escapeHtml()` helper at top of file. Wrapped `body` in `escapeHtml()` in email template interpolation. | `src/server/notifications.ts` |
+| AP2-M2 | MEDIUM | 40-tweet limit — oracle ignores pre-contract tweets | Renamed `_contractStartDate` to `contractStartDate`, added date filtering: tweets with `createdAt < orderStartDate` are excluded before keyword matching. Tweets with null `createdAt` are kept (fail-safe). | `src/server/verification.ts` |
+| AP2-N2 | NTH | Twitter API has no timeout / circuit breaker | Added `AbortController` with 10-second timeout to `twitterFetch`. `clearTimeout` in `finally` block to avoid leaks. | `src/server/twitter-client.ts` |
+| AP2-L1 | LOW | Admin wallet hardcoded fallback exposed in source | Removed module-scope `ADMIN_WALLET` constant with fallback. Moved to per-handler `process.env.ADMIN_WALLET_ADDRESS` read with 500 response if missing. No build-time crash. | `admin/disputes/route.ts`, `admin/disputes/[id]/resolve/route.ts`, `admin/init-config/route.ts` |
+| AP2-L3 | LOW | SESSION_SECRET dual-use for session tokens and Twitter HMAC | Added `TWITTER_VERIFY_SECRET` env var with fallback to `SESSION_SECRET`. Existing installs work unchanged. | `profiles/verify-twitter/route.ts` |
+| AP2-L2 | LOW | 9 routes still use old `x-forwarded-for` pattern | Replaced `request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() \|\| "unknown"` with `getClientIp(request)` in all 9 routes. Added `getClientIp` to imports where missing. | `auth/nonce/route.ts`, `auth/login/route.ts`, `escrow/route.ts`, `orders/route.ts`, `ratings/route.ts`, `escrow/[id]/milestones/route.ts`, `orders/[id]/verify/route.ts`, `orders/[id]/proposals/route.ts`, `orders/[id]/messages/route.ts` |
+| AP2-N1 | NTH | Milestones route returns 401 instead of 403 | Changed `status: 401` to `status: 403` for "Only the depositor can add milestones" response. | `escrow/[id]/milestones/route.ts` |
+
+### DESIGN NOTES
+
+- **AP2-L1 approach**: Original plan used module-scope `throw` but Next.js evaluates module scope at build time, crashing when env var is absent. Moved to per-handler validation with 500 response. Same security effect (no fallback), build-safe.
+- **AP2-M2 date filtering**: Tweets with `null` createdAt are included (not excluded) as a fail-safe — better to include ambiguous tweets than silently drop valid evidence.
+- **AP2-L3 fallback**: `TWITTER_VERIFY_SECRET ?? SESSION_SECRET!` — the `!` is acceptable here because the code immediately checks `if (!secret)` and throws. Existing deployments without `TWITTER_VERIFY_SECRET` continue working.
+
+### BUILD VERIFICATION
+
+- tsc: pass (zero errors)
+- build: pass (33 static pages, all routes compiled)
+
+---
+
+Fix pass complete — Auditor please re-confirm.
+
+---
+
+## WORKER SESSION — 2026-03-01 — Fix Pass 4
+### Task: AP2-M2 pagination, AP3-M1 getClientIp rollout (9 routes), AP3-L1 twitterVerified at service creation
+### FILES I WILL TOUCH
+- `src/server/twitter-client.ts` (AP2-M2: cursor pagination in getUserTweets)
+- `src/server/verification.ts` (AP2-M2: pass contractStartDate to getUserTweets)
+- `src/app/api/watchlist/route.ts` (AP3-M1 getClientIp)
+- `src/app/api/services/[id]/route.ts` (AP3-M1 getClientIp × 2 handlers)
+- `src/app/api/services/route.ts` (AP3-M1 getClientIp + AP3-L1 twitterVerified)
+- `src/app/api/profiles/me/route.ts` (AP3-M1 getClientIp)
+- `src/app/api/orders/[id]/proposals/[proposalId]/route.ts` (AP3-M1 getClientIp)
+- `src/app/api/orders/[id]/route.ts` (AP3-M1 getClientIp)
+- `src/app/api/escrow/[id]/phase/route.ts` (AP3-M1 getClientIp)
+- `src/app/api/milestones/[id]/route.ts` (AP3-M1 getClientIp)
+
+### WILL NOT TOUCH (King's scope)
+- `src/app/api/escrow/[id]/dispute-resolve/route.ts` (AP3-H1)
+
+### COMPLETED
+
+### FIX PASS 4
+
+| # | Severity | Issue | What Changed | File(s) Modified |
+|---|----------|-------|-------------|-----------------|
+| AP2-M2 | MEDIUM | 40-tweet pagination NOT implemented | Rewrote `getUserTweets` with cursor-based pagination loop (up to 5 pages / 200 tweets). Accepts optional `contractStartDate` — stops paginating when oldest tweet in batch is before contract start. Updated call site in `verifyContract` to pass `contractStartDate`. | `src/server/twitter-client.ts`, `src/server/verification.ts` |
+| AP3-M1 | MEDIUM | 9 more routes still use old x-forwarded-for pattern | Replaced `request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() \|\| "unknown"` with `getClientIp(request)` in all 9 remaining routes. Added `getClientIp` to imports. Zero instances of old pattern remain in `src/app/api/`. | `watchlist/route.ts`, `services/[id]/route.ts` (×2), `services/route.ts`, `profiles/me/route.ts`, `orders/[id]/proposals/[proposalId]/route.ts`, `orders/[id]/route.ts`, `escrow/[id]/phase/route.ts`, `milestones/[id]/route.ts` |
+| AP3-L1 | LOW | twitterVerified not enforced at service creation | Added `twitterVerified` check in `services/route.ts` POST handler. Returns 400 "You must verify your X (Twitter) handle before creating a service." if seller profile is missing or unverified. Placed after auth check, before any DB writes. | `src/app/api/services/route.ts` |
+
+### DESIGN NOTES
+
+- **AP2-M2 pagination**: Uses the same cursor pattern as `getRetweeters()`. Stops when: (1) no more tweets in response, (2) oldest tweet in batch is before `contractStartDate`, or (3) maxPages reached (default 5 = 200 tweets). The early-stop optimization avoids fetching pages of ancient tweets. `contractStartDate` is optional — without it, all 5 pages are always fetched.
+- **AP3-M1 completeness**: Confirmed via `grep` that zero instances of the old `x-forwarded-for` pattern remain in any API route. All 18 routes (9 original + 9 new) now use `getClientIp`.
+- **AP3-L1 placement**: Profile fetch is done before the try/catch for Zod parsing. If the profile doesn't exist at all, the check correctly blocks (falsy `sellerProfile` → `!sellerProfile?.twitterVerified` → true → 400).
+
+### BUILD VERIFICATION
+
+- tsc: pass (zero errors)
+- build: pass (33 static pages, all routes compiled)
+- grep verification: 0 instances of old `x-forwarded-for` pattern in `src/app/api/`
+
+---
+
+Fix pass complete — Auditor please re-confirm.

@@ -4,7 +4,7 @@ import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import type { OrderStatus } from "@shared/schema";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 export async function GET(
   _request: NextRequest,
@@ -50,7 +50,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rl = checkRateLimit(ip, "update-order", 30, 60000);
   if (rl) return rl;
 

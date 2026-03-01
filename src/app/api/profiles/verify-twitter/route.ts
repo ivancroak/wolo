@@ -5,9 +5,11 @@ import { getClientIp, checkRateLimit } from "@/server/with-rate-limit";
 import { getUserTweets, getUserInfo } from "@/server/twitter-client";
 import crypto from "crypto";
 
+const TWITTER_VERIFY_SECRET = process.env.TWITTER_VERIFY_SECRET ?? process.env.SESSION_SECRET!;
+
 function generateVerificationCode(userId: string, handle: string): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET env var is required");
+  const secret = TWITTER_VERIFY_SECRET;
+  if (!secret) throw new Error("TWITTER_VERIFY_SECRET or SESSION_SECRET env var is required");
   const hash = crypto
     .createHmac("sha256", secret)
     .update(`${userId}:${handle.toLowerCase()}`)

@@ -5,21 +5,8 @@ import { storage } from "@/server/storage";
 import { verifyContract } from "@/server/verification";
 import { WolandEscrowClient } from "@/lib/solana/escrow-client";
 import { getDeployWalletKeypair } from "@/lib/solana/deploy-wallet";
+import { checkSessionRateLimit } from "@/server/with-rate-limit";
 import type { EscrowPhase } from "@shared/schema";
-
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60_000;
-
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(userId) ?? [];
-  const recent = timestamps.filter((t) => now - t < RATE_WINDOW_MS);
-  if (recent.length >= RATE_LIMIT) return true;
-  recent.push(now);
-  rateLimitMap.set(userId, recent);
-  return false;
-}
 
 function getConnection(): Connection {
   const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
@@ -36,12 +23,8 @@ export async function POST(
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  if (isRateLimited(user.id)) {
-    return NextResponse.json(
-      { message: "Too many requests. Try again in a minute." },
-      { status: 429 },
-    );
-  }
+  const rl = checkSessionRateLimit(user.id, "dispute-resolve", 5, 60000);
+  if (rl) return rl;
 
   const { id } = await params;
   const escrowId = parseInt(id, 10);
@@ -79,10 +62,34 @@ export async function POST(
       return NextResponse.json({ message: "Service not found" }, { status: 404 });
     }
 
+    // AP2-M3 + AP3-H1: prevent immediate oracle — fail-closed when disputeOpenedAt is null
+    if (!escrow.disputeOpenedAt) {
+      return NextResponse.json(
+        { message: "Dispute timestamp unavailable. Please contact support." },
+        { status: 400 },
+      );
+    }
+    const disputedAt = new Date(escrow.disputeOpenedAt).getTime();
+    const deadlineMs = (service.deadlineDays ?? 3) * 24 * 60 * 60 * 1000;
+    if (Date.now() < disputedAt + deadlineMs) {
+      return NextResponse.json(
+        { message: "Oracle resolution unavailable until seller delivery deadline has passed." },
+        { status: 400 },
+      );
+    }
+
     const profile = await storage.getProfile(escrow.receiverId);
     if (!profile?.twitterHandle) {
       return NextResponse.json(
-        { message: "Seller does not have a verified Twitter/X handle on their profile" },
+        { message: "Seller does not have an X handle on their profile" },
+        { status: 400 },
+      );
+    }
+
+    // AP2-H3: require verified X handle before running oracle
+    if (!profile.twitterVerified) {
+      return NextResponse.json(
+        { message: "Seller's X handle has not been verified. Cannot run oracle." },
         { status: 400 },
       );
     }

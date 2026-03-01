@@ -5,7 +5,7 @@ declare_id!("9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9");
 
 const MAX_MILESTONES: usize = 10;
 const MAX_FEE_BPS: u16 = 1000; // 10% cap
-const DISPUTE_WINDOW_SECONDS: i64 = 12 * 3600; // 12 hours
+const DISPUTE_WINDOW_SECONDS: i64 = 7 * 24 * 60 * 60; // 7 days
 const MIN_ESCROW_AMOUNT: u64 = 10_000; // 10k lamports minimum
 const MAX_ESCROW_DURATION: i64 = 365 * 24 * 3600; // 1 year max
 

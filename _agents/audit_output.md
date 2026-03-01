@@ -491,3 +491,657 @@ Cycle 2 is ready to proceed subject to:
 2. King deciding on M4 schema change
 3. King updating architecture.md (H1 note)
 4. King deciding on global rate-limit helper rollout (H4 note)
+
+---
+
+## AUDIT PASS 2 — 2026-03-01
+### Scope: Full production-readiness audit of entire codebase
+### HEAD at time of audit: e35a891 (Proportional dispute resolution, deal negotiation, email notifications, chat improvements)
+### Auditor note: Three commits landed during this session (e2c5846, 1769eaf, e35a891). All code read reflects the current HEAD. The `services/[id]/actions/[actionId]/dispute/route.ts` file referenced in prior audits no longer exists — removed in recent commits.
+
+### Files Read (AUDIT PASS 2)
+
+```
+SMART CONTRACTS (PRIORITY 1):
+  programs/woland_escrow/src/lib.rs                  (lines 1-30 re-read for declare_id + constants)
+  programs/woland_reputation/src/lib.rs               (lines 1-50)
+
+FINANCIAL LOGIC / TS LAYER (PRIORITY 2):
+  src/lib/solana/idl.ts
+  src/lib/solana/escrow-client.ts                    (via prior session — account orderings)
+  src/hooks/use-solana-escrow.ts
+  src/server/verification.ts
+  src/server/twitter-client.ts
+  src/components/PurchaseModal.tsx
+
+AUTH / SESSION (PRIORITY 3):
+  src/server/auth.ts                                 (via prior session)
+  src/server/nonce-store.ts                          (via prior session)
+  src/server/with-rate-limit.ts
+  src/app/api/auth/nonce/route.ts                    (via prior session)
+  src/app/api/auth/login/route.ts                    (via prior session)
+  src/app/api/auth/logout/route.ts
+  src/app/api/profiles/verify-twitter/route.ts
+
+INPUT VALIDATION (PRIORITY 4):
+  src/app/api/orders/route.ts
+  src/app/api/orders/[id]/verify/route.ts
+  src/app/api/orders/[id]/proposals/route.ts
+  src/app/api/orders/[id]/messages/route.ts
+  src/app/api/escrow/route.ts                        (via prior session)
+  src/app/api/escrow/[id]/sync/route.ts
+  src/app/api/escrow/[id]/dispute-resolve/route.ts
+  src/app/api/escrow/[id]/phase/route.ts             (via prior session)
+  src/app/api/escrow/[id]/milestones/route.ts
+  src/app/api/admin/disputes/route.ts
+  src/app/api/admin/disputes/[id]/resolve/route.ts
+  src/app/api/admin/init-config/route.ts             (via prior session)
+  src/app/api/ratings/route.ts
+  src/app/api/verify/milestone/[milestoneId]/route.ts
+  src/app/api/services/[id]/route.ts                 (via prior session)
+
+ARCHITECTURE (PRIORITY 5):
+  src/shared/schema.ts
+  src/server/storage.ts                              (interface + first 80 lines)
+  src/server/notifications.ts
+
+CROSS-CUTTING:
+  src/app/api/auth/user/route.ts                     (not read — low priority, omitted)
+```
+
+---
+
+### PART 1 — EXTRA-SCRUTINY REVIEW: Last 15 Hours of Changes
+
+Changes since session start (commits 23f0689 → e35a891) include SOL-only escrow rewrite, audit fixes, proportional dispute resolution, deal negotiation, and email notifications. The following specific deviations from prior audit assumptions were found:
+
+**CRITICAL DEVIATION: DISPUTE_WINDOW_SECONDS is 12 hours, not 7 days**
+
+AUDIT PASS 1 H2 assumed the on-chain dispute window was 7 days and fixed the UI to match. This assumption was incorrect. The on-chain constant at `programs/woland_escrow/src/lib.rs:8` is:
+```rust
+const DISPUTE_WINDOW_SECONDS: i64 = 12 * 3600; // 12 hours
+```
+
+The H2 fix (`canRefund` = `disputeOpenedAt + 7 * 86400`) made the UI MORE restrictive than the chain. A buyer can call the Rust `refund` instruction directly after 12 hours and receive a full refund — entirely bypassing the 7-day UI restriction. This is documented as AP2-H1 below.
+
+**Completer constraint was added (option a, not just b)**
+
+AUDIT PASS 1 H1 cleared with option (b): documentation only. But `lib.rs` now contains a `constraint =` attribute on `ReleaseActionPayout.completer`:
+```rust
+constraint = completer.key() == escrow.receiver || completer.key() == escrow.depositor @ WolandError::Unauthorized
+```
+This is option (a) — on-chain enforcement. It's a stronger fix than approved. The constraint correctly blocks arbitrary wallets from being used as completer. For current single-influencer use case, the receiver IS the completer, so this works. Noted as a design constraint (MEDIUM impact) in AP2-M5 below.
+
+**`verifyDelivery` ghost import — DEBUNKED**
+
+The previous session summary claimed both dispute routes imported `verifyDelivery`. **This is false.** A full `grep -r verifyDelivery` across all TypeScript files returns zero matches. Both `dispute-resolve/route.ts` and `orders/[id]/verify/route.ts` correctly import `{ verifyContract }`. No broken import exists.
+
+---
+
+### PART 2 — FULL PROJECT SECURITY AUDIT
+
+---
+
+### ⚠️ HIGH
+
+**AP2-H1: DISPUTE_WINDOW_SECONDS on-chain (12h) contradicts UI and prior audit assumption (7d)**
+Type: security / financial
+Location: `programs/woland_escrow/src/lib.rs:8`; `src/app/(app)/dashboard/page.tsx` (canRefund calc)
+Impact: The on-chain refund guard for disputed escrows allows refund after 12 hours:
+```rust
+const DISPUTE_WINDOW_SECONDS: i64 = 12 * 3600; // 12 hours
+```
+The `canRefund` UI flag (added in AUDIT PASS 1 H2 fix) uses 7 * 86400 seconds. This means:
+1. The UI blocks the refund button for 7 days — sellers believe they have 7 days to deliver
+2. On-chain, the refund instruction succeeds after only 12 hours
+3. A buyer using any wallet client (Anchor CLI, custom script, Phantom + custom ix) can call `refund` directly after 12 hours and drain the escrow to themselves — bypassing all UI restrictions
+
+Real attack: buyer opens dispute (funded → disputed), waits 12 hours, calls program directly with `refund` ix — full SOL refund, zero recourse for seller who planned to deliver within 7 days.
+
+Fix: Choose one path and make on-chain match the UX expectation:
+- **Option A (recommended)**: Update on-chain constant to 7 days: `const DISPUTE_WINDOW_SECONDS: i64 = 7 * 24 * 3600;` — requires recompile + redeploy
+- **Option B**: Update all UI to show 12-hour window. Update `canRefund` to `disputeOpenedAt + 12 * 3600`. Update all copy ("12 hours" not "7 days"). Document seller risk prominently.
+Either way, the constant and UI MUST agree. The current state is a silent lie to sellers.
+
+---
+
+**AP2-H2: Reputation program ESCROW_PROGRAM_ID hardcoded to stale program address — on-chain ratings broken**
+Type: security / correctness
+Location: `programs/woland_reputation/src/lib.rs:6`; `src/lib/solana/idl.ts:1`; `src/app/api/escrow/[id]/sync/route.ts:70`
+
+Three separate places use `4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM`:
+
+1. `reputation/src/lib.rs:6` — compile-time constant:
+```rust
+const ESCROW_PROGRAM_ID: Pubkey = Pubkey::new_from_array([54, 176, 192, 230, 85, ...]);
+// comment: "raw bytes of 4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM"
+```
+2. `idl.ts:1` — TypeScript client fallback:
+```typescript
+export const ESCROW_PROGRAM_ID = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM";
+```
+3. `sync/route.ts:70` — server-side owner check:
+```typescript
+const ESCROW_PROGRAM_ID = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM";
+```
+
+But the escrow program's actual program ID (from `declare_id!`) is:
+```rust
+declare_id!("9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9");
+```
+
+**Impact A — On-chain ratings (reputation program)**: `submit_rating` validates that the escrow account's `owner` (the Solana account owner, which IS the program that created it) equals `ESCROW_PROGRAM_ID`. Since all real escrow PDAs are owned by `9yJB...`, this check always fails. Every `submit_rating` call returns a Solana error. The entire on-chain reputation system is non-functional.
+
+**Impact B — TS client + sync route (if env var missing)**: If `NEXT_PUBLIC_ESCROW_PROGRAM_ID` is not set in production env, both the TypeScript escrow client and the sync/route.ts owner check use `4gVL...`. Transactions would target the wrong program. The sync route would return "Account not owned by escrow program" for all escrow PDAs. This may already be happening in production if the env var is missing.
+
+Fix:
+1. Update `reputation/src/lib.rs:6` — change the bytes array to match `9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9`. Recompile and redeploy reputation program.
+2. Update `idl.ts:1` fallback to `"9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9"`.
+3. Update `sync/route.ts:70` fallback to `"9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9"`.
+4. Ensure `NEXT_PUBLIC_ESCROW_PROGRAM_ID` env var is explicitly set in all deployment environments to `9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9`. Never rely on fallbacks for program IDs.
+
+---
+
+**AP2-H3: Unverified seller Twitter handle accepted by oracle — enables fraudulent delivery claims**
+Type: security / financial
+Location: `src/app/api/orders/[id]/verify/route.ts:41-43`; `src/app/api/verify/milestone/[milestoneId]/route.ts:46-51`; `src/app/api/escrow/[id]/dispute-resolve/route.ts:82-88`
+
+All three verification paths check only `sellerProfile?.twitterHandle` (presence), NOT `sellerProfile?.twitterVerified` (ownership):
+```typescript
+// verify/route.ts:41-43
+const sellerProfile = await storage.getProfile(service.creatorId);
+if (!sellerProfile?.twitterHandle) {
+  return NextResponse.json({ message: "Seller does not have a verified X handle" }, { status: 400 });
+}
+// ← twitterVerified is NOT checked here
+const result = await verifyContract(effectiveService, sellerProfile.twitterHandle, ...);
+```
+
+Attack vector:
+1. Malicious seller creates service and enters `twitterHandle = "@nasa"` (or any high-volume account) in their profile — no verification required for sellers
+2. Buyer creates order with keyword `"moon"` (NASA tweets about moon constantly)
+3. Buyer calls `POST /api/orders/{id}/verify` → oracle fetches NASA's tweets → finds `"moon"` → returns `verified`
+4. Escrow releases to malicious seller who did zero work
+
+Note: Buyers ARE required to have `twitterVerified = true` (checked in `orders/route.ts:47` and `PurchaseModal.tsx:93`). The asymmetry is intentional for buyer identity but was never applied to seller verification-for-oracle purposes.
+
+Fix: In all three routes, add after fetching seller profile:
+```typescript
+if (!sellerProfile.twitterVerified) {
+  return NextResponse.json(
+    { message: "Seller's X handle has not been verified. Cannot run oracle check." },
+    { status: 400 }
+  );
+}
+```
+Additionally, enforce verified handle at service creation time in `services/route.ts` POST handler.
+
+---
+
+### 📌 MEDIUM
+
+**AP2-M1: HTML injection in email notifications — user-supplied content rendered as HTML**
+Type: security / XSS
+Location: `src/server/notifications.ts:28-31`
+
+```typescript
+await sendEmail(
+  emailTo,
+  title,
+  `<p>${body}</p><p><a href="${link}">View in app</a></p>`,
+);
+```
+
+`body` is assembled from user-supplied content in call sites, e.g. in `orders/route.ts`:
+```typescript
+`You have a new order for "${service.title}"`
+```
+`service.title` is user-supplied. If a seller creates a service with title `<script>alert(1)</script>Buy My Tweets`, notification emails to all buyers of that service will contain raw `<script>` tags. Email clients vary in HTML rendering; many will render injected HTML elements (images, links, iframes).
+
+Real impact depends on the email client (`sendEmail` implementation not read, likely an SMTP call). At minimum, injected `<img src="attacker.com/x">` can be used for email open tracking on victims.
+
+Fix: Escape HTML in `body` before interpolation:
+```typescript
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+// then:
+`<p>${escapeHtml(body)}</p><p><a href="${link}">View in app</a></p>`
+```
+Apply the same to `title` in the email subject line.
+
+---
+
+**AP2-M2: getUserTweets limited to 40 tweets — oracle fails for high-volume accounts**
+Type: correctness / financial
+Location: `src/server/twitter-client.ts:66`
+
+```typescript
+export async function getUserTweets(userName: string): Promise<...[]> {
+  const data = await twitterFetch("/user/last_tweets", { userName, limit: "40" });
+```
+
+The oracle (`verifyContract`) fetches the last 40 tweets and checks for keyword presence. For payroll-type services or prolific tweeters:
+- A Twitter user who posts 20 times/day will have posted 280 tweets in 2 weeks
+- The required keyword tweet from 3 days ago may be tweet #60 — not in the 40-tweet window
+- `verifyContract` returns `not_found` → dispute-resolve triggers full refund → seller loses payment for completed work
+
+This causes false negatives in the oracle, which AUTO-REFUNDS funds in `dispute-resolve/route.ts`. This is a financial correctness issue, not just UX.
+
+Fix: The twitterapi.io endpoint likely supports `cursor`-based pagination (as `getRetweeters` already demonstrates in `twitter-client.ts:21-42`). Add pagination to `getUserTweets` similar to `getRetweeters`:
+```typescript
+export async function getUserTweets(userName: string, maxPages = 5): Promise<...[]> {
+  const tweets = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < maxPages; page++) {
+    const params: Record<string, string> = { userName, limit: "100" };
+    if (cursor) params.cursor = cursor;
+    const data = await twitterFetch("/user/last_tweets", params);
+    const batch = data?.data?.tweets ?? data?.tweets ?? [];
+    tweets.push(...batch.map(...));
+    const nextCursor = data?.next_cursor ?? data?.cursor;
+    if (!nextCursor || batch.length === 0) break;
+    cursor = nextCursor;
+  }
+  return tweets;
+}
+```
+Also: filter by `createdAt >= order.createdAt` so only tweets from after contract start count.
+
+---
+
+**AP2-M3: Buyer can trigger immediate oracle auto-refund before seller has time to deliver**
+Type: security / financial
+Location: `src/app/api/escrow/[id]/dispute-resolve/route.ts:58-163`
+
+The dispute-resolve route:
+1. Checks escrow is in `disputed` phase
+2. Runs oracle check on seller's tweets NOW
+3. If keyword not found → immediately fires `arbiter_resolve` with `depositorShareBps = 10000` → full refund
+
+There is NO minimum time delay between dispute opening and oracle invocation. The SYNC_ALLOWED_TRANSITIONS (`sync/route.ts:21-29`) allows `funded → disputed` and `in_progress → disputed`.
+
+Attack path:
+1. Buyer funds escrow (funded phase)
+2. Buyer immediately moves to disputed via phase API (or sync)
+3. Buyer immediately calls `POST /api/escrow/{id}/dispute-resolve`
+4. Oracle: seller hasn't posted yet → `not_found` → full refund to buyer
+5. Seller never gets a chance to deliver, even if the deadline is days away
+
+This gives buyers a free option: if they change their mind after funding, they can "game the oracle" before the seller has started.
+
+Fix:
+- Add a minimum dispute duration before oracle can be called. E.g., require `escrow.disputeOpenedAt + MIN_ORACLE_DELAY_SECONDS < now`. Set `MIN_ORACLE_DELAY_SECONDS` to match the seller's deadline (e.g., `service.deadlineDays * 86400`).
+- Alternatively, only allow the ARBITER (admin) to trigger oracle resolution, not either party directly.
+- At minimum, restrict `dispute-resolve` to only the RECEIVER (seller) for self-advocacy OR require both parties to agree before oracle fires.
+
+Current: either `depositorId` (buyer) OR `receiverId` (seller) can call `dispute-resolve`. Buyer has strongest incentive to call it immediately.
+
+---
+
+**AP2-M4: Nonce store is in-memory — broken across serverless instances**
+Type: architecture / reliability
+Location: `src/server/nonce-store.ts`
+
+Single `Map<string, {nonce, expiresAt}>` in process memory. In Vercel, Netlify, or any multi-instance serverless deployment, each edge worker has its own memory. Nonce created on instance A → login request routed to instance B → `consumeNonce` returns `undefined` → auth fails.
+
+The `setInterval(cleanupExpired, 60_000)` on line ~30 of nonce-store.ts is also a no-op in serverless because instances spin up and down; the interval may never fire.
+
+Fix: Store nonces in a shared, short-TTL data store:
+```sql
+CREATE TABLE nonces (
+  wallet_address TEXT PRIMARY KEY,
+  nonce TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX nonces_expires ON nonces(expires_at);
+```
+`consumeNonce` → `DELETE FROM nonces WHERE wallet_address = $1 AND expires_at > NOW() RETURNING nonce`. Atomic and cross-instance.
+
+---
+
+**AP2-M5: Rate limiter is in-memory — per-instance limits, not global**
+Type: architecture / security
+Location: `src/server/rate-limit.ts` (referenced by `with-rate-limit.ts`)
+
+Same architecture issue as nonce store. In-memory `Map` rate limits are per process. An attacker on a multi-instance deployment can send N*30 requests per minute by distributing load across N instances. `dispute-resolve/route.ts:10-22` has its own private `rateLimitMap` — also in-memory.
+
+Fix: Use Vercel KV, Upstash Redis, or Supabase `rate_limits` table. Key on `{ip}:{endpoint}` or `{userId}:{endpoint}`. Enforce globally.
+
+---
+
+**AP2-M6 (Retained from CONFIRMATION PASS 1): H3 Residual — Double-payment race condition**
+Type: security / financial
+Location: Previously documented at H3 residual in CONFIRMATION PASS 1.
+Status: OPEN — `services/[id]/actions/[actionId]/dispute/route.ts` no longer exists on disk. Confirmed via `find`. The auto-pay logic was in this file. If this functionality has been removed, H3 residual is MOOT. If it was moved to another route, that route needs the same analysis.
+
+**King must clarify**: Was the auto-pay action route removed intentionally? If yes, H3 residual is CLEARED. If moved, provide new file path for re-audit.
+
+---
+
+### 🔵 LOW
+
+**AP2-L1: Admin wallet hardcoded fallback exposed in public source**
+Type: security
+Location: `src/app/api/admin/disputes/route.ts:5`; `src/app/api/admin/disputes/[id]/resolve/route.ts:9`; `src/app/api/admin/init-config/route.ts`
+
+```typescript
+const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS || "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
+```
+
+The hardcoded address `2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL` is now in public git history. Anyone who reads this code knows the admin wallet address. This alone doesn't give them access (they'd need the session + the wallet), but it narrows the target surface for social engineering.
+
+More critically: if `ADMIN_WALLET_ADDRESS` env var is misconfigured or missing in a staging/preview deployment, admin routes silently use the hardcoded address — which may or may not be controlled by the intended admin.
+
+Fix: Remove fallback. Fail loudly at startup:
+```typescript
+const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS;
+if (!ADMIN_WALLET) throw new Error("ADMIN_WALLET_ADDRESS env var is required");
+```
+
+---
+
+**AP2-L2: 9 routes still use old `x-forwarded-for` pattern — rate limiting degraded**
+Type: security / regression
+Location (confirmed in this pass):
+- `src/app/api/auth/nonce/route.ts:5`
+- `src/app/api/auth/login/route.ts` (approx line 10)
+- `src/app/api/escrow/route.ts` (approx line 10)
+- `src/app/api/orders/route.ts:10`
+- `src/app/api/ratings/route.ts:10`
+- `src/app/api/escrow/[id]/milestones/route.ts:12`
+- `src/app/api/orders/[id]/verify/route.ts:11`
+- `src/app/api/orders/[id]/proposals/route.ts:45`
+- `src/app/api/orders/[id]/messages/route.ts:45`
+
+All use: `request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"` instead of `getClientIp(request)` (which additionally checks `x-real-ip`).
+
+If the reverse proxy / CDN sets `x-real-ip` instead of `x-forwarded-for`, all these routes return IP = "unknown" and the rate limiter key becomes `unknown:{endpoint}` — effectively all requests from all IPs share a single bucket, making the rate limit nearly useless.
+
+Fix: One-line change per file. Replace the header extraction with:
+```typescript
+import { getClientIp } from "@/server/with-rate-limit";
+const ip = getClientIp(request);
+```
+This was flagged in AUDIT PASS 1 H4 as a King decision for a global rollout. **King: decide and execute.**
+
+---
+
+**AP2-L3: SESSION_SECRET dual-use for session tokens and Twitter verification HMAC**
+Type: security (defense-in-depth)
+Location: `src/app/api/profiles/verify-twitter/route.ts:9`
+
+`SESSION_SECRET` is used to:
+1. (Presumably) sign/validate session cookies
+2. Generate Twitter verification HMAC codes: `crypto.createHmac("sha256", secret).update(userId + handle)`
+
+If the secret is compromised, an attacker can:
+1. Forge valid verification codes for any userId/handle combination, bypassing Twitter account ownership verification
+2. Potentially forge session tokens (depending on session implementation)
+
+Fix: Add a separate env var `TWITTER_VERIFY_SECRET` for the HMAC key. Use `SESSION_SECRET` only for sessions.
+
+---
+
+### 🟢 NICE TO HAVE
+
+**AP2-N1: `milestones/route.ts` returns 401 (Unauthenticated) instead of 403 (Forbidden)**
+Location: `src/app/api/escrow/[id]/milestones/route.ts:29`
+```typescript
+return NextResponse.json({ message: "Only the depositor can add milestones" }, { status: 401 });
+```
+The user is authenticated (check passed). This should be 403. Cosmetic, but breaks REST semantics.
+
+**AP2-N2: Twitter API has no timeout / circuit breaker**
+Location: `src/server/twitter-client.ts`
+`twitterFetch` has no timeout parameter. If the Twitter API hangs, `verifyContract` hangs, and `dispute-resolve` holds the HTTP connection open indefinitely. In production, this can exhaust serverless function concurrency. Add `AbortController` with a 10-second timeout.
+
+**AP2-N3: `dispute-resolve/route.ts` has a private in-memory rate limiter (not using shared infra)**
+Location: `src/app/api/escrow/[id]/dispute-resolve/route.ts:10-22`
+This route implemented its own `rateLimitMap` instead of using `checkRateLimit` / `checkSessionRateLimit`. Inconsistent. Low risk (rate limit is 5/60s), but should use the standard helper for consistency and observability.
+
+---
+
+### CLEAN AREAS (AUDIT PASS 2)
+
+| Component | What was checked | Status |
+|-----------|-----------------|--------|
+| `lib.rs` — `initialize_escrow` | Input validation, amount checks, PDA funding | Clean — MIN_ESCROW_AMOUNT enforced; MAX_ESCROW_DURATION enforced |
+| `lib.rs` — `close_escrow` | Finality, lamport return | Clean — Anchor `close = depositor` ✓ |
+| `lib.rs` — `calculate_fee` | Ceiling rounding arithmetic | Clean — `(amount * fee_bps + 9999) / 10_000` correct, no overflow |
+| `lib.rs` — `refund` | Phase gates, timing window | Clean for logic; window duration mismatch flagged as AP2-H1 |
+| `lib.rs` — `arbiter_resolve` | Signer, distribution math, fee | Clean — `distributable = remaining - fee`; `checked_*` throughout |
+| `dispute-resolve/route.ts` | Import, type safety, proportional split | Clean — uses `verifyContract` ✓; typed `newPhase: EscrowPhase` ✓; math sound |
+| `admin/disputes/[id]/resolve/route.ts` | Auth, Zod, on-chain call | Clean — admin-only; Zod 0–10000; account order matches Rust |
+| `verify-twitter/route.ts` | HMAC, rate limit, response | Clean — HMAC correct; GET + POST both rate-limited |
+| `ratings/route.ts` | Self-rating, participant check, duplicate | Clean — self-rating blocked; counterparty enforced; duplicate check present |
+| `orders/route.ts` | Validations | Clean — self-purchase, maxActions, hasActiveOrder, profile verification all present |
+| `escrow/route.ts` | Amount, receiver, duplicate | Clean — amount validated against service.price; receiver validated |
+| `sync/route.ts` | Auth, participant, transition logic | Clean — depositor/receiver only; SYNC_ALLOWED_TRANSITIONS enforced; program ID bug (AP2-H2) |
+| `schema.ts` | Types, Zod schemas | Clean — Profile has email/emailVerified/emailNotifications ✓ |
+| `notifications.ts` | Logic | Clean logic flow; HTML injection flagged separately (AP2-M1) |
+| `use-solana-escrow.ts` | Pre-flight checks, lamport calc | Clean — config PDA checked; balance pre-flight ✓; expiresAt server-validated by MAX_ESCROW_DURATION |
+| `auth.ts` — sessions | Cookie security, entropy | Clean — httpOnly, sameSite:strict, secure in prod; 256-bit entropy ✓ |
+| `nonce-store.ts` — nonce logic | Single-use, 5min TTL | Logic correct; serverless deployment issue flagged as AP2-M4 |
+
+---
+
+### SUMMARY
+
+**Audit scope**: Full codebase (42 files read across 2 sessions)
+**HEAD**: e35a891
+
+| Severity | Count | Items |
+|----------|-------|-------|
+| HIGH | 3 | AP2-H1 (dispute window mismatch), AP2-H2 (program ID mismatch), AP2-H3 (unverified seller handle) |
+| MEDIUM | 6 | AP2-M1 (HTML injection), AP2-M2 (40-tweet limit), AP2-M3 (immediate oracle), AP2-M4 (nonce in-memory), AP2-M5 (rate limit in-memory), AP2-M6 (H3 residual — status TBD) |
+| LOW | 3 | AP2-L1 (admin wallet fallback), AP2-L2 (9 routes old IP pattern), AP2-L3 (dual-use secret) |
+| NTH | 3 | AP2-N1 (401 vs 403), AP2-N2 (no API timeout), AP2-N3 (private rate limiter) |
+
+**Must fix before production (real SOL at risk):**
+1. **AP2-H1** — Dispute window is 12h on-chain but sellers believe 7 days. Buyers can drain escrow at 12h. Fix: update constant in Rust OR sync all UI/copy to 12h.
+2. **AP2-H2** — Reputation program uses wrong program ID. On-chain ratings universally fail. TS client + sync route use wrong fallback. Fix: update bytes in Rust, rebuild rep program, update TS fallbacks.
+3. **AP2-H3** — Unverified seller handles accepted by oracle. Malicious sellers can claim any famous account's tweet history. Fix: add `twitterVerified` check in all 3 oracle routes.
+
+**Should fix before launch:**
+4. **AP2-M1** — Email HTML injection. Service titles rendered raw in email bodies.
+5. **AP2-M2** — 40-tweet oracle blindness. False not_found → auto-refund for prolific tweeters.
+6. **AP2-M3** — Buyer can immediately trigger oracle refund before seller has started.
+
+**Architectural debt (fix before scale):**
+7. **AP2-M4** + **AP2-M5** — In-memory nonce and rate limiting. Multi-instance deployment breaks auth and makes rate limits ineffective.
+
+---
+
+🔄 King/Worker required — 3 HIGH issues require code changes (1 needs Rust recompile + redeploy)
+
+Priority order for fix pass:
+1. AP2-H2 — Program ID mismatch (Rust + TS, must redeploy reputation program)
+2. AP2-H1 — Dispute window constant (Rust, must redeploy escrow program OR full UI+copy update)
+3. AP2-H3 — Add `twitterVerified` check in oracle routes (3 TS files, ~3 lines each)
+4. AP2-M1 — HTML escape in notifications.ts (1 helper function + 1 usage)
+5. AP2-M2 — Paginated tweet fetching in twitter-client.ts
+6. AP2-M3 — Minimum delay before oracle fires in dispute-resolve
+7. AP2-L1 — Remove admin wallet fallback (3 files)
+8. AP2-L2 — Global `getClientIp` rollout (9 files, 1-line each)
+
+---
+
+## AUDIT PASS 3 — 2026-03-01
+### Scope: Confirmation pass for Fix Pass 3 (King + Worker)
+### King fixed: AP2-H1, AP2-H2, AP2-H3 (dispute-resolve), AP2-M3, AP2-N3, AP2-M6
+### Worker fixed: AP2-H3 (other 2 routes), AP2-M1, AP2-M2, AP2-N2, AP2-L1, AP2-L2 (×9), AP2-L3, AP2-N1
+
+---
+
+### CONFIRMED FIXED ✅
+
+| ID | Severity | Fix Verified | Notes |
+|----|----------|--------------|-------|
+| AP2-H1 | HIGH | `programs/woland_escrow/src/lib.rs:8` now reads `7 * 24 * 60 * 60` (604800s). `anchor build` passes. | ⚠️ REDEPLOY REQUIRED — on-chain constant unchanged until `anchor deploy -p woland_escrow` |
+| AP2-H2 | HIGH | Reputation program byte array `[133,73,115,110,138,133,97,2,46,62,109,59,234,135,171,71,134,71,101,73,139,252,237,168,57,176,42,250,130,239,228,252]` verified via `bs58.encode()` = `9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9`. `idl.ts:1` and `sync/route.ts:70` fallbacks both updated to match. | ⚠️ REDEPLOY REQUIRED — on-chain program ID unchanged until `anchor deploy -p woland_reputation` |
+| AP2-H3 | HIGH | `twitterVerified` check present in all 3 oracle routes: `dispute-resolve/route.ts:83-88`, `orders/[id]/verify/route.ts:44-49`, `verify/milestone/[milestoneId]/route.ts:52-57`. Returns 400 in each. | ✓ Sufficient — all oracle entry points gated |
+| AP2-M1 | MEDIUM | `escapeHtml()` helper at `notifications.ts:5-7`. Applied to `body` at line 36 in email template. `title` in subject line intentionally unescaped (subjects are plain text). | ✓ Sufficient |
+| AP2-M2 (partial) | MEDIUM | Date filtering added to `verification.ts:33-39` — tweets with `createdAt < contractStartDate` are excluded before matching. `null` createdAt tweets kept as fail-safe. | ⚠️ PARTIAL — see STILL OPEN section |
+| AP2-N2 | NTH | `AbortController` with 10-second timeout at `twitter-client.ts:11-25`. `clearTimeout()` called in `finally` block — no leak. | ✓ Sufficient |
+| AP2-N3 | NTH | Private `rateLimitMap` / `isRateLimited()` removed from `dispute-resolve/route.ts`. Replaced with `checkSessionRateLimit(user.id, "dispute-resolve", 5, 60000)` at line 26. | ✓ Sufficient |
+| AP2-L1 | LOW | `ADMIN_WALLET` constant with hardcoded fallback removed from all 3 admin routes. All 3 now use per-handler `process.env.ADMIN_WALLET_ADDRESS` with 500 response if missing. Module-scope throw avoided (would crash Next.js build). | ✓ Sufficient |
+| AP2-L2 | LOW | `getClientIp(request)` confirmed in all 9 originally-flagged routes: `auth/nonce`, `auth/login`, `escrow/route`, `orders/route`, `ratings/route`, `escrow/[id]/milestones`, `orders/[id]/verify`, `orders/[id]/proposals`, `orders/[id]/messages`. | ✓ 9/9 original targets fixed — see NEW ISSUES for residual |
+| AP2-L3 | LOW | `verify-twitter/route.ts:8` now `TWITTER_VERIFY_SECRET = process.env.TWITTER_VERIFY_SECRET ?? process.env.SESSION_SECRET!`. Existing deployments without the new env var continue working unchanged. | ✓ Sufficient |
+| AP2-N1 | NTH | `escrow/[id]/milestones/route.ts:28` changed from `status: 401` to `status: 403`. | ✓ Sufficient |
+| AP2-M6 | MEDIUM | `services/[id]/actions/[actionId]/dispute/route.ts` confirmed removed from disk. H3 double-payment residual is moot. | ✓ CLEARED |
+
+---
+
+### STILL OPEN 🔄
+
+**AP2-M2 — 40-tweet pagination NOT implemented (HIGH residual)**
+- **What was done:** `verification.ts` now filters pre-contract tweets by date. `_contractStartDate` renamed to `contractStartDate` and used as a filter predicate. This is correct and addresses tweet noise.
+- **What remains:** `twitter-client.ts:73` still calls `getUserTweets({ userName, limit: "40" })`. No pagination loop added. For sellers with >40 tweets in the contract window, the oracle only examines the 40 most-recent tweets. Evidence of contract fulfillment beyond tweet #40 is never seen.
+- **Impact:** False `not_found` or `insufficient` oracle verdicts remain possible for prolific tweeters → auto-refund when seller actually delivered. AP2-M2 as originally filed is STILL OPEN.
+- **Required fix:** Add a pagination loop in `getUserTweets` using the API cursor/next_token and collect until `createdAt < contractStartDate` or no more pages.
+
+**AP2-M3 — Null `disputeOpenedAt` guard bypass (HIGH)**
+- **What was done:** `dispute-resolve/route.ts:65-73` correctly computes `deadlineMs` and blocks oracle if `Date.now() < disputedAt + deadlineMs`.
+- **Critical edge case:** Line 67: `const disputedAt = escrow.disputeOpenedAt ? new Date(escrow.disputeOpenedAt).getTime() : 0`. When `disputeOpenedAt` is `null` (any escrow disputed before the AP1 H2 DB migration added the `dispute_opened_at` column), `disputedAt = 0`. The guard then evaluates `Date.now() < 259200000` (3 days past Unix epoch, year 1970). This is ALWAYS FALSE in 2026 → the deadline guard is completely bypassed for legacy escrows.
+- **Impact:** Any buyer who disputed an escrow before the DB column was added can immediately trigger an oracle auto-refund, defeating the entire purpose of AP2-M3.
+- **Required fix:** Treat `null` as a fail-closed condition: `if (!escrow.disputeOpenedAt) return 400 "Dispute timestamp unavailable; contact support"`. This is the safe default — block rather than allow.
+
+**AP2-H3 residual — `twitterVerified` NOT enforced at service creation**
+- **What was done:** `twitterVerified` is now checked at oracle invocation time in all 3 routes (✓ confirmed).
+- **What remains:** `services/route.ts` (POST, service creation) has NO `twitterVerified` check. A seller with an unverified X handle can still create a service, receive buyer funds into escrow, and let the escrow run to expiry or dispute. Buyers see no warning that the seller's X account is unverified at purchase time.
+- **Impact:** Buyers can fund escrows against services that can never pass oracle verification. Dispute is the only remedy — and the oracle will correctly fail — but the buyer UX is misleading. Lower severity than the oracle-time check (now fixed) but still a gap.
+- **Note:** This was a concern raised in STEP 4 of the AP3 audit instructions. Not previously filed; see NEW ISSUES.
+
+---
+
+### SKIPPED — ACCEPTED RISK
+
+| ID | Issue | Decision |
+|----|-------|----------|
+| AP2-M4 | In-memory nonce store (`nonce-store.ts`) — cross-instance auth failures under multi-instance serverless | Deferred by King. Requires Supabase `nonces` table migration. Risk: wallet auth intermittently fails at scale. Accepted for this cycle. |
+| AP2-M5 | In-memory rate limiter (`rate-limit.ts`) — per-instance rate limits ineffective under multi-instance deployment | Deferred by King. Requires Redis (Upstash) or Supabase-backed store. Risk: rate limits bypassable by hitting different instances. Accepted for this cycle. |
+
+---
+
+### NEW ISSUES INTRODUCED OR DISCOVERED
+
+**AP3-M1 (MEDIUM) — AP2-L2 incomplete: 9 additional routes still use old `x-forwarded-for` pattern**
+
+Worker's AP2-L2 fix covered the 9 routes in the original list. A full grep scan found 9 MORE routes not in the original list still using `request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"`:
+
+| Route | Line |
+|-------|------|
+| `src/app/api/watchlist/route.ts` | 19 |
+| `src/app/api/services/[id]/route.ts` | 26 (PUT) |
+| `src/app/api/services/[id]/route.ts` | 59 (DELETE) |
+| `src/app/api/services/route.ts` | 24 (POST) |
+| `src/app/api/profiles/me/route.ts` | 19 |
+| `src/app/api/orders/[id]/proposals/[proposalId]/route.ts` | 26 |
+| `src/app/api/orders/[id]/route.ts` | 53 |
+| `src/app/api/escrow/[id]/phase/route.ts` | 42 |
+| `src/app/api/milestones/[id]/route.ts` | 13 |
+
+Same risk as AP2-L2: IP spoofing bypasses IP-based rate limits. **Worker fix recommended** — mechanical 1-line change per route.
+
+**AP3-H1 (HIGH) — AP2-M3 null `disputeOpenedAt` guard bypass**
+
+See STILL OPEN section above. Filing separately as a new HIGH because it makes the AP2-M3 fix ineffective for all pre-migration escrows. **King fix required** — change null fallback from `0` to a fail-closed `return 400`.
+
+**AP3-L1 (LOW) — `twitterVerified` not enforced at service creation**
+
+`src/app/api/services/route.ts` POST handler has no check for `twitterVerified`. Sellers without a verified X handle can create services, misleading buyers. Recommend adding a check during service creation (return 400 if service type requires X verification and handle is not verified) or surfacing a clear warning in the UI at purchase time.
+
+---
+
+### ANCHOR SECURITY SCAN — `programs/woland_escrow/src/lib.rs` (full file, 1027 lines)
+
+| Check | Result |
+|-------|--------|
+| PDA seeds consistent across all instructions | ✓ All use `[b"escrow", depositor.key().as_ref(), &escrow_id.to_le_bytes()]` |
+| `UncheckedAccount` safety | ✓ All instances have `/// CHECK:` comment + `constraint =` guards |
+| Arbiter constraint in `arbiter_resolve` | ✓ `signer.key() == config.arbiter` enforced via `#[account(constraint = ...)]` |
+| Depositor/receiver constraints in `arbiter_resolve` | ✓ Both constrained against `escrow.depositor` / `escrow.receiver` fields |
+| Fee vault constraint | ✓ `fee_vault.key() == config.fee_vault` enforced |
+| `release_action_payout` completer | ✓ Constrained to `escrow.receiver \|\| escrow.depositor` — stronger than option (b) documented in H1 |
+| `refund` dispute window guard (on-chain) | ✓ `dispute_opened_at > 0 && clock.unix_timestamp > dispute_opened_at + DISPUTE_WINDOW_SECONDS` |
+| `close_escrow` rent return | ✓ `close = depositor` anchor attribute correctly returns rent lamports |
+| `EscrowPhase::TryFrom<u8>` exhaustiveness | ✓ All 8 variants (0–7) covered; unknown values return `Err(())` |
+| Arithmetic overflow | ✓ `u128` intermediates for fee math; `Overflow` error code defined and used |
+| CPI reentrancy | ✓ All lamport borrows are temporaries at `;` — no retained borrow across CPI |
+| Account type confusion | ✓ All accounts use typed `Account<PlatformConfig>` / `Account<EscrowAccount>` |
+| Sysvar spoofing | ✓ `Clock::get()` used — no custom clock account accepted |
+| Error codes | ✓ Comprehensive (25 codes) — no generic catch-all masking |
+| Events | ✓ Emitted for all state transitions — supports off-chain monitoring |
+
+**No new on-chain vulnerabilities found.**
+
+Note: The on-chain `refund` guard uses `dispute_opened_at > 0` — correctly fail-closed. The TypeScript null-bypass (AP3-H1) is a server-side issue only; the Rust program itself cannot be tricked into early release via on-chain calls.
+
+---
+
+### ON-CHAIN REDEPLOY STATUS
+
+Both Rust programs have been rebuilt (`anchor build` confirmed passing by King) but HAVE NOT YET BEEN REDEPLOYED to devnet. Until redeployment:
+
+| Program | Fix pending on-chain | Command |
+|---------|---------------------|---------|
+| `woland_escrow` | AP2-H1 — dispute window still 12h on-chain | `anchor deploy -p woland_escrow --provider.cluster devnet` |
+| `woland_reputation` | AP2-H2 — ESCROW_PROGRAM_ID still wrong on-chain | `anchor deploy -p woland_reputation --provider.cluster devnet` |
+
+**Both must be deployed before any production or devnet testing.** TypeScript fixes (AP2-H2 fallbacks, TS oracle checks) are live on next build.
+
+---
+
+### CLEAN AREAS (updated)
+
+| Area | Status |
+|------|--------|
+| Anchor program account validation | ✓ Clean — full scan, no issues |
+| Anchor arithmetic / overflow | ✓ Clean |
+| Anchor phase state machine | ✓ Clean |
+| Email HTML injection | ✓ Fixed (AP2-M1) |
+| Admin wallet exposure | ✓ Fixed (AP2-L1) |
+| Twitter HMAC secret isolation | ✓ Fixed (AP2-L3) |
+| Oracle twitterVerified gating | ✓ Fixed (AP2-H3 at oracle time) |
+| Pre-contract tweet filtering | ✓ Fixed (AP2-M2 partial) |
+| Dispute window on-chain (code) | ✓ Fixed (AP2-H1, pending redeploy) |
+| Program ID bytes | ✓ Fixed (AP2-H2, pending redeploy) |
+| Rate limiting (dispute-resolve) | ✓ Fixed (AP2-N3) |
+| Twitter API timeout | ✓ Fixed (AP2-N2) |
+| Milestone ordering | ✓ Fixed (H5, prior cycle) |
+
+---
+
+### SUMMARY
+
+| Category | Count |
+|----------|-------|
+| AP2 issues confirmed fixed | 11/13 |
+| AP2 issues still open (partial fix) | 1 (AP2-M2 pagination) |
+| AP2 issues with new bypass discovered | 1 (AP2-M3 null guard) |
+| AP2 issues accepted/deferred | 2 (AP2-M4, AP2-M5) |
+| New issues from this pass | 3 (AP3-H1, AP3-M1, AP3-L1) |
+| On-chain deploys required | 2 (woland_escrow, woland_reputation) |
+| Anchor program vulnerabilities | 0 |
+
+**Resolved this cycle:** AP2-H1 (code), AP2-H2 (code), AP2-H3, AP2-M1, AP2-N2, AP2-N3, AP2-L1, AP2-L2 (9/18 routes), AP2-L3, AP2-N1, AP2-M6 (cleared)
+
+**Requires another pass (King):**
+1. **AP3-H1 / AP2-M3** — null `disputeOpenedAt` bypass → fail-closed fix in `dispute-resolve/route.ts:67`
+2. **AP2-M2** — Add pagination to `getUserTweets` in `twitter-client.ts`
+
+**Requires another pass (Worker):**
+3. **AP3-M1** — `getClientIp` rollout to remaining 9 routes
+4. **AP3-L1** — `twitterVerified` check at service creation in `services/route.ts`
+
+---
+
+🔄 King/Worker required — 2 HIGH + 2 MEDIUM issues remain open before production sign-off
+
+Priority order for Fix Pass 4:
+1. AP3-H1 (King) — Null `disputeOpenedAt` bypass: `dispute-resolve/route.ts:67` → fail-closed (`return 400` when null)
+2. AP2-M2 (Worker) — Add pagination loop to `getUserTweets` in `twitter-client.ts`
+3. AP3-M1 (Worker) — `getClientIp` in 9 remaining routes (mechanical)
+4. AP3-L1 (Worker or King) — `twitterVerified` check or UI warning at service creation
+5. Devnet redeploy — `woland_escrow` + `woland_reputation` (team action required)

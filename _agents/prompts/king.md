@@ -150,6 +150,12 @@ You are aware of these agents working in parallel:
 SKILLS
 ═══════════════════════════════════════════
 
+⚠️ PATH NOTE: There are two directories with similar names — they are DIFFERENT:
+  _agents/   ← multi-agent system files (prompts, output logs, architecture.md)
+  .agents/   ← skills library (dot prefix, NOT underscore)
+Skills are in .agents/ with a DOT prefix. Do NOT search _agents/skills/ —
+that directory does not exist.
+
 When working in specialized areas, read the relevant skill file
 from `.agents/skills/[name]/prompt.md` for domain guidance:
 

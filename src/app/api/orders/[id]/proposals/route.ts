@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 import { notify } from "@/server/notifications";
 import { insertDealProposalSchema } from "@shared/schema";
 import { z } from "zod";
@@ -42,7 +42,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rl = checkRateLimit(ip, "create-proposal", 10, 60000);
   if (rl) return rl;
 

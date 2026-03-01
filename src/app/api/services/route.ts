@@ -3,7 +3,7 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,13 +21,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rateLimitResponse = checkRateLimit(ip, "create-service", 30, 60000);
   if (rateLimitResponse) return rateLimitResponse;
 
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const sellerProfile = await storage.getProfile(user.id);
+  if (!sellerProfile?.twitterVerified) {
+    return NextResponse.json(
+      { message: "You must verify your X (Twitter) handle before creating a service." },
+      { status: 400 },
+    );
   }
 
   try {

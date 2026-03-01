@@ -3,7 +3,7 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { insertServiceSchema } from "@shared/schema";
 import { z } from "zod";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 const updateServiceSchema = insertServiceSchema.omit({ creatorId: true }).partial().omit({ active: true });
 
@@ -23,7 +23,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rl = checkRateLimit(ip, "service-update", 20, 60000);
   if (rl) return rl;
 
@@ -56,7 +56,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const ip = _request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(_request);
   const rl = checkRateLimit(ip, "service-delete", 20, 60000);
   if (rl) return rl;
 

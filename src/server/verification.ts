@@ -13,7 +13,7 @@ export interface VerificationResult {
 export async function verifyContract(
   service: Service,
   sellerHandle: string,
-  _contractStartDate?: Date | null,
+  contractStartDate?: Date | null,
   keywordOverride?: string | null,
 ): Promise<VerificationResult> {
   const keyword = keywordOverride ?? service.requiredKeyword;
@@ -28,7 +28,16 @@ export async function verifyContract(
   const normalizedHandle = sellerHandle.replace(/^@/, "");
 
   try {
-    const tweets = await getUserTweets(normalizedHandle);
+    let tweets = await getUserTweets(normalizedHandle, contractStartDate ? new Date(contractStartDate) : undefined);
+
+    if (contractStartDate) {
+      const startMs = new Date(contractStartDate).getTime();
+      tweets = tweets.filter((t) => {
+        if (!t.createdAt) return true;
+        return new Date(t.createdAt).getTime() >= startMs;
+      });
+    }
+
     const lowerKeyword = keyword.toLowerCase();
     const matching = tweets.filter((t) => t.text.toLowerCase().includes(lowerKeyword));
 

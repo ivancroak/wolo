@@ -8,14 +8,21 @@ async function twitterFetch(path: string, params?: Record<string, string>): Prom
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
-  const res = await fetch(url.toString(), {
-    headers: { "X-API-Key": API_KEY },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Twitter API ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(url.toString(), {
+      headers: { "X-API-Key": API_KEY },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Twitter API ${res.status}: ${text}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json();
 }
 
 export async function getRetweeters(tweetId: string, maxPages = 10): Promise<string[]> {
@@ -62,12 +69,42 @@ export async function getUserInfo(userName: string): Promise<any> {
   return res?.data ?? res;
 }
 
-export async function getUserTweets(userName: string): Promise<{ text: string; id: string; createdAt: string | null }[]> {
-  const data = await twitterFetch("/user/last_tweets", { userName, limit: "40" });
-  const tweets: any[] = data?.data?.tweets ?? data?.tweets ?? data?.data ?? [];
-  return tweets.map((t: any) => ({
-    text: t.text ?? t.full_text ?? "",
-    id: t.id ?? t.id_str ?? "",
-    createdAt: t.created_at ?? t.createdAt ?? null,
-  }));
+export async function getUserTweets(
+  userName: string,
+  contractStartDate?: Date,
+  maxPages = 5,
+): Promise<{ text: string; id: string; createdAt: string | null }[]> {
+  const allTweets: { text: string; id: string; createdAt: string | null }[] = [];
+  let cursor: string | undefined;
+  const startMs = contractStartDate ? contractStartDate.getTime() : undefined;
+
+  for (let page = 0; page < maxPages; page++) {
+    const params: Record<string, string> = { userName, limit: "40" };
+    if (cursor) params.cursor = cursor;
+
+    const data = await twitterFetch("/user/last_tweets", params);
+    const tweets: any[] = data?.data?.tweets ?? data?.tweets ?? data?.data ?? [];
+    if (tweets.length === 0) break;
+
+    let reachedBeforeStart = false;
+    for (const t of tweets) {
+      const createdAt = t.created_at ?? t.createdAt ?? null;
+      allTweets.push({
+        text: t.text ?? t.full_text ?? "",
+        id: t.id ?? t.id_str ?? "",
+        createdAt,
+      });
+      if (startMs && createdAt && new Date(createdAt).getTime() < startMs) {
+        reachedBeforeStart = true;
+      }
+    }
+
+    if (reachedBeforeStart) break;
+
+    const nextCursor = data?.data?.next_cursor ?? data?.next_cursor ?? data?.data?.cursor;
+    if (!nextCursor) break;
+    cursor = nextCursor;
+  }
+
+  return allTweets;
 }

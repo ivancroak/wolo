@@ -49,6 +49,12 @@ export async function GET(
       message: "Seller has not set their X handle in their profile",
     });
   }
+  if (!sellerProfile.twitterVerified) {
+    return NextResponse.json(
+      { message: "Seller's X handle has not been verified. Cannot run oracle." },
+      { status: 400 },
+    );
+  }
 
   const effectiveKeyword = order.negotiatedRequiredKeyword ?? order.requiredKeyword;
   const effectiveService = {

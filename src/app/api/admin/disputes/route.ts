@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/server/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS || "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
-
 export async function GET() {
+  const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS;
+  if (!ADMIN_WALLET) {
+    return NextResponse.json({ message: "ADMIN_WALLET_ADDRESS not configured" }, { status: 500 });
+  }
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

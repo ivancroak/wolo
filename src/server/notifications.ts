@@ -2,6 +2,10 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import type { NotificationType } from "@shared/schema";
 import { sendEmail } from "@/server/email";
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
 export async function notify(
   userId: string,
   type: NotificationType,
@@ -29,7 +33,7 @@ export async function notify(
     await sendEmail(
       emailTo,
       title,
-      `<p>${body}</p><p><a href="${link}">View in app</a></p>`,
+      `<p>${escapeHtml(body)}</p><p><a href="${link}">View in app</a></p>`,
     );
   }
 }

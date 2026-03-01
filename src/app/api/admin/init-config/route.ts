@@ -8,7 +8,6 @@ import {
 } from "@/lib/solana/setup";
 import { getDeployWalletKeypair } from "@/lib/solana/deploy-wallet";
 
-const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS || "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
 const FEE_BPS = 250; // 2.5%
 
 function getConnection(): Connection {
@@ -18,6 +17,11 @@ function getConnection(): Connection {
 }
 
 export async function GET() {
+  const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS;
+  if (!ADMIN_WALLET) {
+    return NextResponse.json({ message: "ADMIN_WALLET_ADDRESS not configured" }, { status: 500 });
+  }
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -40,6 +44,11 @@ export async function GET() {
 }
 
 export async function POST() {
+  const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS;
+  if (!ADMIN_WALLET) {
+    return NextResponse.json({ message: "ADMIN_WALLET_ADDRESS not configured" }, { status: 500 });
+  }
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

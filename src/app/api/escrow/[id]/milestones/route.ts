@@ -3,13 +3,13 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rl = checkRateLimit(ip, "add-milestone", 20, 60000);
   if (rl) return rl;
 
@@ -25,7 +25,7 @@ export async function POST(
   }
 
   if (escrow.depositorId !== user.id) {
-    return NextResponse.json({ message: "Only the depositor can add milestones" }, { status: 401 });
+    return NextResponse.json({ message: "Only the depositor can add milestones" }, { status: 403 });
   }
 
   try {

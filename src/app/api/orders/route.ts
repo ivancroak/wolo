@@ -4,10 +4,10 @@ import { getSessionUser } from "@/server/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { notify } from "@/server/notifications";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rateLimitResponse = checkRateLimit(ip, "create-order", 30, 60000);
   if (rateLimitResponse) return rateLimitResponse;
 

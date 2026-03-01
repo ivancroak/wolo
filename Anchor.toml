@@ -6,7 +6,7 @@ skip-lint = false
 
 [programs.devnet]
 woland_escrow = "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9"
-woland_reputation = "CjNEAXDzVY5aTsHQaHuLMioVkUucu4aEwFZMTWWwXxvR"
+woland_reputation = "42PrQGNH4pCqyGwxrLMXnfkDzz5CTCFx71y2HjuHK9Vg"
 
 [registry]
 url = "https://api.apr.dev"

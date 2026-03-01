@@ -6,8 +6,6 @@ import { WolandEscrowClient } from "@/lib/solana/escrow-client";
 import { getDeployWalletKeypair } from "@/lib/solana/deploy-wallet";
 import { z } from "zod";
 
-const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS || "2MoCBYf5B5S597vXEbZSYAR73278bX2eFDn1yCbXVTAL";
-
 const resolveSchema = z.object({
   depositorShareBps: z.number().int().min(0).max(10000),
 });
@@ -22,6 +20,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS;
+  if (!ADMIN_WALLET) {
+    return NextResponse.json({ message: "ADMIN_WALLET_ADDRESS not configured" }, { status: 500 });
+  }
+
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

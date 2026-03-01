@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { verifyContract } from "@/server/verification";
-import { checkRateLimit } from "@/server/with-rate-limit";
+import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request);
   const rl = checkRateLimit(ip, "verify-contract", 10, 60000);
   if (rl) return rl;
 
@@ -40,6 +40,12 @@ export async function POST(
   const sellerProfile = await storage.getProfile(service.creatorId);
   if (!sellerProfile?.twitterHandle) {
     return NextResponse.json({ message: "Seller does not have a verified X handle" }, { status: 400 });
+  }
+  if (!sellerProfile.twitterVerified) {
+    return NextResponse.json(
+      { message: "Seller's X handle has not been verified. Cannot run oracle." },
+      { status: 400 },
+    );
   }
 
   const effectiveKeyword = order.negotiatedRequiredKeyword ?? order.requiredKeyword;

@@ -67,7 +67,7 @@ export async function POST(
       return NextResponse.json({ message: "On-chain escrow account not found" }, { status: 404 });
     }
 
-    const ESCROW_PROGRAM_ID = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "4gVLZxZQuqKKw7JxDPdMUuZ6p33Ednh65mqJWwEsgGzM";
+    const ESCROW_PROGRAM_ID = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9";
     if (accountInfo.owner.toBase58() !== ESCROW_PROGRAM_ID) {
       return NextResponse.json({ message: "Account not owned by escrow program" }, { status: 400 });
     }
