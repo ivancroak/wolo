@@ -24,6 +24,8 @@ import {
   type DealProposal,
   type InsertDealProposal,
   type ProposalStatus,
+  type PayrollPeriod,
+  type PayrollPeriodStatus,
 } from "@shared/schema";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -74,6 +76,13 @@ export interface IStorage {
   getPendingProposal(orderId: number): Promise<DealProposal | undefined>;
   updateProposalStatus(id: number, status: ProposalStatus): Promise<DealProposal>;
   applyProposalToOrder(orderId: number, proposal: DealProposal): Promise<Order>;
+  createPayrollPeriods(escrowId: number, periods: { periodNumber: number; startsAt: Date; endsAt: Date; disputeDeadline: Date; amount: string }[]): Promise<PayrollPeriod[]>;
+  getPayrollPeriods(escrowId: number): Promise<PayrollPeriod[]>;
+  getPayrollPeriod(id: number): Promise<PayrollPeriod | undefined>;
+  updatePayrollPeriodStatus(id: number, status: PayrollPeriodStatus, extra?: { payoutTxHash?: string; disputedBy?: string; disputeReason?: string; resolutionNote?: string }): Promise<PayrollPeriod>;
+  getReleasablePayrollPeriods(): Promise<PayrollPeriod[]>;
+  getActivatablePayrollPeriods(): Promise<PayrollPeriod[]>;
+  updateEscrowPeriodsPaid(escrowId: number, count: number): Promise<void>;
 }
 
 function toUser(row: any): User {
@@ -196,6 +205,35 @@ function toEscrow(row: any): Escrow {
     expiresAt: row.expires_at ? new Date(row.expires_at) : null,
     createdAt: row.created_at ? new Date(row.created_at) : null,
     updatedAt: row.updated_at ? new Date(row.updated_at) : null,
+    isRecurring: row.is_recurring ?? false,
+    payrollBasis: row.payroll_basis ?? null,
+    totalPeriods: row.total_periods ?? null,
+    periodsPaid: row.periods_paid ?? 0,
+    amountPerPeriod: row.amount_per_period ?? null,
+  };
+}
+
+function toPayrollPeriod(row: any): PayrollPeriod {
+  return {
+    id: row.id,
+    escrowId: row.escrow_id,
+    periodNumber: row.period_number,
+    startsAt: new Date(row.starts_at),
+    endsAt: new Date(row.ends_at),
+    disputeDeadline: new Date(row.dispute_deadline),
+    status: row.status,
+    amount: row.amount,
+    payoutTxHash: row.payout_tx_hash ?? null,
+    paidAt: row.paid_at ? new Date(row.paid_at) : null,
+    disputedAt: row.disputed_at ? new Date(row.disputed_at) : null,
+    disputedBy: row.disputed_by ?? null,
+    disputeReason: row.dispute_reason ?? null,
+    resolvedAt: row.resolved_at ? new Date(row.resolved_at) : null,
+    resolutionNote: row.resolution_note ?? null,
+    verificationResult: row.verification_result ?? null,
+    matchingPosts: row.matching_posts ?? null,
+    requiredPosts: row.required_posts ?? null,
+    createdAt: row.created_at ? new Date(row.created_at) : null,
   };
 }
 
@@ -291,14 +329,27 @@ class SupabaseStorage implements IStorage {
   }
 
   async createProfile(profile: InsertProfile): Promise<Profile> {
+    const handle = profile.twitterHandle || null;
+    if (handle) {
+      const { data: dup } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id")
+        .eq("twitter_handle", handle)
+        .neq("user_id", profile.userId)
+        .limit(1)
+        .maybeSingle();
+      if (dup) throw new Error("This X account is already linked to another wallet");
+    }
     const { data, error } = await supabaseAdmin
       .from("profiles")
       .insert({
         user_id: profile.userId,
         wallet_address: profile.walletAddress ?? null,
         bio: profile.bio ?? null,
-        twitter_handle: profile.twitterHandle ?? null,
+        twitter_handle: handle,
         is_influencer: profile.isInfluencer ?? false,
+        email: profile.email ?? null,
+        email_notifications: profile.emailNotifications ?? false,
       })
       .select()
       .single();
@@ -326,7 +377,7 @@ class SupabaseStorage implements IStorage {
             .neq("user_id", userId)
             .limit(1)
             .maybeSingle();
-          if (dup) throw new Error("This X handle is already claimed by another user");
+          if (dup) throw new Error("This X account is already linked to another wallet");
         }
       }
     }
@@ -674,20 +725,27 @@ class SupabaseStorage implements IStorage {
 
   // --- Escrow ---
 
-  async createEscrow(escrowData: InsertEscrow): Promise<Escrow> {
+  async createEscrow(escrowData: InsertEscrow & { isRecurring?: boolean; payrollBasis?: string; totalPeriods?: number; amountPerPeriod?: string }): Promise<Escrow> {
     const now = new Date();
+    const insertObj: any = {
+      order_id: escrowData.orderId,
+      depositor_id: escrowData.depositorId,
+      receiver_id: escrowData.receiverId,
+      amount: escrowData.amount,
+      phase: "awaiting_deposit",
+      expires_at: escrowData.expiresInDays
+        ? new Date(now.getTime() + escrowData.expiresInDays * 86400000).toISOString()
+        : null,
+    };
+    if (escrowData.isRecurring) {
+      insertObj.is_recurring = true;
+      insertObj.payroll_basis = escrowData.payrollBasis ?? null;
+      insertObj.total_periods = escrowData.totalPeriods ?? null;
+      insertObj.amount_per_period = escrowData.amountPerPeriod ?? null;
+    }
     const { data, error } = await supabaseAdmin
       .from("escrows")
-      .insert({
-        order_id: escrowData.orderId,
-        depositor_id: escrowData.depositorId,
-        receiver_id: escrowData.receiverId,
-        amount: escrowData.amount,
-        phase: "awaiting_deposit",
-        expires_at: escrowData.expiresInDays
-          ? new Date(now.getTime() + escrowData.expiresInDays * 86400000).toISOString()
-          : null,
-      })
+      .insert(insertObj)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -1054,6 +1112,100 @@ class SupabaseStorage implements IStorage {
       .single();
     if (error) throw new Error(error.message);
     return toOrder(data);
+  }
+
+  // --- Payroll Periods ---
+
+  async createPayrollPeriods(escrowId: number, periods: { periodNumber: number; startsAt: Date; endsAt: Date; disputeDeadline: Date; amount: string }[]): Promise<PayrollPeriod[]> {
+    const rows = periods.map((p) => ({
+      escrow_id: escrowId,
+      period_number: p.periodNumber,
+      starts_at: p.startsAt.toISOString(),
+      ends_at: p.endsAt.toISOString(),
+      dispute_deadline: p.disputeDeadline.toISOString(),
+      amount: p.amount,
+      status: "pending",
+    }));
+    const { data, error } = await supabaseAdmin
+      .from("payroll_periods")
+      .insert(rows)
+      .select();
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(toPayrollPeriod);
+  }
+
+  async getPayrollPeriods(escrowId: number): Promise<PayrollPeriod[]> {
+    const { data, error } = await supabaseAdmin
+      .from("payroll_periods")
+      .select("*")
+      .eq("escrow_id", escrowId)
+      .order("period_number", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(toPayrollPeriod);
+  }
+
+  async getPayrollPeriod(id: number): Promise<PayrollPeriod | undefined> {
+    const { data } = await supabaseAdmin
+      .from("payroll_periods")
+      .select("*")
+      .eq("id", id)
+      .single();
+    return data ? toPayrollPeriod(data) : undefined;
+  }
+
+  async updatePayrollPeriodStatus(id: number, status: PayrollPeriodStatus, extra?: { payoutTxHash?: string; disputedBy?: string; disputeReason?: string; resolutionNote?: string }): Promise<PayrollPeriod> {
+    const updateObj: any = { status };
+    if (status === "paid") {
+      updateObj.paid_at = new Date().toISOString();
+      if (extra?.payoutTxHash) updateObj.payout_tx_hash = extra.payoutTxHash;
+    }
+    if (status === "disputed") {
+      updateObj.disputed_at = new Date().toISOString();
+      if (extra?.disputedBy) updateObj.disputed_by = extra.disputedBy;
+      if (extra?.disputeReason) updateObj.dispute_reason = extra.disputeReason;
+    }
+    if (extra?.resolutionNote) {
+      updateObj.resolution_note = extra.resolutionNote;
+      updateObj.resolved_at = new Date().toISOString();
+    }
+    const { data, error } = await supabaseAdmin
+      .from("payroll_periods")
+      .update(updateObj)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return toPayrollPeriod(data);
+  }
+
+  async getReleasablePayrollPeriods(): Promise<PayrollPeriod[]> {
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("payroll_periods")
+      .select("*")
+      .in("status", ["active", "delivered"])
+      .lt("dispute_deadline", now);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(toPayrollPeriod);
+  }
+
+  async getActivatablePayrollPeriods(): Promise<PayrollPeriod[]> {
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("payroll_periods")
+      .select("*")
+      .eq("status", "pending")
+      .lte("starts_at", now);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(toPayrollPeriod);
+  }
+
+  async updateEscrowPeriodsPaid(escrowId: number, count: number): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from("escrows")
+      .update({ periods_paid: count, updated_at: new Date().toISOString() })
+      .eq("id", escrowId);
+    if (error) throw new Error(error.message);
   }
 }
 

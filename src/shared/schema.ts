@@ -20,6 +20,30 @@ export type EscrowPhase =
 
 export type MilestoneStatus = "pending" | "submitted" | "approved" | "rejected" | "expired";
 
+export type PayrollPeriodStatus = "pending" | "active" | "delivered" | "disputed" | "paid" | "skipped";
+
+export interface PayrollPeriod {
+  id: number;
+  escrowId: number;
+  periodNumber: number;
+  startsAt: Date;
+  endsAt: Date;
+  disputeDeadline: Date;
+  status: PayrollPeriodStatus;
+  amount: string;
+  payoutTxHash: string | null;
+  paidAt: Date | null;
+  disputedAt: Date | null;
+  disputedBy: string | null;
+  disputeReason: string | null;
+  resolvedAt: Date | null;
+  resolutionNote: string | null;
+  verificationResult: any | null;
+  matchingPosts: number | null;
+  requiredPosts: number | null;
+  createdAt: Date | null;
+}
+
 export interface Profile {
   id: number;
   userId: string;
@@ -147,6 +171,11 @@ export interface Escrow {
   expiresAt: Date | null;
   createdAt: Date | null;
   updatedAt: Date | null;
+  isRecurring: boolean;
+  payrollBasis: PayrollBasis | null;
+  totalPeriods: number | null;
+  periodsPaid: number;
+  amountPerPeriod: string | null;
 }
 
 export interface Milestone {
@@ -283,7 +312,9 @@ export type NotificationType =
   | "message_received"
   | "proposal_created"
   | "proposal_accepted"
-  | "proposal_rejected";
+  | "proposal_rejected"
+  | "payroll_period_paid"
+  | "payroll_period_disputed";
 
 export interface Notification {
   id: number;

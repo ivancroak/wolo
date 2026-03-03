@@ -8,11 +8,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { useWatchedIds, useToggleWatchlist } from "@/hooks/use-watchlist";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, Loader2, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -120,10 +120,10 @@ function MarketplaceContent() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="flex flex-col gap-4 mb-8"
+          className="flex flex-wrap items-center gap-6 mb-8 rounded-lg border bg-card/50 px-5 py-3"
         >
-          <Tabs value={listingType} onValueChange={setListingType} className="w-full max-w-sm">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value={listingType} onValueChange={setListingType}>
+            <TabsList>
               <TabsTrigger value="offer" data-testid="tab-offers" className="gap-1.5">
                 <ArrowUpFromLine className="h-3.5 w-3.5" />
                 Offers
@@ -135,49 +135,51 @@ function MarketplaceContent() {
             </TabsList>
           </Tabs>
 
-          <div className="relative max-w-md">
+          <div className="h-8 w-px bg-border hidden sm:block" />
+
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Service</span>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="h-8 w-[120px] rounded-full text-xs font-medium border-muted-foreground/25" data-testid="select-filter-category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value} data-testid={`button-filter-${cat.value}`}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="h-8 w-px bg-border hidden sm:block" />
+
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Pricing</span>
+            <Select value={pricing} onValueChange={setPricing}>
+              <SelectTrigger className="h-8 w-[120px] rounded-full text-xs font-medium border-muted-foreground/25" data-testid="select-filter-pricing">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pricingModels.map((pm) => (
+                  <SelectItem key={pm.value} value={pm.value} data-testid={`button-filter-pricing-${pm.value}`}>
+                    {pm.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="relative ml-auto w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search services..."
-              className="pl-10"
+              className="pl-10 rounded-full border-muted-foreground/25"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               data-testid="input-search"
             />
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
-            <div className="flex gap-1.5 flex-wrap">
-              {categories.map((cat) => (
-                <Button
-                  key={cat.value}
-                  variant={category === cat.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCategory(cat.value)}
-                  className="rounded-full text-xs font-medium h-7 px-2.5"
-                  data-testid={`button-filter-${cat.value}`}
-                >
-                  {cat.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pricing</p>
-            <div className="flex gap-1.5 flex-wrap">
-              {pricingModels.map((pm) => (
-                <Button
-                  key={pm.value}
-                  variant={pricing === pm.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPricing(pm.value)}
-                  className="rounded-full text-xs font-medium h-7 px-2.5"
-                  data-testid={`button-filter-pricing-${pm.value}`}
-                >
-                  {pm.label}
-                </Button>
-              ))}
-            </div>
           </div>
         </motion.div>
 

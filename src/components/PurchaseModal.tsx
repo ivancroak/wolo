@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Shield, Lock, Clock, ShieldCheck } from "lucide-react";
+import { Loader2, Shield, Lock, Clock, ShieldCheck, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -45,7 +45,22 @@ import { type Service } from "@shared/schema";
 const formSchema = z.object({
   requirements: z.string().min(10, "Please provide detailed requirements"),
   requiredKeyword: z.string().optional(),
+  totalPeriods: z.number().int().min(1).max(52).optional(),
 });
+
+const WEEKLY_PERIOD_OPTIONS = [
+  { value: 4, label: "4 weeks" },
+  { value: 8, label: "8 weeks" },
+  { value: 12, label: "12 weeks" },
+  { value: 26, label: "26 weeks" },
+  { value: 52, label: "52 weeks" },
+];
+const MONTHLY_PERIOD_OPTIONS = [
+  { value: 1, label: "1 month" },
+  { value: 3, label: "3 months" },
+  { value: 6, label: "6 months" },
+  { value: 12, label: "12 months" },
+];
 
 interface PurchaseModalProps {
   service: Service | null;
@@ -64,14 +79,21 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRequest = service?.listingType === "request";
+  const isPayroll = service?.pricingCategory === "payroll";
+  const periodOptions = service?.payrollBasis === "monthly" ? MONTHLY_PERIOD_OPTIONS : WEEKLY_PERIOD_OPTIONS;
+  const defaultPeriods = periodOptions[0]?.value;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       requirements: "",
       requiredKeyword: isRequest ? (service?.requiredKeyword ?? "") : "",
+      totalPeriods: isPayroll ? defaultPeriods : undefined,
     },
   });
+
+  const selectedPeriods = form.watch("totalPeriods");
+  const totalPrice = isPayroll && selectedPeriods ? (Number(service?.price ?? 0) * selectedPeriods).toFixed(4).replace(/\.?0+$/, "") : service?.price;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!service) return;
@@ -120,16 +142,25 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
 
       const receiverId = isRequest ? user.id : service.creatorId;
 
-      const escrowRes = await createEscrow({
+      const escrowAmount = isPayroll && values.totalPeriods
+        ? (Number(service.price) * values.totalPeriods).toFixed(9).replace(/\.?0+$/, "")
+        : service.price;
+
+      const escrowBody: any = {
         orderId: orderRes.id,
         receiverId,
-        amount: service.price,
+        amount: escrowAmount,
         expiresInDays: service.deadlineDays ?? 7,
-      });
+      };
+      if (isPayroll && values.totalPeriods) {
+        escrowBody.totalPeriods = values.totalPeriods;
+      }
+
+      const escrowRes = await createEscrow(escrowBody);
 
       if (escrowReady) {
         try {
-          const amountLamports = solToLamports(service.price);
+          const amountLamports = solToLamports(escrowAmount);
           const txSig = await initializeAndFund(receiverId, escrowRes.id, amountLamports, 1);
           await updateEscrowPhase({ id: escrowRes.id, phase: "funded", txHash: txSig });
           toast({
@@ -174,7 +205,8 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
           </DialogTitle>
           <DialogDescription>
             {isRequest ? "You are fulfilling " : "You are purchasing "}
-            <span className="font-semibold text-foreground">{service.title}</span> for <span className="font-bold text-foreground font-mono">{service.price} SOL</span>.
+            <span className="font-semibold text-foreground">{service.title}</span> for <span className="font-bold text-foreground font-mono">{totalPrice} SOL</span>
+            {isPayroll && selectedPeriods ? <span className="text-xs"> ({service.price} SOL/{service.payrollBasis === "monthly" ? "mo" : "wk"} &times; {selectedPeriods})</span> : null}.
           </DialogDescription>
         </DialogHeader>
 
@@ -223,7 +255,52 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               />
             )}
 
+            {isPayroll && (
+              <FormField
+                control={form.control}
+                name="totalPeriods"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contract Duration</FormLabel>
+                    <FormControl>
+                      <div className="grid grid-cols-3 gap-2">
+                        {periodOptions.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => field.onChange(opt.value)}
+                            className={`px-3 py-2 text-xs rounded-md border transition-colors ${
+                              field.value === opt.value
+                                ? "border-primary bg-primary/10 text-primary font-medium"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Total: <span className="font-mono font-medium">{totalPrice} SOL</span> locked in escrow, released {service.payrollBasis === "monthly" ? "monthly" : "weekly"} after each period.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <div className="space-y-2">
+              {isPayroll && (
+                <div className="flex items-start gap-3 p-3 rounded-md bg-muted text-sm">
+                  <Repeat className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-foreground">Recurring Payroll</p>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      {service.price} SOL released each {service.payrollBasis === "monthly" ? "month" : "week"} after a 48-hour dispute window.
+                    </p>
+                  </div>
+                </div>
+              )}
               {(service.requiredKeyword || service.minPostCount || service.postsPerPeriod || service.deadlineDays) && (
                 <div className="flex items-start gap-3 p-3 rounded-md bg-muted text-sm">
                   <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />

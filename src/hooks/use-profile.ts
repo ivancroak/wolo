@@ -32,7 +32,10 @@ export function useUpdateProfile() {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Failed to update profile");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message || "Failed to update profile");
+      }
       return api.profiles.update.responses[200].parse(await res.json());
     },
     onSuccess: () => {

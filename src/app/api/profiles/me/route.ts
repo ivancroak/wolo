@@ -37,6 +37,11 @@ export async function PUT(request: NextRequest) {
         field: err.errors[0].path.join('.'),
       }, { status: 400 });
     }
+    const msg = err instanceof Error ? err.message : "";
+    const isBusinessError = msg.includes("already linked") || msg.includes("already claimed") || msg.includes("already in use");
+    if (isBusinessError) {
+      return NextResponse.json({ message: msg }, { status: 409 });
+    }
     console.error("Route error:", err);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }

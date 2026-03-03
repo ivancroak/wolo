@@ -8,6 +8,7 @@ import { useSolanaReputation } from "@/hooks/use-solana-reputation";
 import { useAuth } from "@/hooks/use-auth";
 import { ChatPanel } from "@/components/ChatPanel";
 import { MilestonePanel } from "@/components/MilestonePanel";
+import { PayrollTimeline } from "@/components/PayrollTimeline";
 import { RatingModal } from "@/components/RatingModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -363,7 +364,9 @@ export default function OrderDetailPage() {
               </Card>
             )}
 
-            {escrow && (
+            {escrow && escrow.isRecurring ? (
+              <PayrollTimeline escrow={escrow} isDepositor={isDepositor ?? false} />
+            ) : escrow ? (
               <MilestonePanel
                 escrowId={escrow.id}
                 escrow={escrow}
@@ -371,7 +374,7 @@ export default function OrderDetailPage() {
                 isDepositor={isDepositor}
                 serviceCategory={service?.category}
               />
-            )}
+            ) : null}
           </div>
 
           {/* Right column: Deal Terms + Chat */}

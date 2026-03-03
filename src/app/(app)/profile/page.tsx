@@ -88,7 +88,12 @@ export default function ProfilePage() {
   }, [walletConnected, walletAddress, form]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    const payload = { ...values, email: values.email?.trim() || null };
+    const payload = {
+      ...values,
+      email: values.email?.trim() || null,
+      twitterHandle: values.twitterHandle?.trim() || null,
+      bio: values.bio?.trim() || null,
+    };
     updateProfile(payload, {
       onSuccess: () => {
         toast({ title: "Profile Updated", description: "Your settings have been saved." });

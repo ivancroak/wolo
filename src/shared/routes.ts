@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { insertServiceSchema, insertOrderSchema, insertProfileSchema, insertEscrowSchema, insertMilestoneSchema, insertSecureMessageSchema, insertRatingSchema, insertDealProposalSchema, patchDealProposalSchema } from './schema';
-import type { Service, Order, Profile, Watchlist, Escrow, Milestone, SecureMessage, Reputation, OrderRating, Notification, DealProposal } from './schema';
+import type { Service, Order, Profile, Watchlist, Escrow, Milestone, SecureMessage, Reputation, OrderRating, Notification, DealProposal, PayrollPeriod } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -249,6 +249,41 @@ export const api = {
       responses: {
         200: z.custom<Milestone>(),
         401: errorSchemas.unauthorized,
+      },
+    },
+  },
+  payrollPeriods: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/escrow/:id/periods' as const,
+      responses: {
+        200: z.array(z.custom<PayrollPeriod>()),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
+    dispute: {
+      method: 'POST' as const,
+      path: '/api/escrow/:id/periods/:periodId/dispute' as const,
+      input: z.object({ reason: z.string().max(500).optional() }),
+      responses: {
+        200: z.custom<PayrollPeriod>(),
+        401: errorSchemas.unauthorized,
+        400: errorSchemas.validation,
+        403: errorSchemas.unauthorized,
+      },
+    },
+    resolve: {
+      method: 'POST' as const,
+      path: '/api/escrow/:id/periods/:periodId/resolve' as const,
+      input: z.object({
+        action: z.enum(["release", "skip"]),
+        note: z.string().max(500).optional(),
+      }),
+      responses: {
+        200: z.custom<PayrollPeriod>(),
+        401: errorSchemas.unauthorized,
+        400: errorSchemas.validation,
       },
     },
   },

@@ -33,8 +33,24 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, TriangleAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const MAX_POSTS_PER_DAY = 5;
+
+function DailyLimitWarning({ count, days }: { count: number | null | undefined; days: number }) {
+  if (!count || days <= 0) return null;
+  const daily = count / days;
+  if (daily <= MAX_POSTS_PER_DAY) return null;
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+      <TriangleAlert className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+      <span>
+        This works out to ~{Math.round(daily)} posts/day. X may reduce reach or shadow-ban accounts that post more than {MAX_POSTS_PER_DAY}x/day on a single topic.
+      </span>
+    </div>
+  );
+}
 
 const offerSchema = insertServiceSchema.omit({ creatorId: true }).extend({
   price: z.coerce.number().min(0.001, "Price must be positive"),
@@ -121,6 +137,11 @@ function OfferServiceModal() {
 
   const pricingCategory = form.watch("pricingCategory");
   const contentType = form.watch("contentType");
+  const watchedMinPostCount = form.watch("minPostCount");
+  const watchedDeadlineDays = form.watch("deadlineDays");
+  const watchedPostsPerPeriod = form.watch("postsPerPeriod");
+  const watchedThreadsPerPeriod = form.watch("threadsPerPeriod");
+  const watchedPayrollBasis = form.watch("payrollBasis");
 
   const priceLabel = pricingCategory === "payroll" ? "Rate per Period (SOL)" : "Contract Price (SOL)";
 
@@ -330,6 +351,10 @@ function OfferServiceModal() {
               </div>
             )}
 
+            {pricingCategory === "fixed" && (
+              <DailyLimitWarning count={watchedMinPostCount} days={watchedDeadlineDays || 1} />
+            )}
+
             {pricingCategory === "payroll" && (
               <div className="grid grid-cols-2 gap-4">
                 {(contentType === "posts" || contentType === "mixed") && (
@@ -403,6 +428,13 @@ function OfferServiceModal() {
                   )}
                 />
               </div>
+            )}
+
+            {pricingCategory === "payroll" && (
+              <DailyLimitWarning
+                count={(watchedPostsPerPeriod || 0) + (watchedThreadsPerPeriod || 0)}
+                days={watchedPayrollBasis === "weekly" ? 7 : 30}
+              />
             )}
 
             <FormField
@@ -504,6 +536,11 @@ function RequestServiceModal() {
 
   const pricingCategory = form.watch("pricingCategory");
   const contentType = form.watch("contentType");
+  const watchedMinPostCount = form.watch("minPostCount");
+  const watchedDeadlineDays = form.watch("deadlineDays");
+  const watchedPostsPerPeriod = form.watch("postsPerPeriod");
+  const watchedThreadsPerPeriod = form.watch("threadsPerPeriod");
+  const watchedPayrollBasis = form.watch("payrollBasis");
 
   function onSubmit(values: z.infer<typeof requestSchema>) {
     createService(values as any, {
@@ -727,6 +764,13 @@ function RequestServiceModal() {
               </div>
             )}
 
+            {pricingCategory === "payroll" && (
+              <DailyLimitWarning
+                count={(watchedPostsPerPeriod || 0) + (watchedThreadsPerPeriod || 0)}
+                days={watchedPayrollBasis === "weekly" ? 7 : 30}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="requiredKeyword"
@@ -770,6 +814,10 @@ function RequestServiceModal() {
                   </FormItem>
                 )}
               />
+            )}
+
+            {pricingCategory === "fixed" && (
+              <DailyLimitWarning count={watchedMinPostCount} days={watchedDeadlineDays || 1} />
             )}
 
             <FormField
