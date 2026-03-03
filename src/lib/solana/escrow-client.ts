@@ -7,10 +7,14 @@ import {
 } from "@solana/web3.js";
 import { ESCROW_PROGRAM_ID } from "./idl";
 
-const programId = new PublicKey(ESCROW_PROGRAM_ID);
+let _programId: PublicKey | null = null;
+function getProgramId(): PublicKey {
+  if (!_programId) _programId = new PublicKey(ESCROW_PROGRAM_ID);
+  return _programId;
+}
 
 function findConfigPDA(): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync([Buffer.from("config")], programId);
+  return PublicKey.findProgramAddressSync([Buffer.from("config")], getProgramId());
 }
 
 function findEscrowPDA(depositor: PublicKey, escrowId: number): [PublicKey, number] {
@@ -18,7 +22,7 @@ function findEscrowPDA(depositor: PublicKey, escrowId: number): [PublicKey, numb
   idBuf.writeBigUInt64LE(BigInt(escrowId));
   return PublicKey.findProgramAddressSync(
     [Buffer.from("escrow"), depositor.toBuffer(), idBuf],
-    programId
+    getProgramId()
   );
 }
 
@@ -83,7 +87,7 @@ export class WolandEscrowClient {
         { pubkey: configPDA, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -111,7 +115,7 @@ export class WolandEscrowClient {
         { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -130,7 +134,7 @@ export class WolandEscrowClient {
         { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -149,7 +153,7 @@ export class WolandEscrowClient {
         { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -168,7 +172,7 @@ export class WolandEscrowClient {
         { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -190,7 +194,7 @@ export class WolandEscrowClient {
         { pubkey: feeVaultPubkey, isSigner: false, isWritable: true },
         { pubkey: configPDA, isSigner: false, isWritable: false },
       ],
-      programId,
+      programId: getProgramId(),
       data: disc,
     });
   }
@@ -214,7 +218,7 @@ export class WolandEscrowClient {
         { pubkey: feeVaultPubkey, isSigner: false, isWritable: true },
         { pubkey: configPDA, isSigner: false, isWritable: false },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -232,7 +236,7 @@ export class WolandEscrowClient {
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
         { pubkey: depositorPubkey, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data: disc,
     });
   }
@@ -258,7 +262,7 @@ export class WolandEscrowClient {
         { pubkey: feeVaultPubkey, isSigner: false, isWritable: true },
         { pubkey: configPDA, isSigner: false, isWritable: false },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -283,7 +287,7 @@ export class WolandEscrowClient {
         { pubkey: feeVaultPubkey, isSigner: false, isWritable: true },
         { pubkey: configPDA, isSigner: false, isWritable: false },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -327,7 +331,7 @@ export class WolandEscrowClient {
         { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
         { pubkey: configPDA, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data: Buffer.concat(parts),
     });
   }
@@ -343,7 +347,7 @@ export class WolandEscrowClient {
         { pubkey: this.walletPubkey, isSigner: true, isWritable: true },
         { pubkey: escrowPDA, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data: disc,
     });
   }

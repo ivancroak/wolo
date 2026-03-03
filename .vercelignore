@@ -1,0 +1,9 @@
+target/
+programs/
+.anchor/
+test-ledger/
+node_modules/
+.next/
+supabase/
+*.so
+*.keypair

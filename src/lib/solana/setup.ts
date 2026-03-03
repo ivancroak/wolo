@@ -7,10 +7,14 @@ import {
 } from "@solana/web3.js";
 import { ESCROW_PROGRAM_ID } from "./idl";
 
-const programId = new PublicKey(ESCROW_PROGRAM_ID);
+let _programId: PublicKey | null = null;
+function getProgramId(): PublicKey {
+  if (!_programId) _programId = new PublicKey(ESCROW_PROGRAM_ID);
+  return _programId;
+}
 
 function findConfigPDA(): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync([Buffer.from("config")], programId);
+  return PublicKey.findProgramAddressSync([Buffer.from("config")], getProgramId());
 }
 
 async function getDiscriminator(name: string): Promise<Buffer> {
@@ -45,7 +49,7 @@ export async function buildInitializeConfigTx(
       { pubkey: feeVault, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
-    programId,
+    programId: getProgramId(),
     data,
   };
 

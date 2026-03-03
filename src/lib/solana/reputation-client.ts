@@ -8,19 +8,23 @@ import {
 import { REPUTATION_PROGRAM_ID } from "./idl";
 import { encodeU64 } from "./escrow-client";
 
-const programId = new PublicKey(REPUTATION_PROGRAM_ID);
+let _programId: PublicKey | null = null;
+function getProgramId(): PublicKey {
+  if (!_programId) _programId = new PublicKey(REPUTATION_PROGRAM_ID);
+  return _programId;
+}
 
 function findRepConfigPDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("rep_config")],
-    programId
+    getProgramId()
   );
 }
 
 function findReputationPDA(user: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("reputation"), user.toBuffer()],
-    programId
+    getProgramId()
   );
 }
 
@@ -29,7 +33,7 @@ function findRatingPDA(rater: PublicKey, escrowId: number): [PublicKey, number] 
   idBuf.writeBigUInt64LE(BigInt(escrowId));
   return PublicKey.findProgramAddressSync(
     [Buffer.from("rating"), rater.toBuffer(), idBuf],
-    programId
+    getProgramId()
   );
 }
 
@@ -61,7 +65,7 @@ export class WolandReputationClient {
         { pubkey: configPDA, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      programId,
+      programId: getProgramId(),
       data: disc,
     });
   }
@@ -76,7 +80,7 @@ export class WolandReputationClient {
         { pubkey: repPDA, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      programId,
+      programId: getProgramId(),
       data: disc,
     });
   }
@@ -104,7 +108,7 @@ export class WolandReputationClient {
         { pubkey: configPDA, isSigner: false, isWritable: false },
         { pubkey: repPDA, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -125,7 +129,7 @@ export class WolandReputationClient {
         { pubkey: configPDA, isSigner: false, isWritable: false },
         { pubkey: repPDA, isSigner: false, isWritable: true },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }
@@ -157,7 +161,7 @@ export class WolandReputationClient {
         { pubkey: escrowAccountPubkey, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      programId,
+      programId: getProgramId(),
       data,
     });
   }

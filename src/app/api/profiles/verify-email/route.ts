@@ -3,16 +3,8 @@ import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
 import { getClientIp, checkRateLimit } from "@/server/with-rate-limit";
 import { sendEmail } from "@/server/email";
+import { supabaseAdmin } from "@/lib/supabase/server";
 import crypto from "crypto";
-
-const emailCodes = new Map<string, { code: string; email: string; expiresAt: number }>();
-
-setInterval(() => {
-  const now = Date.now();
-  emailCodes.forEach((entry, key) => {
-    if (now > entry.expiresAt) emailCodes.delete(key);
-  });
-}, 60_000);
 
 function generateCode(): string {
   return crypto.randomInt(100000, 999999).toString();
@@ -42,11 +34,16 @@ export async function POST(request: NextRequest) {
   }
 
   const code = generateCode();
-  emailCodes.set(user.id, {
-    code,
-    email: profile.email,
-    expiresAt: Date.now() + 10 * 60 * 1000,
-  });
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  await supabaseAdmin
+    .from("email_verification_codes")
+    .upsert({
+      user_id: user.id,
+      code,
+      email: profile.email,
+      expires_at: expiresAt,
+    }, { onConflict: "user_id" });
 
   await sendEmail(
     profile.email,
@@ -89,7 +86,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ message: "Invalid code" }, { status: 400 });
   }
 
-  const entry = emailCodes.get(user.id);
+  const { data: entry } = await supabaseAdmin
+    .from("email_verification_codes")
+    .select("code, email, expires_at")
+    .eq("user_id", user.id)
+    .single();
+
   if (!entry) {
     return NextResponse.json(
       { message: "No verification code found. Please request a new one." },
@@ -97,8 +99,8 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  if (Date.now() > entry.expiresAt) {
-    emailCodes.delete(user.id);
+  if (new Date(entry.expires_at) < new Date()) {
+    await supabaseAdmin.from("email_verification_codes").delete().eq("user_id", user.id);
     return NextResponse.json(
       { message: "Code expired. Please request a new one." },
       { status: 400 },
@@ -106,7 +108,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (entry.email !== profile.email) {
-    emailCodes.delete(user.id);
+    await supabaseAdmin.from("email_verification_codes").delete().eq("user_id", user.id);
     return NextResponse.json(
       { message: "Email changed since code was sent. Please request a new one." },
       { status: 400 },
@@ -120,9 +122,9 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  emailCodes.delete(user.id);
+  await supabaseAdmin.from("email_verification_codes").delete().eq("user_id", user.id);
 
-  const { error } = await (await import("@/lib/supabase/server")).supabaseAdmin
+  const { error } = await supabaseAdmin
     .from("profiles")
     .update({ email_verified: true })
     .eq("user_id", user.id);

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Wolo - On-Chain Social Marketplace",
   description: "The trustless marketplace for social influence on Solana",
   icons: {
-    icon: "/favicon.png",
+    icon: "/assets/wolo-logo.png",
   },
 };
 
