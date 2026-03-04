@@ -72,15 +72,29 @@ const requestSchema = insertServiceSchema.omit({ creatorId: true }).extend({
 
 interface CreateServiceModalProps {
   listingType?: "offer" | "request";
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateServiceModal({ listingType = "offer" }: CreateServiceModalProps) {
+export function CreateServiceModal({ listingType = "offer", open, onOpenChange }: CreateServiceModalProps) {
   const isRequest = listingType === "request";
-  return isRequest ? <RequestServiceModal /> : <OfferServiceModal />;
+  return isRequest
+    ? <RequestServiceModal externalOpen={open} onExternalOpenChange={onOpenChange} />
+    : <OfferServiceModal externalOpen={open} onExternalOpenChange={onOpenChange} />;
 }
 
-function OfferServiceModal() {
-  const [open, setOpen] = useState(false);
+interface ModalControlProps {
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
+}
+
+function OfferServiceModal({ externalOpen, onExternalOpenChange }: ModalControlProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v);
+    onExternalOpenChange?.(v);
+  };
   const { mutate: createService, isPending } = useCreateService();
   const { toast } = useToast();
 
@@ -475,8 +489,13 @@ function OfferServiceModal() {
   );
 }
 
-function RequestServiceModal() {
-  const [open, setOpen] = useState(false);
+function RequestServiceModal({ externalOpen, onExternalOpenChange }: ModalControlProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v);
+    onExternalOpenChange?.(v);
+  };
   const { mutate: createService, isPending } = useCreateService();
   const { toast } = useToast();
 

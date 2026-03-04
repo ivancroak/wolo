@@ -15,6 +15,7 @@ import { Search, Loader2, ArrowDownToLine, ArrowUpFromLine } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { AgentPanel } from "@/components/agent/AgentPanel";
 
 const categories = [
   { value: "all", label: "All" },
@@ -58,6 +59,7 @@ function MarketplaceContent() {
   const router = useRouter();
   const [selectedService, setSelectedService] = useState<any>(null);
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false);
+  const [agentCreateType, setAgentCreateType] = useState<"offer" | "request" | null>(null);
 
   const handlePurchase = (service: any) => {
     if (!user) {
@@ -122,18 +124,29 @@ function MarketplaceContent() {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="flex flex-col gap-4 mb-8"
         >
-          <Tabs value={listingType} onValueChange={setListingType} className="w-full max-w-sm">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="offer" data-testid="tab-offers" className="gap-1.5">
-                <ArrowUpFromLine className="h-3.5 w-3.5" />
-                Offers
-              </TabsTrigger>
-              <TabsTrigger value="request" data-testid="tab-requests" className="gap-1.5">
-                <ArrowDownToLine className="h-3.5 w-3.5" />
-                Requests
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-start gap-3 flex-wrap">
+            <Tabs value={listingType} onValueChange={setListingType} className="shrink-0">
+              <TabsList className="grid grid-cols-2 w-[220px]">
+                <TabsTrigger value="offer" data-testid="tab-offers" className="gap-1.5">
+                  <ArrowUpFromLine className="h-3.5 w-3.5" />
+                  Offers
+                </TabsTrigger>
+                <TabsTrigger value="request" data-testid="tab-requests" className="gap-1.5">
+                  <ArrowDownToLine className="h-3.5 w-3.5" />
+                  Requests
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {user && (
+              <AgentPanel
+                listingType={listingType as "offer" | "request"}
+                onPurchase={handlePurchase}
+                onOpenCreateForm={(type) => setAgentCreateType(type)}
+                walletAddress={profile?.walletAddress ?? undefined}
+                currentUserId={user.id}
+              />
+            )}
+          </div>
 
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -226,6 +239,13 @@ function MarketplaceContent() {
         open={isPurchaseOpen}
         onOpenChange={setIsPurchaseOpen}
       />
+      {agentCreateType && (
+        <CreateServiceModal
+          listingType={agentCreateType}
+          open={true}
+          onOpenChange={(open) => { if (!open) setAgentCreateType(null); }}
+        />
+      )}
     </div>
   );
 }
