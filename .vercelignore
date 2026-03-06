@@ -4,6 +4,6 @@ programs/
 test-ledger/
 node_modules/
 .next/
-supabase/
+/supabase/
 *.so
 *.keypair
