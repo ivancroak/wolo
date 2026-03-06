@@ -54,10 +54,9 @@ export async function POST(
       return NextResponse.json({ message: "Escrow not found" }, { status: 404 });
     }
 
-    // Admin-only: only the depositor or receiver can resolve for now
-    // In a full implementation, this would be restricted to platform admin
-    if (user.id !== escrow.depositorId && user.id !== escrow.receiverId) {
-      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS;
+    if (!ADMIN_WALLET || user.id !== ADMIN_WALLET) {
+      return NextResponse.json({ message: "Only platform admin can resolve period disputes" }, { status: 403 });
     }
 
     const period = await storage.getPayrollPeriod(pId);
@@ -78,8 +77,13 @@ export async function POST(
       const connection = getConnection();
       const deployWallet = getDeployWalletKeypair();
       const feeVault = new PublicKey(feeVaultStr);
-      const depositorPubkey = new PublicKey(escrow.depositorId);
-      const receiverPubkey = new PublicKey(escrow.receiverId);
+      const depositorProfile = await storage.getProfile(escrow.depositorId);
+      const receiverProfile = await storage.getProfile(escrow.receiverId);
+      if (!depositorProfile?.walletAddress || !receiverProfile?.walletAddress) {
+        return NextResponse.json({ message: "Depositor or receiver has no wallet address configured" }, { status: 400 });
+      }
+      const depositorPubkey = new PublicKey(depositorProfile.walletAddress);
+      const receiverPubkey = new PublicKey(receiverProfile.walletAddress);
       const amountLamports = solToLamports(period.amount);
 
       const client = new WolandEscrowClient(connection, deployWallet.publicKey);

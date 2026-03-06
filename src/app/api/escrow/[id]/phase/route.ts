@@ -28,8 +28,9 @@ const VALID_TRANSITIONS: Record<string, { phases: EscrowPhase[]; by: "depositor"
     { phases: ["disputed"], by: "depositor" },
   ],
   disputed: [
-    // Only admin/arbiter can resolve disputes — handled by /api/admin/disputes/[id]/resolve
-    // and /api/escrow/[id]/dispute-resolve routes. No self-service transitions allowed.
+    // Admin/arbiter resolves via /api/admin/disputes/[id]/resolve and /api/escrow/[id]/dispute-resolve.
+    // Depositor can sync refunded state after on-chain refund tx completes.
+    { phases: ["refunded"], by: "depositor" },
   ],
   released: [],
   refunded: [],

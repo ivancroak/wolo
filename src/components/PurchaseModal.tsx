@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCreateOrder } from "@/hooks/use-orders";
+import { useCreateOrder, useUpdateOrder } from "@/hooks/use-orders";
 import { useCreateEscrow, useUpdateEscrowPhase } from "@/hooks/use-escrow";
 import { useSolanaEscrow } from "@/hooks/use-solana-escrow";
 import { useAuth } from "@/hooks/use-auth";
@@ -48,19 +48,6 @@ const formSchema = z.object({
   totalPeriods: z.number().int().min(1).max(52).optional(),
 });
 
-const WEEKLY_PERIOD_OPTIONS = [
-  { value: 4, label: "4 weeks" },
-  { value: 8, label: "8 weeks" },
-  { value: 12, label: "12 weeks" },
-  { value: 26, label: "26 weeks" },
-  { value: 52, label: "52 weeks" },
-];
-const MONTHLY_PERIOD_OPTIONS = [
-  { value: 1, label: "1 month" },
-  { value: 3, label: "3 months" },
-  { value: 6, label: "6 months" },
-  { value: 12, label: "12 months" },
-];
 
 interface PurchaseModalProps {
   service: Service | null;
@@ -70,6 +57,7 @@ interface PurchaseModalProps {
 
 export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProps) {
   const { mutateAsync: createOrder, isPending: orderPending } = useCreateOrder();
+  const { mutateAsync: updateOrder } = useUpdateOrder();
   const { mutateAsync: createEscrow } = useCreateEscrow();
   const { mutateAsync: updateEscrowPhase } = useUpdateEscrowPhase();
   const { isReady: escrowReady, initializeAndFund } = useSolanaEscrow();
@@ -80,8 +68,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRequest = service?.listingType === "request";
   const isPayroll = service?.pricingCategory === "payroll";
-  const periodOptions = service?.payrollBasis === "monthly" ? MONTHLY_PERIOD_OPTIONS : WEEKLY_PERIOD_OPTIONS;
-  const defaultPeriods = periodOptions[0]?.value;
+  const defaultPeriods = isPayroll ? 4 : undefined;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -156,12 +143,26 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
         escrowBody.totalPeriods = values.totalPeriods;
       }
 
-      const escrowRes = await createEscrow(escrowBody);
+      let escrowRes;
+      try {
+        escrowRes = await createEscrow(escrowBody);
+      } catch (escrowErr: any) {
+        // Cancel orphaned order if escrow creation fails
+        try { await updateOrder({ id: orderRes.id, status: "cancelled" }); } catch {}
+        throw escrowErr;
+      }
 
       if (escrowReady) {
         try {
+          const receiverWallet = escrowRes.receiverWalletAddress;
+          if (!receiverWallet) {
+            throw new Error("Receiver has no wallet address set. They must configure their wallet in Profile first.");
+          }
           const amountLamports = solToLamports(escrowAmount);
-          const txSig = await initializeAndFund(receiverId, escrowRes.id, amountLamports, 1);
+          const expiresInDays = escrowRes.expiresAt
+            ? Math.max(1, Math.ceil((new Date(escrowRes.expiresAt).getTime() - Date.now()) / 86400000))
+            : (service.deadlineDays ?? 7);
+          const txSig = await initializeAndFund(receiverWallet, escrowRes.id, amountLamports, expiresInDays);
           await updateEscrowPhase({ id: escrowRes.id, phase: "funded", txHash: txSig });
           toast({
             title: "Escrow Funded On-Chain",
@@ -261,24 +262,18 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
                 name="totalPeriods"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contract Duration</FormLabel>
+                    <FormLabel>Number of {service.payrollBasis === "monthly" ? "Months" : "Weeks"}</FormLabel>
                     <FormControl>
-                      <div className="grid grid-cols-3 gap-2">
-                        {periodOptions.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => field.onChange(opt.value)}
-                            className={`px-3 py-2 text-xs rounded-md border transition-colors ${
-                              field.value === opt.value
-                                ? "border-primary bg-primary/10 text-primary font-medium"
-                                : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="52"
+                        step="1"
+                        placeholder={`e.g. ${service.payrollBasis === "monthly" ? "3" : "4"}`}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                        data-testid="input-total-periods"
+                      />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
                       Total: <span className="font-mono font-medium">{totalPrice} SOL</span> locked in escrow, released {service.payrollBasis === "monthly" ? "monthly" : "weekly"} after each period.

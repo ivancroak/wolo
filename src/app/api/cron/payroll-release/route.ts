@@ -69,8 +69,14 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const depositorPubkey = new PublicKey(escrow.depositorId);
-        const receiverPubkey = new PublicKey(escrow.receiverId);
+        const depositorProfile = await storage.getProfile(escrow.depositorId);
+        const receiverProfile = await storage.getProfile(escrow.receiverId);
+        if (!depositorProfile?.walletAddress || !receiverProfile?.walletAddress) {
+          results.errors.push(`period ${period.id}: depositor or receiver has no wallet address`);
+          continue;
+        }
+        const depositorPubkey = new PublicKey(depositorProfile.walletAddress);
+        const receiverPubkey = new PublicKey(receiverProfile.walletAddress);
         const amountLamports = solToLamports(period.amount);
 
         const ix = await client.buildReleaseActionPayoutIx(

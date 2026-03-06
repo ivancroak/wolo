@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
-import { ArrowRight, Zap, Shield, Globe, Repeat, Heart, UserPlus, Sparkles } from "lucide-react";
+import { ArrowRight, Zap, Shield, Globe, FileText, TrendingUp, Target, Sparkles } from "lucide-react";
 import { SiX } from "react-icons/si";
 import { useRef, useEffect, useState } from "react";
 import { TransparentLogo } from "@/components/TransparentLogo";
@@ -115,10 +115,9 @@ export default function LandingPage() {
   }, [mouseX, mouseY]);
 
   const serviceTypes = [
-    { icon: Repeat, label: "Reposts", desc: "Amplify reach on X with targeted reposts" },
-    { icon: Heart, label: "Likes", desc: "Boost engagement on your X posts" },
-    { icon: UserPlus, label: "Follows", desc: "Grow your X audience organically" },
-    { icon: Sparkles, label: "Content", desc: "Keyword-verified posts and threads on X" },
+    { icon: FileText, label: "Posts & Threads", desc: "Verified promotional posts and threads from real influencers" },
+    { icon: TrendingUp, label: "Ongoing Campaigns", desc: "Recurring weekly or monthly content with payroll escrow" },
+    { icon: Target, label: "Targeted Reach", desc: "Keyword-verified content reaching the right audience" },
   ];
 
   const [particles, setParticles] = useState<{ delay: number; x: string; y: string }[]>([]);
@@ -198,8 +197,8 @@ export default function LandingPage() {
               className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-14 leading-relaxed"
               data-testid="text-hero-subtitle"
             >
-              The trustless marketplace for X influence. Content creation,
-              reposts, likes, and follows &mdash; all settled on-chain.
+              Buy marketing posts from X influencers. Verified delivery,
+              on-chain escrow &mdash; trustless and transparent.
             </motion.p>
 
             <motion.div variants={heroItem} className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -241,13 +240,13 @@ export default function LandingPage() {
             className="text-center mb-16"
           >
             <motion.span variants={heroItem} className="inline-block text-xs font-medium tracking-widest uppercase text-muted-foreground mb-4">
-              What You Can Trade
+              What You Can Buy
             </motion.span>
             <motion.h2 variants={heroItem} className="text-3xl md:text-5xl lg:text-6xl font-black tracking-[-0.03em] mb-5" data-testid="text-services-title">
-              Every Type of X Influence
+              Influencer Marketing on X
             </motion.h2>
             <motion.p variants={heroItem} className="text-muted-foreground max-w-lg mx-auto text-lg">
-              From quick X engagements to ongoing content contracts.
+              From one-time promotional posts to ongoing content campaigns.
             </motion.p>
           </motion.div>
 
@@ -295,7 +294,7 @@ export default function LandingPage() {
               How It Works
             </motion.h2>
             <motion.p variants={heroItem} className="text-muted-foreground max-w-lg mx-auto text-lg">
-              A trustless protocol connecting brands with X influencers.
+              A trustless protocol for buying marketing content from X influencers.
             </motion.p>
           </motion.div>
 

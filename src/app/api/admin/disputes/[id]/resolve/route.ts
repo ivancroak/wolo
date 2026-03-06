@@ -67,8 +67,13 @@ export async function POST(
     const connection = getConnection();
     const deployWallet = getDeployWalletKeypair();
     const feeVault = new PublicKey(feeVaultStr);
-    const depositorPubkey = new PublicKey(escrow.depositorId);
-    const receiverPubkey = new PublicKey(escrow.receiverId);
+    const depositorProfile = await storage.getProfile(escrow.depositorId);
+    const receiverProfile = await storage.getProfile(escrow.receiverId);
+    if (!depositorProfile?.walletAddress || !receiverProfile?.walletAddress) {
+      return NextResponse.json({ message: "Depositor or receiver has no wallet address configured" }, { status: 400 });
+    }
+    const depositorPubkey = new PublicKey(depositorProfile.walletAddress);
+    const receiverPubkey = new PublicKey(receiverProfile.walletAddress);
 
     const client = new WolandEscrowClient(connection, deployWallet.publicKey);
     const ix = await client.buildArbiterResolveIx(

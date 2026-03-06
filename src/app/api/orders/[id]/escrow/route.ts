@@ -22,5 +22,15 @@ export async function GET(
   }
 
   const milestones = await storage.getMilestones(escrow.id);
-  return NextResponse.json({ escrow, milestones });
+
+  // Enrich with wallet addresses for on-chain transactions
+  const depositorProfile = await storage.getProfile(escrow.depositorId);
+  const receiverProfile = await storage.getProfile(escrow.receiverId);
+  const enriched = {
+    ...escrow,
+    depositorWalletAddress: depositorProfile?.walletAddress ?? null,
+    receiverWalletAddress: receiverProfile?.walletAddress ?? null,
+  };
+
+  return NextResponse.json({ escrow: enriched, milestones });
 }

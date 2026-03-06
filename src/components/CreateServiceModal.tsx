@@ -52,6 +52,14 @@ function DailyLimitWarning({ count, days }: { count: number | null | undefined; 
   );
 }
 
+function isValidXUrl(url: string): boolean {
+  if (!url) return true;
+  try {
+    const u = new URL(url);
+    return ["x.com", "www.x.com", "twitter.com", "www.twitter.com"].includes(u.hostname);
+  } catch { return false; }
+}
+
 const offerSchema = insertServiceSchema.omit({ creatorId: true }).extend({
   price: z.coerce.number().min(0.001, "Price must be positive"),
   pricingCategory: z.enum(["fixed", "payroll"]),
@@ -63,6 +71,9 @@ const offerSchema = insertServiceSchema.omit({ creatorId: true }).extend({
   postsPerPeriod: z.coerce.number().int().min(1).nullable().optional(),
   threadsPerPeriod: z.coerce.number().int().min(1).nullable().optional(),
 }).refine(
+  (data) => !data.imageUrl || isValidXUrl(data.imageUrl),
+  { message: "Only links to your own X content (x.com or twitter.com) are allowed", path: ["imageUrl"] }
+).refine(
   (data) => data.pricingCategory !== "payroll" || data.payrollBasis != null,
   { message: "Please select a payroll basis (period)", path: ["payrollBasis"] }
 ).refine(
@@ -143,7 +154,7 @@ function OfferServiceModal() {
   const watchedThreadsPerPeriod = form.watch("threadsPerPeriod");
   const watchedPayrollBasis = form.watch("payrollBasis");
 
-  const priceLabel = pricingCategory === "payroll" ? "Rate per Period (SOL)" : "Contract Price (SOL)";
+  const priceLabel = pricingCategory === "payroll" ? "Rate per Period (SOL)" : "Price (SOL)";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -203,7 +214,7 @@ function OfferServiceModal() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="fixed">Fixed Contract</SelectItem>
+                      <SelectItem value="fixed">Fixed Price</SelectItem>
                       <SelectItem value="payroll">Payroll</SelectItem>
                     </SelectContent>
                   </Select>
@@ -410,7 +421,7 @@ function OfferServiceModal() {
                   name="deadlineDays"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Duration (days)</FormLabel>
+                      <FormLabel>Duration (periods)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -484,9 +495,9 @@ function OfferServiceModal() {
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reference URL (Optional)</FormLabel>
+                  <FormLabel>Reference URL (Optional — your X content only)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://..." {...field} value={field.value || ""} data-testid="input-image-url" />
+                    <Input placeholder="https://x.com/yourhandle/status/..." {...field} value={field.value || ""} data-testid="input-image-url" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -610,7 +621,7 @@ function RequestServiceModal() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="fixed">Fixed Contract</SelectItem>
+                      <SelectItem value="fixed">Fixed Price</SelectItem>
                       <SelectItem value="payroll">Payroll</SelectItem>
                     </SelectContent>
                   </Select>
@@ -671,7 +682,7 @@ function RequestServiceModal() {
                 name="deadlineDays"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Deadline (days)</FormLabel>
+                    <FormLabel>{pricingCategory === "payroll" ? "Deadline (periods)" : "Deadline (days)"}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"

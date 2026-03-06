@@ -1,6 +1,7 @@
 "use client";
 
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,6 +56,7 @@ export default function ProfilePage() {
   const { address: walletAddress, isConnected: walletConnected } = useWallet();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { mutate: updateProfile, isPending: updatePending } = useUpdateProfile();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -130,7 +132,7 @@ export default function ProfilePage() {
       } else {
         toast({ title: "No Blue Checkmark", description: "This X account does not have a blue checkmark." });
       }
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
     } catch {
       toast({ title: "Error", description: "Failed to check blue checkmark status", variant: "destructive" });
     } finally {
@@ -167,7 +169,7 @@ export default function ProfilePage() {
       if (data.verified) {
         toast({ title: "Verified!", description: "Your X account has been verified." });
         setVerifyCode(null);
-        window.location.reload();
+        queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
       } else {
         toast({ title: "Not Found", description: data.message, variant: "destructive" });
       }
@@ -223,7 +225,7 @@ export default function ProfilePage() {
         toast({ title: "Verified!", description: "Your email has been verified." });
         setEmailCodeSent(false);
         setEmailCode("");
-        window.location.reload();
+        queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
       } else {
         toast({ title: "Error", description: data.message, variant: "destructive" });
       }

@@ -392,8 +392,14 @@ export default function DashboardPage() {
                                 setLoadingEscrowId(escrow.id);
                                 try {
                                   const amountLamports = solToLamports(escrow.amount);
+                                  if (!escrow.receiverWalletAddress) {
+                                    throw new Error("Receiver has no wallet address configured.");
+                                  }
+                                  const expiresInDays = escrow.expiresAt
+                                    ? Math.max(1, Math.ceil((new Date(escrow.expiresAt).getTime() - Date.now()) / 86400000))
+                                    : 30;
                                   const txSig = await solanaEscrow.initializeAndFund(
-                                    escrow.receiverId, escrow.id, amountLamports, 30
+                                    escrow.receiverWalletAddress, escrow.id, amountLamports, expiresInDays
                                   );
                                   updateEscrowPhase({ id: escrow.id, phase: "funded", txHash: txSig });
                                   toast({ title: "Escrow Funded", description: `Tx: ${txSig.slice(0, 12)}...` });
@@ -420,9 +426,13 @@ export default function DashboardPage() {
                                   toast({ title: "Wallet not connected", variant: "destructive" });
                                   return;
                                 }
+                                if (!escrow.depositorWalletAddress) {
+                                  toast({ title: "Depositor wallet address missing", variant: "destructive" });
+                                  return;
+                                }
                                 setLoadingEscrowId(escrow.id);
                                 try {
-                                  await solanaEscrow.advancePhase(escrow.depositorId, escrow.id, "in_progress");
+                                  await solanaEscrow.advancePhase(escrow.depositorWalletAddress, escrow.id, "in_progress");
                                   updateEscrowPhase({ id: escrow.id, phase: "in_progress" });
                                 } catch (err: any) {
                                   toast({ title: "Transaction failed", description: err?.message, variant: "destructive" });
@@ -445,9 +455,13 @@ export default function DashboardPage() {
                                   toast({ title: "Wallet not connected", variant: "destructive" });
                                   return;
                                 }
+                                if (!escrow.depositorWalletAddress) {
+                                  toast({ title: "Depositor wallet address missing", variant: "destructive" });
+                                  return;
+                                }
                                 setLoadingEscrowId(escrow.id);
                                 try {
-                                  await solanaEscrow.advancePhase(escrow.depositorId, escrow.id, "under_review");
+                                  await solanaEscrow.advancePhase(escrow.depositorWalletAddress, escrow.id, "under_review");
                                   updateEscrowPhase({ id: escrow.id, phase: "under_review" });
                                 } catch (err: any) {
                                   toast({ title: "Transaction failed", description: err?.message, variant: "destructive" });
@@ -472,9 +486,13 @@ export default function DashboardPage() {
                                     toast({ title: "Wallet not connected", variant: "destructive" });
                                     return;
                                   }
+                                  if (!escrow.depositorWalletAddress) {
+                                    toast({ title: "Depositor wallet address missing", variant: "destructive" });
+                                    return;
+                                  }
                                   setLoadingEscrowId(escrow.id);
                                   try {
-                                    await solanaEscrow.advancePhase(escrow.depositorId, escrow.id, "disputed");
+                                    await solanaEscrow.advancePhase(escrow.depositorWalletAddress, escrow.id, "disputed");
                                     updateEscrowPhase({ id: escrow.id, phase: "disputed" });
                                     if (solanaRep.isReady && user) {
                                       try { await solanaRep.recordDispute(user.id, escrow.id); } catch (err: any) { console.error(err); }
@@ -498,9 +516,13 @@ export default function DashboardPage() {
                                     toast({ title: "Wallet not connected", variant: "destructive" });
                                     return;
                                   }
+                                  if (!escrow.receiverWalletAddress) {
+                                    toast({ title: "Receiver wallet address missing", variant: "destructive" });
+                                    return;
+                                  }
                                   setLoadingEscrowId(escrow.id);
                                   try {
-                                    const txSig = await solanaEscrow.releaseFunds(escrow.id, escrow.receiverId);
+                                    const txSig = await solanaEscrow.releaseFunds(escrow.id, escrow.receiverWalletAddress);
                                     updateEscrowPhase({ id: escrow.id, phase: "released", txHash: txSig });
                                     toast({ title: "Funds Released", description: `Tx: ${txSig.slice(0, 12)}...` });
                                     if (solanaRep.isReady && user) {
@@ -565,9 +587,13 @@ export default function DashboardPage() {
                                         toast({ title: "Wallet not connected", variant: "destructive" });
                                         return;
                                       }
+                                      if (!escrow.depositorWalletAddress) {
+                                        toast({ title: "Depositor wallet address missing", variant: "destructive" });
+                                        return;
+                                      }
                                       setLoadingEscrowId(escrow.id);
                                       try {
-                                        const txSig = await solanaEscrow.refund(escrow.depositorId, escrow.id);
+                                        const txSig = await solanaEscrow.refund(escrow.depositorWalletAddress, escrow.id);
                                         updateEscrowPhase({ id: escrow.id, phase: "refunded", txHash: txSig });
                                         toast({ title: "Refund Processed", description: `Tx: ${txSig.slice(0, 12)}...` });
                                       } catch (err: any) {

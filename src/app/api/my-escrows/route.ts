@@ -9,6 +9,15 @@ export async function GET() {
   }
 
   const escrows = await storage.getEscrowsByUser(user.id);
+
+  // Collect all unique user IDs to look up wallet addresses
+  const userIds = Array.from(new Set(escrows.flatMap(e => [e.depositorId, e.receiverId])));
+  const walletMap = new Map<string, string | null>();
+  for (const uid of userIds) {
+    const profile = await storage.getProfile(uid);
+    walletMap.set(uid, profile?.walletAddress ?? null);
+  }
+
   const withMilestones = await Promise.all(
     escrows.map(async (e) => {
       const milestones = await storage.getMilestones(e.id);
@@ -18,6 +27,8 @@ export async function GET() {
         ...e,
         milestones,
         serviceCategory: service?.category ?? null,
+        depositorWalletAddress: walletMap.get(e.depositorId) ?? null,
+        receiverWalletAddress: walletMap.get(e.receiverId) ?? null,
       };
     })
   );

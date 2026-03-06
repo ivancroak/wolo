@@ -59,7 +59,11 @@ export async function POST(
 
   try {
     const connection = getConnection();
-    const depositorPubkey = new PublicKey(escrow.depositorId);
+    const depositorProfile = await storage.getProfile(escrow.depositorId);
+    if (!depositorProfile?.walletAddress) {
+      return NextResponse.json({ message: "Depositor has no wallet address configured" }, { status: 400 });
+    }
+    const depositorPubkey = new PublicKey(depositorProfile.walletAddress);
     const escrowPDA = WolandEscrowClient.getEscrowPDAForDepositor(depositorPubkey, escrow.id);
 
     const accountInfo = await connection.getAccountInfo(escrowPDA);

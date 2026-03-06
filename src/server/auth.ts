@@ -33,11 +33,14 @@ export async function createSession(userId: string): Promise<string> {
   const sessionToken = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000).toISOString();
 
-  await supabaseAdmin.from("sessions").insert({
+  const { error } = await supabaseAdmin.from("sessions").insert({
     id: sessionToken,
     user_id: userId,
     expires_at: expiresAt,
   });
+  if (error) {
+    throw new Error("Failed to create session");
+  }
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, sessionToken, {

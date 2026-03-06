@@ -120,21 +120,21 @@ export const insertProfileSchema = z.object({
 
 export const insertServiceSchema = z.object({
   creatorId: z.string(),
-  title: z.string(),
-  description: z.string(),
-  price: z.string().refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: "Price must be a positive number" }),
+  title: z.string().min(3, "Title must be at least 3 characters").max(120, "Title must be 120 characters or less"),
+  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description must be 2000 characters or less"),
+  price: z.string().refine((v) => !isNaN(Number(v)) && Number(v) > 0 && Number(v) <= 1000000, { message: "Price must be a positive number (max 1,000,000)" }),
   category: z.enum(["content"]),
   listingType: z.enum(["offer", "request"]).default("offer"),
   pricingCategory: z.enum(["fixed", "payroll"]),
   payrollBasis: z.enum(["weekly", "monthly"]).nullable().optional(),
   contentType: z.enum(["posts", "threads", "mixed"]).default("posts"),
-  maxActions: z.number().int().min(1).nullable().optional(),
-  deadlineDays: z.number().int().min(1).nullable().optional(),
-  requiredKeyword: z.string().nullable().optional(),
-  minPostCount: z.number().int().min(1).nullable().optional(),
-  postsPerPeriod: z.number().int().min(1).nullable().optional(),
-  threadsPerPeriod: z.number().int().min(1).nullable().optional(),
-  imageUrl: z.string().nullable().optional(),
+  maxActions: z.number().int().min(1).max(10000).nullable().optional(),
+  deadlineDays: z.number().int().min(1).max(365).nullable().optional(),
+  requiredKeyword: z.string().max(100, "Keyword must be 100 characters or less").nullable().optional(),
+  minPostCount: z.number().int().min(1).max(10000).nullable().optional(),
+  postsPerPeriod: z.number().int().min(1).max(1000).nullable().optional(),
+  threadsPerPeriod: z.number().int().min(1).max(1000).nullable().optional(),
+  imageUrl: z.string().url("Must be a valid URL").max(500).nullable().optional(),
   active: z.boolean().optional(),
   showTwitterHandle: z.boolean().optional(),
 });
@@ -176,6 +176,8 @@ export interface Escrow {
   totalPeriods: number | null;
   periodsPaid: number;
   amountPerPeriod: string | null;
+  depositorWalletAddress?: string | null;
+  receiverWalletAddress?: string | null;
 }
 
 export interface Milestone {

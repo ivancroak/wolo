@@ -18,7 +18,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
 };
 
 const pricingLabels: Record<string, string> = {
-  fixed: "Fixed Contract",
+  fixed: "Fixed Price",
   payroll: "Payroll",
 };
 

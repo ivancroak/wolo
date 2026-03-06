@@ -34,7 +34,7 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
 
   const getPricingLabel = (pricingCategory: string, payrollBasis: string | null) => {
     switch (pricingCategory) {
-      case "fixed": return "Fixed Contract";
+      case "fixed": return "Fixed Price";
       case "payroll": return payrollBasis ? `Payroll / ${payrollBasis.charAt(0).toUpperCase() + payrollBasis.slice(1)}` : "Payroll";
       default: return pricingCategory;
     }

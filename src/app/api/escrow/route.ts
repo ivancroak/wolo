@@ -70,15 +70,16 @@ export async function POST(request: NextRequest) {
     }
 
     const isPayroll = service.pricingCategory === "payroll" && !!totalPeriods;
+    const effectivePrice = order.negotiatedPrice ?? service.price;
 
     if (isPayroll) {
       if (!Number.isInteger(totalPeriods) || totalPeriods < 1 || totalPeriods > 52) {
         return NextResponse.json({ message: "totalPeriods must be 1-52" }, { status: 400 });
       }
-      const expectedTotal = (Number(service.price) * totalPeriods).toFixed(9).replace(/\.?0+$/, "");
+      const expectedTotal = (Number(effectivePrice) * totalPeriods).toFixed(9).replace(/\.?0+$/, "");
       const inputAmount = Number(input.amount).toFixed(9).replace(/\.?0+$/, "");
       if (inputAmount !== expectedTotal) {
-        return NextResponse.json({ message: `Amount must be ${expectedTotal} SOL (${service.price} × ${totalPeriods})` }, { status: 400 });
+        return NextResponse.json({ message: `Amount must be ${expectedTotal} SOL (${effectivePrice} × ${totalPeriods})` }, { status: 400 });
       }
       const basis = service.payrollBasis ?? "weekly";
       const periodDays = basis === "weekly" ? 7 : 30;
@@ -87,8 +88,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: `Payroll contract exceeds max ${MAX_ESCROW_DAYS}-day escrow duration` }, { status: 400 });
       }
     } else {
-      if (input.amount !== service.price) {
-        return NextResponse.json({ message: "Amount does not match service price" }, { status: 400 });
+      const normalizedInput = Number(input.amount).toFixed(9).replace(/\.?0+$/, "");
+      const normalizedPrice = Number(effectivePrice).toFixed(9).replace(/\.?0+$/, "");
+      if (normalizedInput !== normalizedPrice) {
+        return NextResponse.json({ message: `Amount does not match price (expected ${normalizedPrice} SOL)` }, { status: 400 });
       }
     }
 
@@ -109,18 +112,27 @@ export async function POST(request: NextRequest) {
       escrowInput.isRecurring = true;
       escrowInput.payrollBasis = basis;
       escrowInput.totalPeriods = totalPeriods;
-      escrowInput.amountPerPeriod = service.price;
+      escrowInput.amountPerPeriod = effectivePrice;
     }
 
     const escrow = await storage.createEscrow(escrowInput);
 
     if (isPayroll) {
       const basis = service.payrollBasis ?? "weekly";
-      const periods = computePayrollPeriods(totalPeriods!, basis as "weekly" | "monthly", service.price);
+      const periods = computePayrollPeriods(totalPeriods!, basis as "weekly" | "monthly", effectivePrice);
       await storage.createPayrollPeriods(escrow.id, periods);
     }
 
-    return NextResponse.json(escrow, { status: 201 });
+    // Enrich with wallet addresses for on-chain transactions
+    const depositorProfile = await storage.getProfile(escrow.depositorId);
+    const receiverProfile = await storage.getProfile(escrow.receiverId);
+    const enriched = {
+      ...escrow,
+      depositorWalletAddress: depositorProfile?.walletAddress ?? null,
+      receiverWalletAddress: receiverProfile?.walletAddress ?? null,
+    };
+
+    return NextResponse.json(enriched, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({

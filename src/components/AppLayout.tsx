@@ -4,8 +4,11 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectWallet } from "@/components/ConnectWallet";
+import { NotificationBell } from "@/components/NotificationBell";
+import { useAuth } from "@/hooks/use-auth";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -19,6 +22,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <header className="flex items-center justify-between gap-2 px-4 h-14 border-b bg-background/80 backdrop-blur-lg sticky top-0 z-50">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-2">
+              {user && <NotificationBell />}
               <ConnectWallet variant="outline" size="sm" />
               <ThemeToggle />
             </div>
