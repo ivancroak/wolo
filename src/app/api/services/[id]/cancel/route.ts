@@ -60,7 +60,7 @@ export async function POST(
       }
     }
 
-    const escrowsToRefund: { escrowId: number; depositorId: string }[] = [];
+    const escrowsToRefund: { escrowId: number; depositorWalletAddress: string }[] = [];
     let ordersAffected = 0;
 
     for (const order of activeOrders) {
@@ -72,7 +72,10 @@ export async function POST(
           if (FUNDED_PHASES.includes(escrow.phase)) {
             // Mark escrow as refunded in DB; on-chain refund handled client-side
             await storage.updateEscrowPhase(escrow.id, "refunded");
-            escrowsToRefund.push({ escrowId: escrow.id, depositorId: escrow.depositorId });
+            const depositorProfile = await storage.getProfile(escrow.depositorId);
+            if (depositorProfile?.walletAddress) {
+              escrowsToRefund.push({ escrowId: escrow.id, depositorWalletAddress: depositorProfile.walletAddress });
+            }
             escrowNeedsRefund = true;
           }
           // awaiting_deposit or already terminal phases: no refund needed

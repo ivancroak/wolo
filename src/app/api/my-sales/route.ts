@@ -9,5 +9,31 @@ export async function GET() {
   }
 
   const orders = await storage.getOrdersBySeller(user.id);
-  return NextResponse.json(orders);
+
+  // Enrich with service title, buyer twitter handle, and escrow phase
+  const serviceIds = Array.from(new Set(orders.map((o) => o.serviceId)));
+  const serviceMap = new Map<number, string>();
+  for (const sid of serviceIds) {
+    const svc = await storage.getService(sid);
+    if (svc) serviceMap.set(sid, svc.title);
+  }
+
+  const buyerIds = Array.from(new Set(orders.map((o) => o.buyerId)));
+  const handleMap = new Map<string, string | null>();
+  for (const uid of buyerIds) {
+    const profile = await storage.getProfile(uid);
+    handleMap.set(uid, profile?.twitterHandle ?? null);
+  }
+
+  const enriched = await Promise.all(orders.map(async (o) => {
+    const escrow = o.escrowId ? await storage.getEscrow(o.escrowId) : null;
+    return {
+      ...o,
+      serviceTitle: serviceMap.get(o.serviceId) ?? `Service #${o.serviceId}`,
+      buyerTwitterHandle: handleMap.get(o.buyerId) ?? null,
+      escrowPhase: escrow?.phase ?? null,
+    };
+  }));
+
+  return NextResponse.json(enriched);
 }

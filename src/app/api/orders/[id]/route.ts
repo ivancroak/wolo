@@ -29,7 +29,16 @@ export async function GET(
     return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
   }
 
-  return NextResponse.json(order);
+  // Enrich with service title and twitter handles
+  const buyerProfile = await storage.getProfile(order.buyerId);
+  const sellerProfile = service ? await storage.getProfile(service.creatorId) : null;
+
+  return NextResponse.json({
+    ...order,
+    serviceTitle: service?.title ?? `Service #${order.serviceId}`,
+    buyerTwitterHandle: buyerProfile?.twitterHandle ?? null,
+    sellerTwitterHandle: sellerProfile?.twitterHandle ?? null,
+  });
 }
 
 const VALID_ORDER_TRANSITIONS: Record<OrderStatus, { status: OrderStatus; by: "buyer" | "seller" | "both" }[]> = {

@@ -63,9 +63,13 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
       toast({ title: "Wallet not connected", variant: "destructive" });
       return;
     }
+    if (!escrow.depositorWalletAddress) {
+      toast({ title: "Depositor wallet address missing", variant: "destructive" });
+      return;
+    }
     try {
       const amountLamports = solToLamports(amount);
-      await solanaEscrow.addMilestone(escrow.depositorId, escrowId, title, amountLamports, 0);
+      await solanaEscrow.addMilestone(escrow.depositorWalletAddress!, escrowId, title, amountLamports, 0);
       addMilestone({ escrowId, title, amount, description: "" }, {
         onSuccess: () => {
           setTitle("");
@@ -84,8 +88,12 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
       toast({ title: "Wallet not connected", variant: "destructive" });
       return;
     }
+    if (!escrow.depositorWalletAddress) {
+      toast({ title: "Depositor wallet address missing", variant: "destructive" });
+      return;
+    }
     try {
-      await solanaEscrow.submitMilestone(escrow.depositorId, escrowId, idx);
+      await solanaEscrow.submitMilestone(escrow.depositorWalletAddress!, escrowId, idx);
       updateMilestone({ id: milestone.id, status: "submitted" }, {
         onSuccess: () => toast({ title: "Milestone Submitted" }),
       });
@@ -99,8 +107,12 @@ export function MilestonePanel({ escrowId, escrow, milestones, isDepositor, serv
       toast({ title: "Wallet not connected", variant: "destructive" });
       return;
     }
+    if (!escrow.depositorWalletAddress) {
+      toast({ title: "Depositor wallet address missing", variant: "destructive" });
+      return;
+    }
     try {
-      await solanaEscrow.rejectMilestone(escrow.depositorId, escrowId, idx);
+      await solanaEscrow.rejectMilestone(escrow.depositorWalletAddress!, escrowId, idx);
       updateMilestone({ id: milestone.id, status: "rejected" }, {
         onSuccess: () => toast({ title: "Milestone Rejected" }),
       });

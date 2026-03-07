@@ -237,7 +237,7 @@ export default function ServiceDetailPage() {
             </div>
 
             <div className="pt-4 border-t flex justify-end gap-3">
-              {isOwn ? (
+              {isOwn && service.active ? (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm" className="rounded-full" disabled={isCancelling}>
@@ -271,7 +271,7 @@ export default function ServiceDetailPage() {
                             if (data.escrowsToRefund?.length > 0) {
                               for (const esc of data.escrowsToRefund) {
                                 try {
-                                  await sellerCancel(esc.depositorId, esc.escrowId);
+                                  await sellerCancel(esc.depositorWalletAddress, esc.escrowId);
                                   toast({ title: "Payment Refunded", description: `On-chain refund completed for order payment #${esc.escrowId}` });
                                 } catch (txErr: any) {
                                   toast({ title: "On-chain refund failed", description: txErr.message, variant: "destructive" });
@@ -295,6 +295,8 @@ export default function ServiceDetailPage() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+              ) : isOwn && !service.active ? (
+                <Badge variant="destructive" className="text-sm px-4 py-1.5">Listing Cancelled</Badge>
               ) : (
                 <Button onClick={() => {
                   if (!user) {

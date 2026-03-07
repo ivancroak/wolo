@@ -8,8 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, MessageSquare, ArrowLeft, ExternalLink } from "lucide-react";
+import { Loader2, Package, TrendingUp, CheckCircle, XCircle, LayoutList, Shield, Star, Award, MessageSquare, ArrowLeft, ExternalLink, FileText, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications, useMarkRead } from "@/hooks/use-notifications";
@@ -20,6 +19,13 @@ import { ConnectWallet } from "@/components/ConnectWallet";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatPanel } from "@/components/ChatPanel";
 import { type Order, type Service } from "@shared/schema";
+
+type EnrichedOrder = Order & {
+  serviceTitle?: string;
+  sellerTwitterHandle?: string | null;
+  buyerTwitterHandle?: string | null;
+  escrowPhase?: string | null;
+};
 
 export default function DashboardPage() {
   const { user, isLoading: authLoading, isLoggingIn } = useAuth();
@@ -33,6 +39,11 @@ export default function DashboardPage() {
   const { data: notifications } = useNotifications();
   const { mutate: markRead } = useMarkRead();
   const [openChat, setOpenChat] = useState<number | null>(null);
+
+  // Filter out cancelled orders and inactive listings
+  const activeOrders = useMemo(() => (orders as EnrichedOrder[] | null)?.filter((o) => o.status !== "cancelled") ?? [], [orders]);
+  const activeSales = useMemo(() => (sales as EnrichedOrder[] | null)?.filter((o) => o.status !== "cancelled") ?? [], [sales]);
+  const activeListings = useMemo(() => myServices?.filter((s: Service) => s.active) ?? [], [myServices]);
 
   const unreadByOrderId = useMemo(() => {
     const map = new Map<number, number[]>();
@@ -97,62 +108,111 @@ export default function DashboardPage() {
     );
   }
 
-  const OrderCard = ({ order, isSeller }: { order: Order; isSeller?: boolean }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Card data-testid={`card-order-${order.id}`}>
-        <CardHeader className="pb-2 flex-row items-start justify-between gap-2 flex-wrap">
-          <div>
-            <CardTitle className="text-base">Order #{order.id}</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              {order.createdAt ? format(new Date(order.createdAt), "PPP") : ""}
-            </p>
-          </div>
-          <StatusBadge status={order.status} />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {order.requirements && (
-            <div className="bg-muted p-3 rounded-md text-sm">
-              <p className="font-medium mb-1 text-muted-foreground text-xs uppercase tracking-wider">Requirements</p>
-              <p className="text-foreground">{order.requirements}</p>
-            </div>
-          )}
-          <div className="flex justify-between items-center gap-2 flex-wrap text-sm text-muted-foreground">
-            <Link href={`/orders/${order.id}`} className="font-mono text-xs hover:underline">
-              Order #{order.id} &middot; Service #{order.serviceId}
-            </Link>
-            {isSeller && order.status === "pending" && (
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full text-xs"
-                  onClick={() => handleStatusUpdate(order.id, "cancelled")}
-                  data-testid={`button-cancel-${order.id}`}
-                >
-                  <XCircle className="mr-1 h-3 w-3" />
-                  Decline
-                </Button>
-                <Button
-                  size="sm"
-                  className="rounded-full text-xs"
-                  onClick={() => handleStatusUpdate(order.id, "completed")}
-                  data-testid={`button-complete-${order.id}`}
-                >
-                  <CheckCircle className="mr-1 h-3 w-3" />
-                  Complete
-                </Button>
+  const OrderCard = ({ order, isSeller }: { order: EnrichedOrder; isSeller?: boolean }) => {
+    const orderActive = order.status !== "completed" && order.status !== "cancelled";
+    const escrowNotFunded = !order.escrowPhase || order.escrowPhase === "awaiting_deposit";
+    const canBuyerCancel = !isSeller && orderActive && escrowNotFunded;
+    const canBuyerPay = !isSeller && orderActive && order.escrowPhase === "awaiting_deposit";
+    const canPropose = orderActive;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Link href={`/orders/${order.id}`} className="block">
+          <Card className="hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`card-order-${order.id}`}>
+            <CardHeader className="pb-2 flex-row items-start justify-between gap-2 flex-wrap">
+              <div>
+                <CardTitle className="text-base">{order.serviceTitle ?? `Order #${order.id}`}</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {order.createdAt ? format(new Date(order.createdAt), "PPP") : ""}
+                </p>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
+              <StatusBadge status={order.status} />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {order.requirements && (
+                <div className="bg-muted p-3 rounded-md text-sm">
+                  <p className="font-medium mb-1 text-muted-foreground text-xs uppercase tracking-wider">Requirements</p>
+                  <p className="text-foreground">{order.requirements}</p>
+                </div>
+              )}
+              <div className="flex justify-between items-center gap-2 flex-wrap text-sm text-muted-foreground">
+                <span className="font-mono text-xs">
+                  Order #{order.id} &middot; Service #{order.serviceId}
+                </span>
+                <div className="flex gap-2 flex-wrap" onClick={(e) => e.preventDefault()}>
+                  {/* Seller buttons */}
+                  {isSeller && order.status === "pending" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full text-xs"
+                        onClick={(e) => { e.preventDefault(); handleStatusUpdate(order.id, "cancelled"); }}
+                        data-testid={`button-cancel-${order.id}`}
+                      >
+                        <XCircle className="mr-1 h-3 w-3" />
+                        Decline
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="rounded-full text-xs"
+                        onClick={(e) => { e.preventDefault(); handleStatusUpdate(order.id, "completed"); }}
+                        data-testid={`button-complete-${order.id}`}
+                      >
+                        <CheckCircle className="mr-1 h-3 w-3" />
+                        Complete
+                      </Button>
+                    </>
+                  )}
+                  {/* Buyer buttons */}
+                  {canBuyerCancel && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full text-xs"
+                      onClick={(e) => { e.preventDefault(); handleStatusUpdate(order.id, "cancelled"); }}
+                      data-testid={`button-buyer-cancel-${order.id}`}
+                    >
+                      <XCircle className="mr-1 h-3 w-3" />
+                      Cancel Order
+                    </Button>
+                  )}
+                  {canPropose && (
+                    <Link href={`/orders/${order.id}?propose=1`} onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full text-xs"
+                      >
+                        <FileText className="mr-1 h-3 w-3" />
+                        Propose Changes
+                      </Button>
+                    </Link>
+                  )}
+                  {canBuyerPay && (
+                    <Link href={`/orders/${order.id}`} onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        className="rounded-full text-xs"
+                      >
+                        <Wallet className="mr-1 h-3 w-3" />
+                        Pay for Order
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="px-6 py-6">
@@ -222,18 +282,18 @@ export default function DashboardPage() {
 
         <TabsContent value="orders">
           <div className="space-y-8">
-            {/* My Listings */}
+            {/* My Listings (active only) */}
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
                 <LayoutList className="h-4 w-4" /> My Listings
               </h3>
               {servicesLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="animate-spin h-5 w-5 text-muted-foreground" /></div>
-              ) : !myServices?.length ? (
-                <p className="text-sm text-muted-foreground py-4">No listings yet. Head to the marketplace to list a service or post a request.</p>
+              ) : !activeListings.length ? (
+                <p className="text-sm text-muted-foreground py-4">No active listings. Head to the marketplace to list a service or post a request.</p>
               ) : (
                 <div className="grid gap-3">
-                  {myServices.map((service: Service) => (
+                  {activeListings.map((service: Service) => (
                     <Link key={service.id} href={`/services/${service.id}`} className="block">
                       <Card className="hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`card-listing-${service.id}`}>
                         <CardContent className="py-3 flex items-center justify-between gap-3">
@@ -245,8 +305,8 @@ export default function DashboardPage() {
                             </p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className={`h-2 w-2 rounded-full ${service.active ? "bg-green-500" : "bg-red-400"}`} />
-                            <Badge variant="secondary" className="text-[10px]">{service.active ? "Active" : "Inactive"}</Badge>
+                            <span className="h-2 w-2 rounded-full bg-green-500" />
+                            <Badge variant="secondary" className="text-[10px]">Active</Badge>
                           </div>
                         </CardContent>
                       </Card>
@@ -256,19 +316,19 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Buying Orders */}
+            {/* Buying Orders (non-cancelled) */}
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Package className="h-4 w-4" /> Buying
               </h3>
               {ordersLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="animate-spin h-5 w-5 text-muted-foreground" /></div>
-              ) : !orders?.length ? (
+              ) : !activeOrders.length ? (
                 <p className="text-sm text-muted-foreground py-4">No purchases yet. Browse the marketplace to find services.</p>
               ) : (
                 <div className="grid gap-3">
                   <AnimatePresence>
-                    {orders.map((order: Order) => (
+                    {activeOrders.map((order) => (
                       <OrderCard key={order.id} order={order} />
                     ))}
                   </AnimatePresence>
@@ -276,19 +336,19 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Selling Orders */}
+            {/* Selling Orders (non-cancelled) */}
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" /> Selling
               </h3>
               {salesLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="animate-spin h-5 w-5 text-muted-foreground" /></div>
-              ) : !sales?.length ? (
+              ) : !activeSales.length ? (
                 <p className="text-sm text-muted-foreground py-4">No sales yet. List a service to start earning SOL.</p>
               ) : (
                 <div className="grid gap-3">
                   <AnimatePresence>
-                    {sales.map((order: Order) => (
+                    {activeSales.map((order) => (
                       <OrderCard key={order.id} order={order} isSeller />
                     ))}
                   </AnimatePresence>
