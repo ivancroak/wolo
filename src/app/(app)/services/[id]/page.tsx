@@ -8,10 +8,24 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, ArrowLeft, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight, Image } from "lucide-react";
+import { Loader2, ArrowLeft, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight, Image, Trash2, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useSolanaEscrow } from "@/hooks/use-solana-escrow";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   content: <Image className="h-4 w-4" />,
@@ -34,7 +48,10 @@ export default function ServiceDetailPage() {
   const id = Number(params.id);
   const { data: service, isLoading } = useService(id);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const { toast } = useToast();
+  const { sellerCancel } = useSolanaEscrow();
+  const queryClient = useQueryClient();
 
   if (isLoading) {
     return (
@@ -219,9 +236,65 @@ export default function ServiceDetailPage() {
               )}
             </div>
 
-            <div className="pt-4 border-t flex justify-end">
+            <div className="pt-4 border-t flex justify-end gap-3">
               {isOwn ? (
-                <Badge variant="outline" className="text-muted-foreground">This is your listing</Badge>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="rounded-full" disabled={isCancelling}>
+                      {isCancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                      Cancel Listing
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        Cancel this listing?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will deactivate the listing and cancel all active orders.
+                        {service.listingType === "offer"
+                          ? " Any locked payments will be refunded to the buyers (no platform fee)."
+                          : " This is only possible if no payments have been locked yet."}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep Listing</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={async () => {
+                          setIsCancelling(true);
+                          try {
+                            const res = await apiRequest("POST", `/api/services/${id}/cancel`);
+                            const data = await res.json();
+                            // Process on-chain refunds for funded escrows
+                            if (data.escrowsToRefund?.length > 0) {
+                              for (const esc of data.escrowsToRefund) {
+                                try {
+                                  await sellerCancel(esc.depositorId, esc.escrowId);
+                                  toast({ title: "Payment Refunded", description: `On-chain refund completed for order payment #${esc.escrowId}` });
+                                } catch (txErr: any) {
+                                  toast({ title: "On-chain refund failed", description: txErr.message, variant: "destructive" });
+                                }
+                              }
+                            }
+                            toast({ title: "Listing Cancelled", description: `${data.ordersAffected} order(s) cancelled.` });
+                            queryClient.invalidateQueries({ queryKey: [`/api/services/${id}`] });
+                            queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+                            router.push("/dashboard");
+                          } catch (err: any) {
+                            const msg = await err?.response?.json?.().catch(() => null);
+                            toast({ title: "Cancel failed", description: msg?.message || err.message, variant: "destructive" });
+                          } finally {
+                            setIsCancelling(false);
+                          }
+                        }}
+                      >
+                        Cancel Listing
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               ) : (
                 <Button onClick={() => {
                   if (!user) {

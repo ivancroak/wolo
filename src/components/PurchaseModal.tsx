@@ -68,14 +68,12 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRequest = service?.listingType === "request";
   const isPayroll = service?.pricingCategory === "payroll";
-  const defaultPeriods = isPayroll ? 4 : undefined;
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       requirements: "",
       requiredKeyword: isRequest ? (service?.requiredKeyword ?? "") : "",
-      totalPeriods: isPayroll ? defaultPeriods : undefined,
+      totalPeriods: isPayroll ? 4 : undefined,
     },
   });
 
@@ -165,18 +163,18 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
           const txSig = await initializeAndFund(receiverWallet, escrowRes.id, amountLamports, expiresInDays);
           await updateEscrowPhase({ id: escrowRes.id, phase: "funded", txHash: txSig });
           toast({
-            title: "Escrow Funded On-Chain",
+            title: "Payment Locked On-Chain",
             description: `Transaction: ${txSig.slice(0, 8)}...`,
           });
           onOpenChange(false);
           form.reset();
-          toast({ title: "Order Placed", description: "Check your dashboard for escrow status." });
+          toast({ title: "Order Placed", description: "Check your dashboard for payment status." });
           router.push("/dashboard");
         } catch (txErr: any) {
           onOpenChange(false);
           form.reset();
           toast({
-            title: "Order created but escrow not funded",
+            title: "Order created but payment not funded",
             description: txErr?.message || "On-chain transaction failed. Go to your dashboard to retry funding.",
             variant: "destructive",
           });
@@ -262,7 +260,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
                 name="totalPeriods"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of {service.payrollBasis === "monthly" ? "Months" : "Weeks"}</FormLabel>
+                    <FormLabel>Contract Duration ({service.payrollBasis === "monthly" ? "months" : "weeks"})</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -276,7 +274,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
-                      Total: <span className="font-mono font-medium">{totalPrice} SOL</span> locked in escrow, released {service.payrollBasis === "monthly" ? "monthly" : "weekly"} after each period.
+                      Total: <span className="font-mono font-medium">{totalPrice} SOL</span> locked on-chain, released {service.payrollBasis === "monthly" ? "monthly" : "weekly"} after each period.
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -291,7 +289,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
                   <div>
                     <p className="font-medium text-foreground">Recurring Payroll</p>
                     <p className="text-muted-foreground text-xs mt-0.5">
-                      {service.price} SOL released each {service.payrollBasis === "monthly" ? "month" : "week"} after a 48-hour dispute window.
+                      {service.price} SOL released each {service.payrollBasis === "monthly" ? "month" : "week"} after a 7-day dispute window.
                     </p>
                   </div>
                 </div>
@@ -313,9 +311,9 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               <div className="flex items-start gap-3 p-3 rounded-md bg-muted text-sm">
                 <Shield className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                 <div>
-                  <p className="font-medium text-foreground">Escrow Protected</p>
+                  <p className="font-medium text-foreground">Payment Protected</p>
                   <p className="text-muted-foreground text-xs mt-0.5">
-                    Payment is locked in on-chain escrow and released only after the service is verified complete.
+                    Payment is locked on-chain and released only after the service is verified complete.
                   </p>
                 </div>
               </div>
@@ -331,9 +329,9 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               <div className="flex items-start gap-3 p-3 rounded-md bg-muted text-sm">
                 <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                 <div>
-                  <p className="font-medium text-foreground">12-Hour Settlement</p>
+                  <p className="font-medium text-foreground">7-Day Settlement</p>
                   <p className="text-muted-foreground text-xs mt-0.5">
-                    Escrow settles within 12 hours with automatic dispute resolution.
+                    Payment settles within 7 days with automatic dispute resolution.
                   </p>
                 </div>
               </div>
@@ -343,7 +341,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} data-testid="button-cancel-purchase">Cancel</Button>
               <Button type="submit" disabled={isSubmitting || orderPending} data-testid="button-confirm-purchase">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isRequest ? "Submit & Lock Escrow" : "Accept Offer & Lock Escrow"}
+                {isRequest ? "Submit & Lock Payment" : "Accept Offer & Lock Payment"}
               </Button>
             </div>
           </form>

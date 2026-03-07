@@ -746,6 +746,67 @@
       ]
     },
     {
+      "name": "seller_cancel",
+      "docs": [
+        "Receiver (seller) cancels the escrow and returns ALL remaining funds",
+        "to the depositor (buyer) with NO platform fee deducted."
+      ],
+      "discriminator": [
+        32,
+        135,
+        125,
+        225,
+        9,
+        49,
+        24,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "docs": [
+            "Signer must be the receiver (seller) of the escrow"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "escrow.depositor",
+                "account": "EscrowAccount"
+              },
+              {
+                "kind": "account",
+                "path": "escrow.id",
+                "account": "EscrowAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "depositor",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "submit_milestone",
       "discriminator": [
         35,

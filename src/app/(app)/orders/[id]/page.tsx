@@ -244,7 +244,7 @@ export default function OrderDetailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Shield className="h-4 w-4" /> Escrow Details
+                    <Shield className="h-4 w-4" /> Payment Details
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -254,11 +254,11 @@ export default function OrderDetailPage() {
                       <p className="text-lg font-bold font-mono">{escrow.amount} <span className="text-xs text-muted-foreground">SOL</span></p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Depositor</span>
+                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Buyer</span>
                       <p className="font-mono text-xs">{escrow.depositorId?.slice(0, 16)}...</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Receiver</span>
+                      <span className="text-muted-foreground text-xs uppercase tracking-wider">Seller</span>
                       <p className="font-mono text-xs">{escrow.receiverId?.slice(0, 16)}...</p>
                     </div>
                   </div>
@@ -277,7 +277,7 @@ export default function OrderDetailPage() {
                   {order.negotiatedPrice && order.negotiatedPrice !== escrow.amount && (
                     <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-500/10 rounded-md px-3 py-2">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                      Escrow amount ({escrow.amount} SOL) doesn&apos;t match deal price ({order.negotiatedPrice} SOL). Depositor needs to adjust funds.
+                      Locked amount ({escrow.amount} SOL) doesn&apos;t match deal price ({order.negotiatedPrice} SOL). Buyer needs to adjust funds.
                     </div>
                   )}
 
@@ -342,7 +342,7 @@ export default function OrderDetailPage() {
                     )}
                     {escrow.phase === "disputed" && (() => {
                       const disputeOpenedAt = escrow.disputeOpenedAt;
-                      const canRefund = disputeOpenedAt && Date.now() / 1000 > new Date(disputeOpenedAt).getTime() / 1000 + 12 * 3600;
+                      const canRefund = disputeOpenedAt && Date.now() / 1000 > new Date(disputeOpenedAt).getTime() / 1000 + 7 * 86400;
                       return (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-sm text-destructive">
@@ -351,7 +351,7 @@ export default function OrderDetailPage() {
                           <p className="text-xs text-muted-foreground">
                             {canRefund
                               ? "Dispute window expired. You may claim a refund."
-                              : "Seller has 12 hours to submit evidence. After that, you may claim a refund."}
+                              : "Seller has 7 days to submit evidence. After that, you may claim a refund."}
                           </p>
                           {isDepositor && (
                             <Button size="sm" variant="outline" className="rounded-full"
@@ -397,7 +397,7 @@ export default function OrderDetailPage() {
             ) : null}
           </div>
 
-          {/* Right column: Deal Terms + Chat */}
+          {/* Right column: Deal Terms + Propose Changes */}
           <div className="space-y-6">
             {service && order && (
               <DealTermsCard order={order} service={service} />
@@ -413,17 +413,21 @@ export default function OrderDetailPage() {
                 Propose Changes
               </Button>
             )}
-            {escrow && counterpartyId && (
-              <ChatPanel
-                orderId={orderId}
-                recipientId={counterpartyId}
-                service={service}
-                order={order}
-                escrowPhase={escrow.phase}
-              />
-            )}
           </div>
         </div>
+
+        {/* Full-width Chat section */}
+        {escrow && counterpartyId && (
+          <div className="mt-6">
+            <ChatPanel
+              orderId={orderId}
+              recipientId={counterpartyId}
+              service={service}
+              order={order}
+              escrowPhase={escrow.phase}
+            />
+          </div>
+        )}
       </motion.div>
 
       {escrow && counterpartyId && (

@@ -134,7 +134,10 @@ export const insertServiceSchema = z.object({
   minPostCount: z.number().int().min(1).max(10000).nullable().optional(),
   postsPerPeriod: z.number().int().min(1).max(1000).nullable().optional(),
   threadsPerPeriod: z.number().int().min(1).max(1000).nullable().optional(),
-  imageUrl: z.string().url("Must be a valid URL").max(500).nullable().optional(),
+  imageUrl: z.string().refine(
+    (val) => !val || /^https?:\/\/(x\.com|twitter\.com)\//.test(val),
+    { message: "Only X (x.com / twitter.com) links are allowed" }
+  ).nullable().optional(),
   active: z.boolean().optional(),
   showTwitterHandle: z.boolean().optional(),
 });
@@ -316,7 +319,9 @@ export type NotificationType =
   | "proposal_accepted"
   | "proposal_rejected"
   | "payroll_period_paid"
-  | "payroll_period_disputed";
+  | "payroll_period_disputed"
+  | "order_cancelled"
+  | "service_cancelled";
 
 export interface Notification {
   id: number;

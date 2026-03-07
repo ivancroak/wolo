@@ -241,6 +241,24 @@ export class WolandEscrowClient {
     });
   }
 
+  async buildSellerCancelIx(
+    depositorPubkey: PublicKey,
+    escrowId: number,
+  ): Promise<TransactionInstruction> {
+    const [escrowPDA] = findEscrowPDA(depositorPubkey, escrowId);
+    const disc = await getDiscriminator("seller_cancel");
+
+    return new TransactionInstruction({
+      keys: [
+        { pubkey: this.walletPubkey, isSigner: true, isWritable: false },
+        { pubkey: escrowPDA, isSigner: false, isWritable: true },
+        { pubkey: depositorPubkey, isSigner: false, isWritable: false },
+      ],
+      programId: getProgramId(),
+      data: disc,
+    });
+  }
+
   async buildArbiterResolveIx(
     depositorPubkey: PublicKey,
     escrowId: number,

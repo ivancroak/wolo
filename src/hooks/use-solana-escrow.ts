@@ -72,7 +72,12 @@ export function useSolanaEscrow() {
       );
     }
 
-    const receiver = new PublicKey(receiverAddress);
+    let receiver: PublicKey;
+    try {
+      receiver = new PublicKey(receiverAddress);
+    } catch {
+      throw new Error(`Invalid receiver address: "${receiverAddress}" is not a valid Solana public key.`);
+    }
     const expiresAt = Math.floor(Date.now() / 1000) + expiresInDays * 86400;
 
     const ix = await client.buildInitializeEscrowIx(
@@ -95,7 +100,12 @@ export function useSolanaEscrow() {
     const phaseNum = PHASE_MAP[phase];
     if (phaseNum === undefined) throw new Error("Invalid phase");
 
-    const depositor = new PublicKey(depositorAddress);
+    let depositor: PublicKey;
+    try {
+      depositor = new PublicKey(depositorAddress);
+    } catch {
+      throw new Error(`Invalid depositor address: "${depositorAddress}" is not a valid Solana public key.`);
+    }
     const ix = await client.buildAdvancePhaseIx(depositor, escrowId, phaseNum);
     const tx = await client.buildTransaction([ix]);
 
@@ -111,7 +121,12 @@ export function useSolanaEscrow() {
     if (!client || !publicKey) throw new Error("Wallet not connected");
     if (!feeVault) throw new Error("Fee vault not configured. Set NEXT_PUBLIC_FEE_VAULT in .env");
 
-    const receiver = new PublicKey(receiverAddress);
+    let receiver: PublicKey;
+    try {
+      receiver = new PublicKey(receiverAddress);
+    } catch {
+      throw new Error(`Invalid receiver address: "${receiverAddress}" is not a valid Solana public key.`);
+    }
     const ix = await client.buildReleaseFundsIx(escrowId, receiver, feeVault);
     const tx = await client.buildTransaction([ix]);
 
@@ -221,6 +236,26 @@ export function useSolanaEscrow() {
     return sig;
   }, [client, publicKey, connection, sendTransaction, feeVault]);
 
+  const sellerCancel = useCallback(async (
+    depositorAddress: string,
+    escrowId: number,
+  ) => {
+    if (!client || !publicKey) throw new Error("Wallet not connected");
+
+    let depositor: PublicKey;
+    try {
+      depositor = new PublicKey(depositorAddress);
+    } catch {
+      throw new Error(`Invalid depositor address: "${depositorAddress}" is not a valid Solana public key.`);
+    }
+    const ix = await client.buildSellerCancelIx(depositor, escrowId);
+    const tx = await client.buildTransaction([ix]);
+
+    const sig = await sendTransaction(tx, connection);
+    await connection.confirmTransaction(sig, "confirmed");
+    return sig;
+  }, [client, publicKey, connection, sendTransaction]);
+
   const closeEscrow = useCallback(async (escrowId: number) => {
     if (!client || !publicKey) throw new Error("Wallet not connected");
 
@@ -247,6 +282,7 @@ export function useSolanaEscrow() {
     rejectMilestone,
     refund,
     arbiterResolve,
+    sellerCancel,
     closeEscrow,
     getEscrowPDA: (escrowId: number) => client?.getEscrowPDA(escrowId)?.toBase58(),
   };

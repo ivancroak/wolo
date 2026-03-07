@@ -121,7 +121,7 @@ export function ProposeChangesModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Deadline (days)</Label>
+              <Label>{service.pricingCategory === "payroll" ? "Deadline (periods)" : "Deadline (days)"}</Label>
               <Input
                 type="number"
                 value={deadlineDays}

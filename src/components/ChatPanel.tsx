@@ -144,7 +144,7 @@ export function ChatPanel({ orderId, recipientId, service, order, escrowPhase }:
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Lock className="h-3.5 w-3.5" /> Encrypted Messages
+              <Lock className="h-3.5 w-3.5" /> Messages
             </CardTitle>
             <Button
               size="icon"
@@ -158,7 +158,7 @@ export function ChatPanel({ orderId, recipientId, service, order, escrowPhase }:
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div ref={scrollRef} className={`${expanded ? "h-[500px]" : "h-64"} overflow-y-auto space-y-2 border rounded-md p-3 transition-[height] duration-200`}>
+          <div ref={scrollRef} className={`${expanded ? "h-[600px]" : "h-[400px]"} overflow-y-auto space-y-2 border rounded-md p-3 transition-[height] duration-200`}>
             {msgsLoading ? (
               <p className="text-xs text-muted-foreground text-center py-4">Loading...</p>
             ) : timeline.length === 0 ? (

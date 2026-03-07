@@ -541,6 +541,53 @@ pub mod woland_escrow {
 
         Ok(())
     }
+
+    /// Receiver (seller) cancels the escrow and returns ALL remaining funds
+    /// to the depositor (buyer) with NO platform fee deducted.
+    pub fn seller_cancel(ctx: Context<SellerCancel>) -> Result<()> {
+        let escrow = &ctx.accounts.escrow;
+
+        require!(
+            matches!(
+                escrow.phase,
+                EscrowPhase::Funded
+                    | EscrowPhase::InProgress
+                    | EscrowPhase::MilestoneCheck
+                    | EscrowPhase::UnderReview
+            ),
+            WolandError::InvalidPhase
+        );
+
+        let remaining = escrow
+            .amount
+            .checked_sub(escrow.released)
+            .ok_or(WolandError::InsufficientFunds)?;
+        require!(remaining > 0, WolandError::NothingToRelease);
+
+        let total_amount = escrow.amount;
+        let escrow_id = escrow.id;
+        let depositor_key = escrow.depositor;
+
+        // Transfer ALL remaining to depositor — zero fee on seller-initiated cancel
+        **ctx.accounts.escrow.to_account_info().try_borrow_mut_lamports()? -= remaining;
+        **ctx
+            .accounts
+            .depositor
+            .to_account_info()
+            .try_borrow_mut_lamports()? += remaining;
+
+        let escrow_mut = &mut ctx.accounts.escrow;
+        escrow_mut.released = total_amount;
+        escrow_mut.phase = EscrowPhase::Refunded;
+
+        emit!(EscrowRefunded {
+            escrow_id,
+            depositor: depositor_key,
+            amount: remaining,
+        });
+
+        Ok(())
+    }
 }
 
 fn calculate_fee(amount: u64, fee_bps: u16) -> Result<u64> {
@@ -808,6 +855,28 @@ pub struct CloseEscrow<'info> {
         constraint = depositor.key() == escrow.depositor @ WolandError::Unauthorized,
     )]
     pub escrow: Account<'info, EscrowAccount>,
+}
+
+#[derive(Accounts)]
+pub struct SellerCancel<'info> {
+    /// Signer must be the receiver (seller) of the escrow
+    #[account(
+        mut,
+        constraint = authority.key() == escrow.receiver @ WolandError::Unauthorized,
+    )]
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"escrow", escrow.depositor.as_ref(), &escrow.id.to_le_bytes()],
+        bump = escrow.bump,
+    )]
+    pub escrow: Account<'info, EscrowAccount>,
+    /// CHECK: depositor — validated against escrow.depositor
+    #[account(
+        mut,
+        constraint = depositor.key() == escrow.depositor @ WolandError::Unauthorized,
+    )]
+    pub depositor: UncheckedAccount<'info>,
 }
 
 // --- State ---

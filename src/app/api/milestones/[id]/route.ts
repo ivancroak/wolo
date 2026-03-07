@@ -62,7 +62,7 @@ export async function PATCH(
     };
     const info = statusNotifications[input.status];
     if (info) {
-      await notify(targetId, info.type, "Milestone Update", info.body, "/dashboard");
+      await notify(targetId, info.type, "Milestone Update", info.body, `/orders/${escrow.orderId}`);
     }
 
     return NextResponse.json(updated);

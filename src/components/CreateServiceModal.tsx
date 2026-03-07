@@ -511,7 +511,21 @@ function OfferServiceModal({ externalOpen, onExternalOpenChange }: ModalControlP
                 <FormItem>
                   <FormLabel>Reference URL (Optional — your X content only)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://x.com/yourhandle/status/..." {...field} value={field.value || ""} data-testid="input-image-url" />
+                    <Input
+                      placeholder="https://x.com/yourhandle/status/..."
+                      {...field}
+                      value={field.value || ""}
+                      data-testid="input-image-url"
+                      onChange={(e) => {
+                        field.onChange(e);
+                        const v = e.target.value.trim();
+                        if (v && !/^https?:\/\/(x\.com|twitter\.com)\//.test(v)) {
+                          form.setError("imageUrl", { message: "Only links to your own X posts, threads, or profile are allowed." });
+                        } else {
+                          form.clearErrors("imageUrl");
+                        }
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -876,7 +890,21 @@ function RequestServiceModal({ externalOpen, onExternalOpenChange }: ModalContro
                 <FormItem>
                   <FormLabel>Reference URL (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://x.com/post/..." {...field} value={field.value || ""} data-testid="input-image-url" />
+                    <Input
+                      placeholder="https://x.com/yourhandle/status/..."
+                      {...field}
+                      value={field.value || ""}
+                      data-testid="input-image-url"
+                      onChange={(e) => {
+                        field.onChange(e);
+                        const v = e.target.value.trim();
+                        if (v && !/^https?:\/\/(x\.com|twitter\.com)\//.test(v)) {
+                          form.setError("imageUrl", { message: "Only X (twitter.com / x.com) links are allowed." });
+                        } else {
+                          form.clearErrors("imageUrl");
+                        }
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

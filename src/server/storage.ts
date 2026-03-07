@@ -46,6 +46,7 @@ export interface IStorage {
   getOrder(id: number): Promise<Order | undefined>;
   getOrdersByBuyer(userId: string): Promise<Order[]>;
   getOrdersBySeller(userId: string): Promise<Order[]>;
+  getOrdersByServiceId(serviceId: number): Promise<Order[]>;
   updateOrder(id: number, updates: UpdateOrderRequest): Promise<Order>;
   getWatchlist(userId: string): Promise<any[]>;
   addToWatchlist(userId: string, watchedUserId: string): Promise<Watchlist>;
@@ -627,6 +628,16 @@ class SupabaseStorage implements IStorage {
       .from("orders")
       .select("*")
       .in("service_id", serviceIds)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(toOrder);
+  }
+
+  async getOrdersByServiceId(serviceId: number): Promise<Order[]> {
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .select("*")
+      .eq("service_id", serviceId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []).map(toOrder);

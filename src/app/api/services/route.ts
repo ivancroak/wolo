@@ -41,6 +41,23 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const input = api.services.create.input.parse(body);
+
+    // Validate reference URL belongs to seller's own X handle
+    if (input.imageUrl && sellerProfile.twitterHandle) {
+      const urlLower = input.imageUrl.toLowerCase();
+      const handleLower = sellerProfile.twitterHandle.toLowerCase();
+      const urlMatch = urlLower.match(/^https?:\/\/(x\.com|twitter\.com)\/([^/?#]+)/);
+      if (urlMatch) {
+        const urlHandle = urlMatch[2].replace(/^@/, "");
+        if (urlHandle !== handleLower) {
+          return NextResponse.json(
+            { message: "Reference URL must link to your own X content. The handle in the URL doesn't match your verified X handle." },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
     const service = await storage.createService({
       ...input,
       creatorId: user.id,

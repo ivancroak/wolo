@@ -91,7 +91,7 @@ export async function PATCH(
     };
     const info = phaseNotifications[input.phase];
     if (info) {
-      await notify(targetId, info.type, "Escrow Update", info.body, "/dashboard");
+      await notify(targetId, info.type, "Escrow Update", info.body, `/orders/${escrow.orderId}`);
     }
 
     return NextResponse.json(updated);
