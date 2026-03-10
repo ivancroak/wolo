@@ -119,51 +119,55 @@ export function ProposeChangesModal({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>{service.pricingCategory === "payroll" ? "Deadline (periods)" : "Deadline (days)"}</Label>
-              <Input
-                type="number"
-                value={deadlineDays}
-                onChange={(e) => setDeadlineDays(e.target.value)}
-                placeholder="—"
-                min={1}
-              />
+          {service.pricingCategory === "fixed" ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Deadline (days)</Label>
+                <Input
+                  type="number"
+                  value={deadlineDays}
+                  onChange={(e) => setDeadlineDays(e.target.value)}
+                  placeholder="—"
+                  min={1}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Min Posts (total)</Label>
+                <Input
+                  type="number"
+                  value={minPosts}
+                  onChange={(e) => setMinPosts(e.target.value)}
+                  placeholder="—"
+                  min={1}
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Min Posts</Label>
-              <Input
-                type="number"
-                value={minPosts}
-                onChange={(e) => setMinPosts(e.target.value)}
-                placeholder="—"
-                min={1}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Posts / Period</Label>
-              <Input
-                type="number"
-                value={postsPer}
-                onChange={(e) => setPostsPer(e.target.value)}
-                placeholder="—"
-                min={1}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Threads / Period</Label>
-              <Input
-                type="number"
-                value={threadsPer}
-                onChange={(e) => setThreadsPer(e.target.value)}
-                placeholder="—"
-                min={1}
-              />
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Posts / Period</Label>
+                  <Input
+                    type="number"
+                    value={postsPer}
+                    onChange={(e) => setPostsPer(e.target.value)}
+                    placeholder="—"
+                    min={1}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Threads / Period</Label>
+                  <Input
+                    type="number"
+                    value={threadsPer}
+                    onChange={(e) => setThreadsPer(e.target.value)}
+                    placeholder="—"
+                    min={1}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="space-y-1.5">
             <Label>Content Type</Label>

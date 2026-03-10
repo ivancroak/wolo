@@ -14,7 +14,7 @@ const PHASE_MAP: Record<number, EscrowPhase> = {
 };
 
 export function getSolanaConnection(): Connection {
-  const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+  const rpcUrl = (process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "").trim();
   if (!rpcUrl) throw new Error("NEXT_PUBLIC_SOLANA_RPC_URL not set");
   return new Connection(rpcUrl, "confirmed");
 }
@@ -35,7 +35,7 @@ export async function readOnChainEscrowPhase(
   if (!accountInfo) return null;
 
   const ESCROW_PROGRAM_ID =
-    process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9";
+    (process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9").trim();
   if (accountInfo.owner.toBase58() !== ESCROW_PROGRAM_ID) return null;
 
   // SOL-only layout: disc(8) + id(8) + depositor(32) + receiver(32) + amount(8) + released(8) + phase(1)

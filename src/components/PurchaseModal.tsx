@@ -125,7 +125,17 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
         requiredKeyword: isRequest ? (service.requiredKeyword ?? undefined) : (values.requiredKeyword?.trim() || undefined),
       });
 
-      const receiverId = isRequest ? user.id : service.creatorId;
+      // For request listings, only submit the application — no escrow yet.
+      // The requester reviews applicants and creates the escrow upon acceptance.
+      if (isRequest) {
+        onOpenChange(false);
+        form.reset();
+        toast({ title: "Application Submitted", description: "The requester will review your application." });
+        router.push("/dashboard");
+        return;
+      }
+
+      const receiverId = service.creatorId;
 
       const escrowAmount = isPayroll && values.totalPeriods
         ? (Number(service.price) * values.totalPeriods).toFixed(9).replace(/\.?0+$/, "")
@@ -341,7 +351,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} data-testid="button-cancel-purchase">Cancel</Button>
               <Button type="submit" disabled={isSubmitting || orderPending} data-testid="button-confirm-purchase">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isRequest ? "Submit & Lock Payment" : "Accept Offer & Lock Payment"}
+                {isRequest ? "Submit Application" : "Accept Offer & Lock Payment"}
               </Button>
             </div>
           </form>

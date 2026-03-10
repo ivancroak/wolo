@@ -28,7 +28,7 @@ export async function notify(
   }
 
   if (emailTo && emailEnabled) {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://woloapp.xyz";
     const link = linkUrl ? `${baseUrl}${linkUrl}` : baseUrl;
     await sendEmail(
       emailTo,

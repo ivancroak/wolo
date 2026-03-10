@@ -343,6 +343,10 @@ export default function OrderDetailPage() {
       toast({ title: "Receiver wallet address missing", description: "The seller must set their wallet in Profile first.", variant: "destructive" });
       return;
     }
+    if (escrow.receiverWalletAddress === solanaEscrow.walletAddress) {
+      toast({ title: "Cannot fund escrow", description: "Receiver and depositor cannot be the same wallet. Please cancel this order and create a new one.", variant: "destructive" });
+      return;
+    }
     setFundingInProgress(true);
     try {
       const amountLamports = solToLamports(escrow.amount);
@@ -383,7 +387,7 @@ export default function OrderDetailPage() {
             </p>
           </div>
           <Badge className={`capitalize ${escrow ? phaseColors[escrow.phase] ?? "" : ""}`}>
-            {escrow?.phase?.replace(/_/g, " ") ?? order.status}
+            {escrow?.phase?.replace(/_/g, " ") ?? (order.status === "pending_approval" ? "Awaiting Review" : order.status)}
           </Badge>
         </div>
 
@@ -399,7 +403,7 @@ export default function OrderDetailPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground text-xs uppercase tracking-wider">Status</span>
-                    <p className="font-medium capitalize">{order.status}</p>
+                    <p className="font-medium capitalize">{order.status === "pending_approval" ? "Awaiting Review" : order.status.replace(/_/g, " ")}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground text-xs uppercase tracking-wider">Buyer</span>
@@ -423,8 +427,48 @@ export default function OrderDetailPage() {
                   </div>
                 )}
 
-                {/* Buyer actions: propose changes + cancel + pay */}
-                {isBuyer && !orderClosed && (
+                {/* Pending approval banner */}
+                {order.status === "pending_approval" && isBuyer && (
+                  <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-500/10 rounded-md px-3 py-2">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    Your application is awaiting review by the requester.
+                  </div>
+                )}
+
+                {/* Seller: Accept/Decline for pending_approval orders */}
+                {order.status === "pending_approval" && isSeller && (
+                  <div className="flex gap-2 flex-wrap pt-2 border-t">
+                    <Button
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => {
+                        updateOrder({ id: orderId, status: "pending" }, {
+                          onSuccess: () => {
+                            toast({ title: "Application Accepted", description: "Escrow created. Fund it below to start the contract." });
+                          },
+                          onError: (err: any) => {
+                            toast({ title: "Error", description: err?.message || "Failed to accept application.", variant: "destructive" });
+                          },
+                        });
+                      }}
+                    >
+                      <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+                      Accept Applicant
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={handleCancelOrder}
+                    >
+                      <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                      Decline
+                    </Button>
+                  </div>
+                )}
+
+                {/* Buyer actions: propose changes + cancel + pay (not for pending_approval) */}
+                {isBuyer && !orderClosed && order.status !== "pending_approval" && (
                   <div className="flex gap-2 flex-wrap pt-2 border-t">
                     {!hasPendingProposal && (
                       <Button
@@ -470,8 +514,23 @@ export default function OrderDetailPage() {
                   </div>
                 )}
 
-                {/* Seller actions: propose changes */}
-                {isSeller && !orderClosed && !hasPendingProposal && (
+                {/* Buyer: withdraw application for pending_approval */}
+                {isBuyer && order.status === "pending_approval" && (
+                  <div className="flex gap-2 flex-wrap pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={handleCancelOrder}
+                    >
+                      <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                      Withdraw Application
+                    </Button>
+                  </div>
+                )}
+
+                {/* Seller actions: propose changes (not for pending_approval) */}
+                {isSeller && !orderClosed && order.status !== "pending_approval" && !hasPendingProposal && (
                   <div className="flex gap-2 flex-wrap pt-2 border-t">
                     <Button
                       variant="outline"

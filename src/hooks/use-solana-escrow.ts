@@ -16,7 +16,7 @@ const PHASE_MAP: Record<string, number> = {
   disputed: 7,
 };
 
-const FEE_VAULT = process.env.NEXT_PUBLIC_FEE_VAULT || "";
+const FEE_VAULT = (process.env.NEXT_PUBLIC_FEE_VAULT || "").trim();
 
 export function useSolanaEscrow() {
   const { connection } = useConnection();
@@ -31,6 +31,16 @@ export function useSolanaEscrow() {
     if (!FEE_VAULT) return null;
     try { return new PublicKey(FEE_VAULT); } catch { return null; }
   }, []);
+
+  /** Send a transaction and confirm it with blockhash-based strategy */
+  const sendAndConfirm = useCallback(async (
+    built: Awaited<ReturnType<WolandEscrowClient["buildTransaction"]>>,
+  ) => {
+    const { tx, blockhash, lastValidBlockHeight } = built;
+    const sig = await sendTransaction(tx, connection);
+    await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+    return sig;
+  }, [connection, sendTransaction]);
 
   const initializeAndFund = useCallback(async (
     receiverAddress: string,
@@ -52,8 +62,7 @@ export function useSolanaEscrow() {
 
     // Pre-flight: verify escrow PDA doesn't already exist (from a prior attempt)
     const escrowPDA = client.getEscrowPDA(escrowId);
-    const escrowPDAKey = new PublicKey(escrowPDA!);
-    const escrowInfo = await connection.getAccountInfo(escrowPDAKey);
+    const escrowInfo = await connection.getAccountInfo(escrowPDA);
     if (escrowInfo) {
       throw new Error(
         "Escrow account already exists on-chain. " +
@@ -83,12 +92,9 @@ export function useSolanaEscrow() {
     const ix = await client.buildInitializeEscrowIx(
       receiver, escrowId, amountLamports, expiresAt
     );
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, connection, sendAndConfirm]);
 
   const advancePhase = useCallback(async (
     depositorAddress: string,
@@ -107,12 +113,9 @@ export function useSolanaEscrow() {
       throw new Error(`Invalid depositor address: "${depositorAddress}" is not a valid Solana public key.`);
     }
     const ix = await client.buildAdvancePhaseIx(depositor, escrowId, phaseNum);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm]);
 
   const releaseFunds = useCallback(async (
     escrowId: number,
@@ -128,12 +131,9 @@ export function useSolanaEscrow() {
       throw new Error(`Invalid receiver address: "${receiverAddress}" is not a valid Solana public key.`);
     }
     const ix = await client.buildReleaseFundsIx(escrowId, receiver, feeVault);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction, feeVault]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm, feeVault]);
 
   const releaseMilestone = useCallback(async (
     escrowId: number,
@@ -145,12 +145,9 @@ export function useSolanaEscrow() {
 
     const receiver = new PublicKey(receiverAddress);
     const ix = await client.buildReleaseMilestoneIx(escrowId, receiver, feeVault, milestoneIdx);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction, feeVault]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm, feeVault]);
 
   const addMilestone = useCallback(async (
     depositorAddress: string,
@@ -163,12 +160,9 @@ export function useSolanaEscrow() {
 
     const depositor = new PublicKey(depositorAddress);
     const ix = await client.buildAddMilestoneIx(depositor, escrowId, title, amount, deadlineOffsetSeconds);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm]);
 
   const submitMilestone = useCallback(async (
     depositorAddress: string,
@@ -179,12 +173,9 @@ export function useSolanaEscrow() {
 
     const depositor = new PublicKey(depositorAddress);
     const ix = await client.buildSubmitMilestoneIx(depositor, escrowId, milestoneIdx);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm]);
 
   const rejectMilestone = useCallback(async (
     depositorAddress: string,
@@ -195,12 +186,9 @@ export function useSolanaEscrow() {
 
     const depositor = new PublicKey(depositorAddress);
     const ix = await client.buildRejectMilestoneIx(depositor, escrowId, milestoneIdx);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm]);
 
   const refund = useCallback(async (
     depositorAddress: string,
@@ -210,12 +198,9 @@ export function useSolanaEscrow() {
 
     const depositor = new PublicKey(depositorAddress);
     const ix = await client.buildRefundIx(depositor, escrowId);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm]);
 
   const arbiterResolve = useCallback(async (
     depositorAddress: string,
@@ -229,12 +214,9 @@ export function useSolanaEscrow() {
     const depositor = new PublicKey(depositorAddress);
     const receiver = new PublicKey(receiverAddress);
     const ix = await client.buildArbiterResolveIx(depositor, escrowId, receiver, feeVault, depositorShareBps);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction, feeVault]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm, feeVault]);
 
   const sellerCancel = useCallback(async (
     depositorAddress: string,
@@ -249,23 +231,17 @@ export function useSolanaEscrow() {
       throw new Error(`Invalid depositor address: "${depositorAddress}" is not a valid Solana public key.`);
     }
     const ix = await client.buildSellerCancelIx(depositor, escrowId);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm]);
 
   const closeEscrow = useCallback(async (escrowId: number) => {
     if (!client || !publicKey) throw new Error("Wallet not connected");
 
     const ix = await client.buildCloseEscrowIx(escrowId);
-    const tx = await client.buildTransaction([ix]);
-
-    const sig = await sendTransaction(tx, connection);
-    await connection.confirmTransaction(sig, "confirmed");
-    return sig;
-  }, [client, publicKey, connection, sendTransaction]);
+    const built = await client.buildTransaction([ix]);
+    return sendAndConfirm(built);
+  }, [client, publicKey, sendAndConfirm]);
 
   const hasFeeVault = !!feeVault;
 

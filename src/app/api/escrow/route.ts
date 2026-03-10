@@ -64,9 +64,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Cannot create escrow for your own service" }, { status: 400 });
     }
 
+    // For "offer" listings: buyer pays (depositor), service creator receives payment
+    // For "request" listings: service creator pays (depositor), buyer (acceptor) receives payment
     const expectedReceiver = service.listingType === "request" ? order.buyerId : service.creatorId;
     if (input.receiverId !== expectedReceiver) {
-      return NextResponse.json({ message: "Receiver does not match service creator" }, { status: 400 });
+      return NextResponse.json({ message: "Receiver does not match expected party" }, { status: 400 });
     }
 
     const isPayroll = service.pricingCategory === "payroll" && !!totalPeriods;
@@ -100,9 +102,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Escrow already exists for this order" }, { status: 400 });
     }
 
+    const depositorId = service.listingType === "request" ? service.creatorId : user.id;
     const escrowInput: any = {
       ...input,
-      depositorId: user.id,
+      depositorId,
     };
 
     if (isPayroll) {
@@ -124,12 +127,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Enrich with wallet addresses for on-chain transactions
+    // User ID is the wallet address (set at login), profile.walletAddress is optional override
     const depositorProfile = await storage.getProfile(escrow.depositorId);
     const receiverProfile = await storage.getProfile(escrow.receiverId);
     const enriched = {
       ...escrow,
-      depositorWalletAddress: depositorProfile?.walletAddress ?? null,
-      receiverWalletAddress: receiverProfile?.walletAddress ?? null,
+      depositorWalletAddress: depositorProfile?.walletAddress || escrow.depositorId,
+      receiverWalletAddress: receiverProfile?.walletAddress || escrow.receiverId,
     };
 
     return NextResponse.json(enriched, { status: 201 });

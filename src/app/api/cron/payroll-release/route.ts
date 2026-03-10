@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
           amountLamports,
         );
 
-        const tx = await client.buildTransaction([ix]);
+        const { tx } = await client.buildTransaction([ix]);
         tx.sign(deployWallet);
 
         const sig = await connection.sendRawTransaction(tx.serialize());

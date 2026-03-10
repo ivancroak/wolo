@@ -71,20 +71,26 @@ export default function DashboardPage() {
     if (ids?.length) markRead(ids);
   }, [openChat, unreadByOrderId, markRead]);
 
-  const handleStatusUpdate = (orderId: number, status: "completed" | "cancelled") => {
+  const handleStatusUpdate = (orderId: number, status: "pending" | "completed" | "cancelled") => {
     updateOrder({ id: orderId, status }, {
       onSuccess: () => {
-        toast({ title: "Order Updated", description: `Order marked as ${status}.` });
+        const messages: Record<string, string> = {
+          pending: "Application accepted. Escrow created — fund it from the order page.",
+          completed: "Order marked as completed.",
+          cancelled: "Order cancelled.",
+        };
+        toast({ title: "Order Updated", description: messages[status] ?? `Order updated to ${status}.` });
       },
-      onError: () => {
-        toast({ title: "Error", description: "Failed to update order.", variant: "destructive" });
+      onError: (err: any) => {
+        toast({ title: "Error", description: err?.message || "Failed to update order.", variant: "destructive" });
       }
     });
   };
 
   const StatusBadge = ({ status }: { status: string }) => {
     const variant = status === "completed" ? "default" : status === "cancelled" ? "destructive" : "secondary";
-    return <Badge variant={variant === "default" ? "default" : variant === "destructive" ? "destructive" : "secondary"} className="text-xs capitalize" data-testid={`badge-status-${status}`}>{status}</Badge>;
+    const label = status === "pending_approval" ? "Awaiting Review" : status;
+    return <Badge variant={variant === "default" ? "default" : variant === "destructive" ? "destructive" : "secondary"} className="text-xs capitalize" data-testid={`badge-status-${status}`}>{label.replace(/_/g, " ")}</Badge>;
   };
 
   if (authLoading || isLoggingIn) {
@@ -110,10 +116,11 @@ export default function DashboardPage() {
 
   const OrderCard = ({ order, isSeller }: { order: EnrichedOrder; isSeller?: boolean }) => {
     const orderActive = order.status !== "completed" && order.status !== "cancelled";
+    const isPendingApproval = order.status === "pending_approval";
     const escrowNotFunded = !order.escrowPhase || order.escrowPhase === "awaiting_deposit";
     const canBuyerCancel = !isSeller && orderActive && escrowNotFunded;
-    const canBuyerPay = !isSeller && orderActive && order.escrowPhase === "awaiting_deposit";
-    const canPropose = orderActive;
+    const canBuyerPay = !isSeller && orderActive && !isPendingApproval && order.escrowPhase === "awaiting_deposit";
+    const canPropose = orderActive && !isPendingApproval;
 
     return (
       <motion.div
@@ -145,7 +152,31 @@ export default function DashboardPage() {
                   Order #{order.id} &middot; Service #{order.serviceId}
                 </span>
                 <div className="flex gap-2 flex-wrap" onClick={(e) => e.preventDefault()}>
-                  {/* Seller buttons */}
+                  {/* Seller: Accept/Decline applicant for pending_approval (request listings) */}
+                  {isSeller && isPendingApproval && (
+                    <>
+                      <Button
+                        size="sm"
+                        className="rounded-full text-xs"
+                        onClick={(e) => { e.preventDefault(); handleStatusUpdate(order.id, "pending" as any); }}
+                        data-testid={`button-accept-${order.id}`}
+                      >
+                        <CheckCircle className="mr-1 h-3 w-3" />
+                        Accept
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full text-xs"
+                        onClick={(e) => { e.preventDefault(); handleStatusUpdate(order.id, "cancelled"); }}
+                        data-testid={`button-decline-${order.id}`}
+                      >
+                        <XCircle className="mr-1 h-3 w-3" />
+                        Decline
+                      </Button>
+                    </>
+                  )}
+                  {/* Seller buttons for active orders */}
                   {isSeller && order.status === "pending" && (
                     <>
                       <Button

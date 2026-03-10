@@ -6,7 +6,7 @@ export type ListingType = "offer" | "request";
 export type PricingCategory = "fixed" | "payroll";
 export type PayrollBasis = "weekly" | "monthly";
 export type ContentType = "posts" | "threads" | "mixed";
-export type OrderStatus = "pending" | "completed" | "disputed" | "cancelled";
+export type OrderStatus = "pending_approval" | "pending" | "completed" | "disputed" | "cancelled";
 
 export type EscrowPhase =
   | "awaiting_deposit"
@@ -145,7 +145,7 @@ export const insertServiceSchema = z.object({
 export const insertOrderSchema = z.object({
   serviceId: z.number(),
   buyerId: z.string(),
-  status: z.enum(["pending", "completed", "disputed", "cancelled"]).optional(),
+  status: z.enum(["pending_approval", "pending", "completed", "disputed", "cancelled"]).optional(),
   txHash: z.string().nullable().optional(),
   requirements: z.string().nullable().optional(),
   requiredKeyword: z.string().nullable().optional(),
@@ -288,7 +288,7 @@ export interface DealProposal {
 
 export const insertDealProposalSchema = z.object({
   orderId: z.number(),
-  proposedPrice: z.string().refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: "Price must be a positive number" }).nullable().optional(),
+  proposedPrice: z.string().refine((v) => !isNaN(Number(v)) && Number(v) >= 0, { message: "Price must be a valid number" }).nullable().optional(),
   proposedDeadlineDays: z.number().int().min(1).nullable().optional(),
   proposedMinPostCount: z.number().int().min(1).nullable().optional(),
   proposedPostsPerPeriod: z.number().int().min(1).nullable().optional(),

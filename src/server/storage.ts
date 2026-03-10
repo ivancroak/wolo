@@ -72,6 +72,7 @@ export interface IStorage {
   getNotifications(userId: string): Promise<any[]>;
   markNotificationsRead(userId: string, ids?: number[]): Promise<void>;
   hasActiveOrder(serviceId: number, buyerId: string): Promise<boolean>;
+  cancelPendingApprovalOrders(serviceId: number, exceptOrderId: number): Promise<void>;
   createProposal(proposal: InsertDealProposal & { proposerId: string }): Promise<DealProposal>;
   getProposals(orderId: number): Promise<DealProposal[]>;
   getPendingProposal(orderId: number): Promise<DealProposal | undefined>;
@@ -84,6 +85,8 @@ export interface IStorage {
   getReleasablePayrollPeriods(): Promise<PayrollPeriod[]>;
   getActivatablePayrollPeriods(): Promise<PayrollPeriod[]>;
   updateEscrowPeriodsPaid(escrowId: number, count: number): Promise<void>;
+  getExpiredEscrows(): Promise<Escrow[]>;
+  fixEscrowParties(escrowId: number, depositorId: string, receiverId: string): Promise<void>;
 }
 
 function toUser(row: any): User {
@@ -1044,10 +1047,19 @@ class SupabaseStorage implements IStorage {
       .select("id")
       .eq("service_id", serviceId)
       .eq("buyer_id", buyerId)
-      .in("status", ["pending", "completed"])
+      .in("status", ["pending_approval", "pending", "completed"])
       .limit(1)
       .maybeSingle();
     return !!data;
+  }
+
+  async cancelPendingApprovalOrders(serviceId: number, exceptOrderId: number): Promise<void> {
+    await supabaseAdmin
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("service_id", serviceId)
+      .eq("status", "pending_approval")
+      .neq("id", exceptOrderId);
   }
 
   // --- Deal Proposals ---
@@ -1215,6 +1227,25 @@ class SupabaseStorage implements IStorage {
     const { error } = await supabaseAdmin
       .from("escrows")
       .update({ periods_paid: count, updated_at: new Date().toISOString() })
+      .eq("id", escrowId);
+    if (error) throw new Error(error.message);
+  }
+
+  async getExpiredEscrows(): Promise<Escrow[]> {
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("escrows")
+      .select("*")
+      .in("phase", ["funded", "in_progress", "under_review", "milestone_check"])
+      .lt("expires_at", now);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(toEscrow);
+  }
+
+  async fixEscrowParties(escrowId: number, depositorId: string, receiverId: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from("escrows")
+      .update({ depositor_id: depositorId, receiver_id: receiverId, updated_at: new Date().toISOString() })
       .eq("id", escrowId);
     if (error) throw new Error(error.message);
   }

@@ -61,17 +61,23 @@ export async function POST(request: NextRequest) {
       requiredKeyword = service.requiredKeyword ?? null;
     }
 
+    // For request listings, orders start as pending_approval so the requester can choose
+    const initialStatus = service.listingType === "request" ? "pending_approval" : undefined;
+
     const order = await storage.createOrder({
       ...input,
       buyerId: user.id,
       requiredKeyword,
+      ...(initialStatus ? { status: initialStatus } : {}),
     });
 
     await notify(
       service.creatorId,
       "order_created",
-      "New Order",
-      `You have a new order for "${service.title}"`,
+      service.listingType === "request" ? "New Application" : "New Order",
+      service.listingType === "request"
+        ? `Someone applied to fulfill "${service.title}"`
+        : `You have a new order for "${service.title}"`,
       `/orders/${order.id}`,
     );
 

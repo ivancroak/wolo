@@ -370,13 +370,13 @@ export class WolandEscrowClient {
     });
   }
 
-  async buildTransaction(instructions: TransactionInstruction[]): Promise<Transaction> {
+  async buildTransaction(instructions: TransactionInstruction[]): Promise<{ tx: Transaction; blockhash: string; lastValidBlockHeight: number }> {
     const tx = new Transaction();
     instructions.forEach(ix => tx.add(ix));
-    const { blockhash } = await this.connection.getLatestBlockhash();
+    const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash("confirmed");
     tx.recentBlockhash = blockhash;
     tx.feePayer = this.walletPubkey;
-    return tx;
+    return { tx, blockhash, lastValidBlockHeight };
   }
 
   getConfigPDA(): PublicKey {

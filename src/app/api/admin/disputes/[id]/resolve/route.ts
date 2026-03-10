@@ -84,7 +84,7 @@ export async function POST(
       depositorShareBps,
     );
 
-    const tx = await client.buildTransaction([ix]);
+    const { tx } = await client.buildTransaction([ix]);
     tx.sign(deployWallet);
 
     const sig = await connection.sendRawTransaction(tx.serialize());

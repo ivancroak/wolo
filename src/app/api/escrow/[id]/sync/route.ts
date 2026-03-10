@@ -29,7 +29,7 @@ const SYNC_ALLOWED_TRANSITIONS: Record<string, EscrowPhase[]> = {
 };
 
 function getConnection(): Connection {
-  const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+  const rpcUrl = (process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "").trim();
   if (!rpcUrl) throw new Error("NEXT_PUBLIC_SOLANA_RPC_URL not set");
   return new Connection(rpcUrl, "confirmed");
 }
@@ -60,10 +60,8 @@ export async function POST(
   try {
     const connection = getConnection();
     const depositorProfile = await storage.getProfile(escrow.depositorId);
-    if (!depositorProfile?.walletAddress) {
-      return NextResponse.json({ message: "Depositor has no wallet address configured" }, { status: 400 });
-    }
-    const depositorPubkey = new PublicKey(depositorProfile.walletAddress);
+    const depositorWallet = depositorProfile?.walletAddress || escrow.depositorId;
+    const depositorPubkey = new PublicKey(depositorWallet);
     const escrowPDA = WolandEscrowClient.getEscrowPDAForDepositor(depositorPubkey, escrow.id);
 
     const accountInfo = await connection.getAccountInfo(escrowPDA);
@@ -71,7 +69,7 @@ export async function POST(
       return NextResponse.json({ message: "On-chain escrow account not found" }, { status: 404 });
     }
 
-    const ESCROW_PROGRAM_ID = process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9";
+    const ESCROW_PROGRAM_ID = (process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID || "9yJBgVvpGvvQRWbPNzDAgv9snP8bvoXXS7A8U28nzNd9").trim();
     if (accountInfo.owner.toBase58() !== ESCROW_PROGRAM_ID) {
       return NextResponse.json({ message: "Account not owned by escrow program" }, { status: 400 });
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getSessionUser } from "@/server/auth";
-import { verifyContract } from "@/server/verification";
+import { verifyContract, verifyMilestoneParams, parseMilestoneParams } from "@/server/verification";
 import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
 
 export async function GET(
@@ -37,11 +37,6 @@ export async function GET(
     return NextResponse.json({ message: "Order not found" }, { status: 404 });
   }
 
-  const service = await storage.getService(order.serviceId);
-  if (!service) {
-    return NextResponse.json({ message: "Service not found" }, { status: 404 });
-  }
-
   const sellerProfile = await storage.getProfile(escrow.receiverId);
   if (!sellerProfile?.twitterHandle) {
     return NextResponse.json({
@@ -54,6 +49,23 @@ export async function GET(
       { message: "Seller's X handle has not been verified. Cannot run oracle." },
       { status: 400 },
     );
+  }
+
+  // Try structured milestone params first (new format)
+  const milestoneParams = parseMilestoneParams(milestone.description);
+  if (milestoneParams) {
+    const result = await verifyMilestoneParams(
+      milestoneParams,
+      sellerProfile.twitterHandle,
+      order.createdAt,
+    );
+    return NextResponse.json(result);
+  }
+
+  // Fallback: legacy verification using service-level config
+  const service = await storage.getService(order.serviceId);
+  if (!service) {
+    return NextResponse.json({ message: "Service not found" }, { status: 404 });
   }
 
   const effectiveKeyword = order.negotiatedRequiredKeyword ?? order.requiredKeyword;

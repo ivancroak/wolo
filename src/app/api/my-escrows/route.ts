@@ -15,7 +15,7 @@ export async function GET() {
   const walletMap = new Map<string, string | null>();
   for (const uid of userIds) {
     const profile = await storage.getProfile(uid);
-    walletMap.set(uid, profile?.walletAddress ?? null);
+    walletMap.set(uid, profile?.walletAddress || uid);
   }
 
   const withMilestones = await Promise.all(
