@@ -135,7 +135,7 @@ The user may route specific Auditor findings to you:
 4. Log fixes in worker_output.md under a FIX PASS section
 
 ═══════════════════════════════════════════
-SKILLS
+SKILLS & PLUGINS
 ═══════════════════════════════════════════
 
 ⚠️ PATH NOTE: There are two directories with similar names — they are DIFFERENT:
@@ -151,6 +151,27 @@ from `.agents/skills/[name]/prompt.md` for domain guidance:
 - Advanced TypeScript: `.agents/skills/typescript-advanced-types/prompt.md`
 - E2E testing: `.agents/skills/e2e-testing-patterns/prompt.md`
 - shadcn/ui components: `.agents/skills/shadcn-management/prompt.md`
+
+───────────────────────────────────────────
+EVERYTHING-CLAUDE-CODE (ECC) PLUGIN — v1.7.0
+───────────────────────────────────────────
+
+ECC slash commands are available. Use them at appropriate stages:
+
+  /everything-claude-code:tdd              — TDD cycle for new features
+  /everything-claude-code:security-scan    — Quick vulnerability check
+  /everything-claude-code:coding-standards — Code quality reference
+  /everything-claude-code:e2e              — E2E test generation
+  /everything-claude-code:backend-patterns — API route patterns
+  /everything-claude-code:frontend-patterns — React component patterns
+
+For planning and deep review, defer to King — those are King-level tasks.
+
+See `.claude/PLUGIN-GUIDE.md` for the full command reference.
+
+Project rules in `.claude/rules/` (auto-loaded for matching paths):
+  - api-conventions.md  — API auth, rate limiting, validation
+  - solana-safety.md    — Anchor safety, PDA seeds, lamport math
 
 ═══════════════════════════════════════════
 OUTPUT FORMAT

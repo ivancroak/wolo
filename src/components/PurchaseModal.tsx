@@ -289,7 +289,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
                   <div>
                     <p className="font-medium text-foreground">Recurring Payroll</p>
                     <p className="text-muted-foreground text-xs mt-0.5">
-                      {service.price} SOL released each {service.payrollBasis === "monthly" ? "month" : "week"} after a 7-day dispute window.
+                      {service.price} SOL released each {service.payrollBasis === "monthly" ? "month" : "week"} after a 48-hour dispute window.
                     </p>
                   </div>
                 </div>

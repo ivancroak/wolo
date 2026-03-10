@@ -147,7 +147,7 @@ You are aware of these agents working in parallel:
   to check carefully.
 
 ═══════════════════════════════════════════
-SKILLS
+SKILLS & PLUGINS
 ═══════════════════════════════════════════
 
 ⚠️ PATH NOTE: There are two directories with similar names — they are DIFFERENT:
@@ -163,6 +163,73 @@ from `.agents/skills/[name]/prompt.md` for domain guidance:
 - Advanced TypeScript: `.agents/skills/typescript-advanced-types/prompt.md`
 - E2E testing: `.agents/skills/e2e-testing-patterns/prompt.md`
 - shadcn/ui components: `.agents/skills/shadcn-management/prompt.md`
+
+───────────────────────────────────────────
+EVERYTHING-CLAUDE-CODE (ECC) PLUGIN — v1.7.0
+───────────────────────────────────────────
+
+The project has the ECC plugin installed. It provides slash commands
+you can invoke via the `/everything-claude-code:<command>` syntax.
+See `.claude/PLUGIN-GUIDE.md` for quick reference.
+
+USE THESE SLASH COMMANDS at the appropriate stage of your workflow:
+
+PLANNING (before coding):
+  /everything-claude-code:plan         — Structured implementation plan
+  /everything-claude-code:search-first — Research before implementing
+
+IMPLEMENTATION:
+  /everything-claude-code:tdd          — Test-driven development cycle
+  /everything-claude-code:coding-standards — Ensure code quality
+
+REVIEW (after coding, before commit):
+  /everything-claude-code:security-review   — Deep security review (use for auth/escrow/financial)
+  /everything-claude-code:security-scan     — Quick automated vulnerability scan
+  /everything-claude-code:verification-loop — Check implementation matches plan
+
+TESTING:
+  /everything-claude-code:e2e          — Generate & run Playwright E2E tests
+  /everything-claude-code:e2e-testing  — E2E testing patterns reference
+
+DOMAIN-SPECIFIC (read as reference when relevant):
+  /everything-claude-code:backend-patterns    — API route patterns
+  /everything-claude-code:frontend-patterns   — React component patterns
+  /everything-claude-code:database-migrations — Schema change patterns
+  /everything-claude-code:postgres-patterns   — Complex SQL queries
+  /everything-claude-code:deployment-patterns — Deploy/infra patterns
+
+MAINTENANCE:
+  /everything-claude-code:strategic-compact — Smart context compaction timing
+  /everything-claude-code:continuous-learning — Extract patterns before session ends
+
+MULTI-AGENT ORCHESTRATION (for complex tasks):
+  /everything-claude-code:evolve     — Self-improvement cycle
+  /everything-claude-code:promote    — Promote patterns to project rules
+
+HOW TO INTEGRATE ECC INTO THE KING PROCESS:
+  Step 1 (UNDERSTAND): Use /search-first if the domain is unfamiliar
+  Step 3 (PLAN): Use /plan for MAJOR tasks
+  Step 4 (IMPLEMENT): Use /tdd for new features, /coding-standards as reference
+  Step 5 (VERIFY): Use /verification-loop + /security-review for sensitive code
+  Step 6 (LOG): Use /continuous-learning at end of long sessions
+
+ECC skills are at: ~/.claude/plugins/cache/everything-claude-code/everything-claude-code/1.7.0/skills/
+ECC commands are at: ~/.claude/plugins/cache/everything-claude-code/everything-claude-code/1.7.0/commands/
+
+Additional ECC commands available but less relevant to Wolo:
+  /build-fix, /code-review, /refactor-clean, /update-docs, /verify,
+  /checkpoint, /claw, /projects, /skill-create, /learn, /learn-eval
+
+───────────────────────────────────────────
+PROJECT-SPECIFIC CLAUDE CODE RULES
+───────────────────────────────────────────
+
+The project has custom rules in `.claude/rules/`:
+  - api-conventions.md  — API auth, rate limiting, validation, imports
+  - solana-safety.md    — Anchor checked arithmetic, PDA seeds, account ordering
+
+These are auto-loaded by Claude Code for matching file paths. You do not
+need to read them manually, but be aware they exist and enforce patterns.
 
 ═══════════════════════════════════════════
 OUTPUT FORMAT

@@ -20,11 +20,13 @@ interface RatingModalProps {
   escrowId?: number;
   targetId: string;
   depositorId?: string;
+  targetWalletAddress?: string;
+  depositorWalletAddress?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function RatingModal({ orderId, escrowId, targetId, depositorId, open, onOpenChange }: RatingModalProps) {
+export function RatingModal({ orderId, escrowId, targetId, depositorId, targetWalletAddress, depositorWalletAddress, open, onOpenChange }: RatingModalProps) {
   const { mutate: rateOrder, isPending } = useRateOrder();
   const solanaRep = useSolanaReputation();
   const { toast } = useToast();
@@ -35,9 +37,9 @@ export function RatingModal({ orderId, escrowId, targetId, depositorId, open, on
   const handleSubmit = async () => {
     if (score === 0) return;
 
-    if (solanaRep.isReady && escrowId) {
+    if (solanaRep.isReady && escrowId && targetWalletAddress && depositorWalletAddress) {
       try {
-        await solanaRep.submitRating(targetId, escrowId, score, comment || "", depositorId || targetId);
+        await solanaRep.submitRating(targetWalletAddress, escrowId, score, comment || "", depositorWalletAddress);
       } catch (err: any) {
         console.warn("On-chain rating failed:", err?.message);
         toast({

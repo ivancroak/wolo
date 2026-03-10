@@ -34,6 +34,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+function solToLamports(sol: string): number {
+  const parts = sol.split(".");
+  const whole = parts[0] || "0";
+  const frac = (parts[1] || "").padEnd(9, "0").slice(0, 9);
+  return Number(BigInt(whole) * BigInt(1_000_000_000) + BigInt(frac));
+}
+
 const phaseColors: Record<string, string> = {
   awaiting_deposit: "bg-yellow-500/10 text-yellow-600",
   funded: "bg-blue-500/10 text-blue-600",
@@ -268,9 +275,9 @@ export default function OrderDetailPage() {
       const txSig = await solanaEscrow.releaseFunds(escrow.id, escrow.receiverWalletAddress);
       updateEscrowPhase({ id: escrow.id, phase: "released", txHash: txSig });
       toast({ title: "Funds Released", description: `Tx: ${txSig.slice(0, 16)}...` });
-      if (solanaRep.isReady && user) {
-        const amountLamports = Math.round(parseFloat(escrow.amount) * 1_000_000_000);
-        try { await solanaRep.recordCompletion(user.id, escrow.id, amountLamports, isDepositor ?? true); } catch {}
+      if (solanaRep.isReady && solanaEscrow.walletAddress) {
+        const amountLamports = solToLamports(escrow.amount);
+        try { await solanaRep.recordCompletion(solanaEscrow.walletAddress, escrow.id, amountLamports, isDepositor ?? true); } catch (e: any) { console.warn("On-chain completion recording failed:", e?.message); }
       }
     } catch (err: any) {
       toast({ title: "Release Failed", description: err?.message, variant: "destructive" });
@@ -290,8 +297,8 @@ export default function OrderDetailPage() {
     try {
       await solanaEscrow.advancePhase(escrow.depositorWalletAddress, escrow.id, "disputed");
       updateEscrowPhase({ id: escrow.id, phase: "disputed" });
-      if (solanaRep.isReady && user) {
-        try { await solanaRep.recordDispute(user.id, escrow.id); } catch {}
+      if (solanaRep.isReady && solanaEscrow.walletAddress) {
+        try { await solanaRep.recordDispute(solanaEscrow.walletAddress, escrow.id); } catch (e: any) { console.warn("On-chain dispute recording failed:", e?.message); }
       }
     } catch (err: any) {
       toast({ title: "Transaction failed", description: err?.message, variant: "destructive" });
@@ -322,11 +329,7 @@ export default function OrderDetailPage() {
     }
     setFundingInProgress(true);
     try {
-      // Convert SOL string to lamports
-      const parts = escrow.amount.split(".");
-      const whole = parts[0] || "0";
-      const frac = (parts[1] || "").padEnd(9, "0").slice(0, 9);
-      const amountLamports = Number(BigInt(whole) * BigInt(1_000_000_000) + BigInt(frac));
+      const amountLamports = solToLamports(escrow.amount);
 
       const expiresInDays = escrow.expiresAt
         ? Math.max(1, Math.ceil((new Date(escrow.expiresAt).getTime() - Date.now()) / 86400000))
@@ -669,6 +672,8 @@ export default function OrderDetailPage() {
           escrowId={escrow.id}
           targetId={counterpartyId}
           depositorId={escrow.depositorId}
+          targetWalletAddress={isDepositor ? escrow.receiverWalletAddress : escrow.depositorWalletAddress}
+          depositorWalletAddress={escrow.depositorWalletAddress}
           open={ratingOpen}
           onOpenChange={setRatingOpen}
         />

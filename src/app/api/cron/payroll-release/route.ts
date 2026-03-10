@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { storage } from "@/server/storage";
 import { WolandEscrowClient } from "@/lib/solana/escrow-client";
+import { WolandReputationClient } from "@/lib/solana/reputation-client";
 import { getDeployWalletKeypair } from "@/lib/solana/deploy-wallet";
 import { notify } from "@/server/notifications";
 
@@ -94,6 +95,39 @@ export async function POST(request: NextRequest) {
         await connection.confirmTransaction(sig, "confirmed");
 
         await storage.updatePayrollPeriodStatus(period.id, "paid", { payoutTxHash: sig });
+
+        // Record on-chain reputation for the receiver (seller completed the period)
+        try {
+          const repClient = new WolandReputationClient(connection, deployWallet.publicKey);
+          const repPDA = repClient.getReputationPDA(receiverPubkey);
+          const repInfo = await connection.getAccountInfo(repPDA);
+
+          const ixs = [];
+          if (!repInfo) {
+            // Seller has no reputation account yet — initialize it first
+            // Note: buildInitializeReputationIx uses walletPubkey (deploy wallet) as payer,
+            // but the PDA is derived from walletPubkey. We need a custom init for receiverPubkey.
+            // Since the on-chain program requires the user themselves to init their rep account,
+            // skip reputation recording for users without an existing account.
+            console.warn(`Reputation PDA not initialized for receiver ${receiverPubkey.toBase58()}, skipping reputation recording for period ${period.id}`);
+          } else {
+            const repIx = await repClient.buildRecordCompletionIx(
+              receiverPubkey,
+              escrow.id,
+              amountLamports,
+              false, // receiver is the seller, not the buyer
+            );
+            ixs.push(repIx);
+
+            const repTx = await repClient.buildTransaction(ixs);
+            repTx.sign(deployWallet);
+            const repSig = await connection.sendRawTransaction(repTx.serialize());
+            await connection.confirmTransaction(repSig, "confirmed");
+          }
+        } catch (repErr: any) {
+          // Don't fail the period release if reputation recording fails
+          console.warn(`Reputation recording failed for period ${period.id}:`, repErr?.message);
+        }
 
         const newPaidCount = escrow.periodsPaid + 1;
         await storage.updateEscrowPeriodsPaid(escrow.id, newPaidCount);
