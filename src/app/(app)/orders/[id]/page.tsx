@@ -590,7 +590,13 @@ export default function OrderDetailPage() {
                   {escrow.phase === "awaiting_deposit" && isDepositor && (
                     <div className="flex items-center gap-2 text-sm text-yellow-600 bg-yellow-500/10 rounded-md px-3 py-2">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                      Payment not yet funded. Click &quot;Pay for Order&quot; below to lock funds on-chain.
+                      Payment not yet funded. Click &quot;Fund Payment&quot; below to lock funds on-chain.
+                    </div>
+                  )}
+                  {escrow.phase === "awaiting_deposit" && !isDepositor && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
+                      Waiting for the {isBuyer ? "requester" : "buyer"} to fund this payment.
                     </div>
                   )}
 
@@ -599,7 +605,7 @@ export default function OrderDetailPage() {
                     {escrow.phase === "awaiting_deposit" && isDepositor && (
                       <Button size="sm" className="rounded-full" onClick={handleFundEscrow} disabled={fundingInProgress}>
                         {fundingInProgress ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Shield className="mr-1 h-3 w-3" />}
-                        Pay for Order
+                        Fund Payment
                       </Button>
                     )}
                     {escrow.phase === "under_review" && isDepositor && (

@@ -189,10 +189,8 @@ export default function DashboardPage() {
                         <XCircle className="mr-1 h-3 w-3" />
                         Decline
                       </Button>
-                      {/* Only allow quick-complete when no active escrow exists;
-                          orders with escrow must be completed via the order detail page
-                          so that funds are properly released on-chain with wallet signing */}
-                      {(!order.escrowPhase || order.escrowPhase === "released") && (
+                      {/* Only allow quick-complete when escrow has been released on-chain */}
+                      {order.escrowPhase === "released" && (
                         <Button
                           size="sm"
                           className="rounded-full text-xs"
@@ -237,7 +235,7 @@ export default function DashboardPage() {
                         className="rounded-full text-xs"
                       >
                         <Wallet className="mr-1 h-3 w-3" />
-                        Pay for Order
+                        Fund Payment
                       </Button>
                     </Link>
                   )}
