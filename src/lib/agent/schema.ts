@@ -35,6 +35,7 @@ export interface AgentSearchFilters {
   minPostCount?: number;
   maxDeadlineDays?: number;
   search?: string;
+  creatorHandle?: string;
   sortBy?: AgentSortBy;
   relaxed?: boolean;
 }

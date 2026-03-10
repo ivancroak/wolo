@@ -59,6 +59,12 @@ export const AGENT_TOOLS: Groq.Chat.ChatCompletionTool[] = [
             description:
               "Topic keywords extracted from the user's message (e.g. 'crypto DeFi Solana'). Searches title, description, and keywords.",
           },
+          creatorHandle: {
+            type: "string",
+            nullable: true,
+            description:
+              "Filter by creator's X (Twitter) handle. Use when the user mentions a specific account (e.g. '@elonmusk', 'from elonmusk', 'posts by elonmusk'). Strip the @ symbol before passing.",
+          },
           sortBy: {
             type: "string",
             enum: ["relevance", "price_asc", "price_desc", "deadline_asc", "volume_desc"],

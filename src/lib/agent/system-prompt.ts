@@ -49,6 +49,7 @@ WORKFLOW:
 
 SEARCH PARAMETER RULES:
 - search: extract the topic/niche keywords from the user's message (e.g. "crypto DeFi Solana NFT")
+- creatorHandle: use when the user mentions a specific X account (e.g. "@elonmusk", "from elonmusk", "posts by elonmusk"). Pass the handle without @.
 - sortBy: choose based on the user's priorities:
   · "price_asc" — user says "cheapest", "affordable", "budget", "low cost"
   · "price_desc" — seller wants highest-paying projects

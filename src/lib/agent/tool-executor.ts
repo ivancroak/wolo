@@ -98,6 +98,14 @@ export async function executeTool(
       // Always exclude own services
       services = services.filter((s) => s.creatorId !== userId);
 
+      // Filter by creator handle (post-filter, handle already enriched)
+      if (filters.creatorHandle) {
+        const h = filters.creatorHandle.replace(/^@/, "").toLowerCase();
+        services = services.filter((s) =>
+          s.creatorTwitterHandle?.toLowerCase().includes(h)
+        );
+      }
+
       // Hard filters (never relaxed)
       if (filters.maxPrice !== undefined) {
         services = services.filter((s) => parseFloat(s.price) <= filters.maxPrice!);
