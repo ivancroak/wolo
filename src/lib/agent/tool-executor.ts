@@ -10,17 +10,13 @@ function scoreService(
   let score = 0;
   const price = parseFloat(service.price);
 
-  // Group 1: Price attractiveness (0-30)
   if (filters.maxPrice !== undefined) {
-    // Buyer: cheaper relative to budget = higher score
     const ratio = price / filters.maxPrice;
     score += Math.max(0, (1 - ratio) * 30);
   } else if (filters.minPrice !== undefined) {
-    // Seller: higher budget = better
     score += Math.min(30, (price / filters.minPrice) * 15);
   }
 
-  // Group 2: Volume match (0-20)
   if (filters.minPostCount !== undefined && filters.minPostCount > 0) {
     const svc = service.minPostCount ?? service.postsPerPeriod ?? 0;
     if (svc >= filters.minPostCount) {
@@ -28,10 +24,8 @@ function scoreService(
       if (svc >= filters.minPostCount * 1.2) score += 5; // bonus: more than requested
     }
   } else if (service.minPostCount || service.postsPerPeriod) {
-    score += 5; // has volume info, even if not filtered
   }
 
-  // Group 3: Deadline match (0-15)
   if (filters.maxDeadlineDays !== undefined) {
     const dl = service.deadlineDays;
     if (dl != null) {
@@ -44,7 +38,6 @@ function scoreService(
     }
   }
 
-  // Group 4: Type match (0-20)
   if (filters.contentType && service.contentType === filters.contentType) score += 10;
   if (filters.pricingCategory && service.pricingCategory === filters.pricingCategory) score += 5;
   if (filters.payrollBasis && service.payrollBasis === filters.payrollBasis) score += 5;
@@ -88,7 +81,12 @@ export async function executeTool(
 ): Promise<{ result: string; context: ToolContext }> {
   switch (toolName) {
     case "search_services": {
-      const filters = args as unknown as AgentSearchFilters;
+      // Strip null values the LLM may pass for optional fields
+      const rawArgs = args as Record<string, unknown>;
+      for (const key of Object.keys(rawArgs)) {
+        if (rawArgs[key] === null) delete rawArgs[key];
+      }
+      const filters = rawArgs as unknown as AgentSearchFilters;
 
       let services = await storage.getServices({
         category: "content",
@@ -159,10 +157,6 @@ export async function executeTool(
         storage.getServices({ category: "content", listingType: "offer" }),
         storage.getServices({ category: "content", listingType: "request" }),
       ]);
-
-      const prices = [...allOffers, ...allRequests]
-        .map((s) => parseFloat(s.price))
-        .filter((p) => !isNaN(p));
 
       const offerPrices = allOffers.map((s) => parseFloat(s.price)).filter((p) => !isNaN(p));
       const requestPrices = allRequests.map((s) => parseFloat(s.price)).filter((p) => !isNaN(p));
