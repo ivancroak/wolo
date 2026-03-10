@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle, Clock, AlertTriangle, XCircle, Circle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSolanaReputation } from "@/hooks/use-solana-reputation";
+import { useSolanaEscrow } from "@/hooks/use-solana-escrow";
 import { useState } from "react";
 import type { Escrow, PayrollPeriod } from "@shared/schema";
 
@@ -28,6 +30,8 @@ export function PayrollTimeline({ escrow, isDepositor }: PayrollTimelineProps) {
   const { data: periods, isLoading } = usePayrollPeriods(escrow.id);
   const { mutateAsync: disputePeriod, isPending: disputing } = useDisputePeriod();
   const { toast } = useToast();
+  const solanaRep = useSolanaReputation();
+  const solanaEscrow = useSolanaEscrow();
   const [disputingId, setDisputingId] = useState<number | null>(null);
 
   if (isLoading) {
@@ -50,6 +54,18 @@ export function PayrollTimeline({ escrow, isDepositor }: PayrollTimelineProps) {
     setDisputingId(period.id);
     try {
       await disputePeriod({ escrowId: escrow.id, periodId: period.id });
+      // Record dispute on-chain for reputation tracking
+      if (solanaRep.isReady && solanaEscrow.walletAddress) {
+        try {
+          await solanaRep.recordDispute(solanaEscrow.walletAddress, escrow.id);
+        } catch (e: any) {
+          toast({
+            title: "On-chain reputation not updated",
+            description: `Period disputed but reputation recording failed: ${e?.message}`,
+            variant: "destructive",
+          });
+        }
+      }
       toast({ title: "Period Disputed", description: `Period ${period.periodNumber} is now under dispute.` });
     } catch (err: any) {
       toast({ title: "Dispute Failed", description: err.message, variant: "destructive" });

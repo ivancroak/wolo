@@ -158,15 +158,20 @@ export default function DashboardPage() {
                         <XCircle className="mr-1 h-3 w-3" />
                         Decline
                       </Button>
-                      <Button
-                        size="sm"
-                        className="rounded-full text-xs"
-                        onClick={(e) => { e.preventDefault(); handleStatusUpdate(order.id, "completed"); }}
-                        data-testid={`button-complete-${order.id}`}
-                      >
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                        Complete
-                      </Button>
+                      {/* Only allow quick-complete when no active escrow exists;
+                          orders with escrow must be completed via the order detail page
+                          so that funds are properly released on-chain with wallet signing */}
+                      {(!order.escrowPhase || order.escrowPhase === "released") && (
+                        <Button
+                          size="sm"
+                          className="rounded-full text-xs"
+                          onClick={(e) => { e.preventDefault(); handleStatusUpdate(order.id, "completed"); }}
+                          data-testid={`button-complete-${order.id}`}
+                        >
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                          Complete
+                        </Button>
+                      )}
                     </>
                   )}
                   {/* Buyer buttons */}

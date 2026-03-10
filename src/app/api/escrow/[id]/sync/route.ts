@@ -19,10 +19,10 @@ const PHASE_MAP: Record<number, EscrowPhase> = {
 
 const SYNC_ALLOWED_TRANSITIONS: Record<string, EscrowPhase[]> = {
   awaiting_deposit: ["funded"],
-  funded: ["in_progress", "disputed"],
-  in_progress: ["under_review", "milestone_check", "disputed"],
-  under_review: ["released", "disputed"],
-  milestone_check: ["in_progress", "released", "disputed"],
+  funded: ["in_progress", "disputed", "refunded"],
+  in_progress: ["under_review", "milestone_check", "disputed", "refunded"],
+  under_review: ["released", "disputed", "refunded"],
+  milestone_check: ["in_progress", "released", "disputed", "refunded"],
   disputed: ["released", "refunded"],
   released: [],
   refunded: [],

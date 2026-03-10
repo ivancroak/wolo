@@ -37,16 +37,18 @@ export function RatingModal({ orderId, escrowId, targetId, depositorId, targetWa
   const handleSubmit = async () => {
     if (score === 0) return;
 
+    // On-chain rating is required when wallet + escrow info is available.
+    // DB rating is only saved after on-chain succeeds to prevent divergence.
     if (solanaRep.isReady && escrowId && targetWalletAddress && depositorWalletAddress) {
       try {
         await solanaRep.submitRating(targetWalletAddress, escrowId, score, comment || "", depositorWalletAddress);
       } catch (err: any) {
-        console.warn("On-chain rating failed:", err?.message);
         toast({
-          title: "On-chain rating skipped",
-          description: "Off-chain rating will still be recorded.",
+          title: "On-chain rating failed",
+          description: err?.message || "Please retry. Rating was not saved.",
           variant: "destructive",
         });
+        return; // Do NOT save to DB if on-chain fails
       }
     }
 

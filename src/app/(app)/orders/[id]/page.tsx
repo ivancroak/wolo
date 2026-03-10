@@ -277,7 +277,15 @@ export default function OrderDetailPage() {
       toast({ title: "Funds Released", description: `Tx: ${txSig.slice(0, 16)}...` });
       if (solanaRep.isReady && solanaEscrow.walletAddress) {
         const amountLamports = solToLamports(escrow.amount);
-        try { await solanaRep.recordCompletion(solanaEscrow.walletAddress, escrow.id, amountLamports, isDepositor ?? true); } catch (e: any) { console.warn("On-chain completion recording failed:", e?.message); }
+        try {
+          await solanaRep.recordCompletion(solanaEscrow.walletAddress, escrow.id, amountLamports, isDepositor ?? true);
+        } catch (e: any) {
+          toast({
+            title: "Reputation recording failed",
+            description: `Funds were released but on-chain reputation was not recorded: ${e?.message}. Please contact support.`,
+            variant: "destructive",
+          });
+        }
       }
     } catch (err: any) {
       toast({ title: "Release Failed", description: err?.message, variant: "destructive" });
@@ -295,10 +303,18 @@ export default function OrderDetailPage() {
       return;
     }
     try {
-      await solanaEscrow.advancePhase(escrow.depositorWalletAddress, escrow.id, "disputed");
-      updateEscrowPhase({ id: escrow.id, phase: "disputed" });
+      const disputeTxSig = await solanaEscrow.advancePhase(escrow.depositorWalletAddress, escrow.id, "disputed");
+      updateEscrowPhase({ id: escrow.id, phase: "disputed", txHash: disputeTxSig });
       if (solanaRep.isReady && solanaEscrow.walletAddress) {
-        try { await solanaRep.recordDispute(solanaEscrow.walletAddress, escrow.id); } catch (e: any) { console.warn("On-chain dispute recording failed:", e?.message); }
+        try {
+          await solanaRep.recordDispute(solanaEscrow.walletAddress, escrow.id);
+        } catch (e: any) {
+          toast({
+            title: "Reputation recording failed",
+            description: `Dispute was filed but on-chain reputation was not updated: ${e?.message}. Please contact support.`,
+            variant: "destructive",
+          });
+        }
       }
     } catch (err: any) {
       toast({ title: "Transaction failed", description: err?.message, variant: "destructive" });

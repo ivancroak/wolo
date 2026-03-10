@@ -5,6 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import type { OrderStatus } from "@shared/schema";
 import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
+import { readOnChainEscrowPhase } from "@/lib/solana/verify-on-chain";
 
 export async function GET(
   _request: NextRequest,
@@ -103,6 +104,46 @@ export async function PATCH(
       }
       if (rule.by === "seller" && !isSeller) {
         return NextResponse.json({ message: "Only the seller can perform this action" }, { status: 403 });
+      }
+
+      // Prevent marking an order "completed" when escrow funds haven't been released on-chain
+      if (input.status === "completed") {
+        const escrow = await storage.getEscrowByOrder(Number(id));
+        if (escrow) {
+          // Verify on-chain state, not just DB, to prevent spoofed DB phase
+          const depositorProfile = await storage.getProfile(escrow.depositorId);
+          if (depositorProfile?.walletAddress) {
+            try {
+              const onChainPhase = await readOnChainEscrowPhase(depositorProfile.walletAddress, escrow.id);
+              if (onChainPhase !== null && onChainPhase !== "released") {
+                return NextResponse.json({
+                  message: `Cannot complete order: on-chain escrow is '${onChainPhase}', not 'released'. Release funds first.`,
+                }, { status: 400 });
+              }
+            } catch {
+              // Fallback to DB check if on-chain verification fails
+              if (escrow.phase !== "released") {
+                return NextResponse.json({
+                  message: "Cannot complete order while escrow is active. Release funds on the order page first.",
+                }, { status: 400 });
+              }
+            }
+          } else if (escrow.phase !== "released") {
+            return NextResponse.json({
+              message: "Cannot complete order while escrow is active. Release funds on the order page first.",
+            }, { status: 400 });
+          }
+        }
+      }
+
+      // Prevent cancelling an order when escrow has funds locked on-chain
+      if (input.status === "cancelled") {
+        const escrow = await storage.getEscrowByOrder(Number(id));
+        if (escrow && escrow.phase !== "awaiting_deposit" && escrow.phase !== "released" && escrow.phase !== "refunded") {
+          return NextResponse.json({
+            message: "Cannot cancel order with funded escrow. Resolve the escrow on the order page first.",
+          }, { status: 400 });
+        }
       }
     }
 

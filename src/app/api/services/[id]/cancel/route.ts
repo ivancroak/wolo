@@ -70,8 +70,9 @@ export async function POST(
         const escrow = await storage.getEscrow(order.escrowId);
         if (escrow) {
           if (FUNDED_PHASES.includes(escrow.phase)) {
-            // Mark escrow as refunded in DB; on-chain refund handled client-side
-            await storage.updateEscrowPhase(escrow.id, "refunded");
+            // Do NOT mark escrow as "refunded" in DB yet — the frontend must first
+            // complete the on-chain sellerCancel() transaction, then sync the phase.
+            // This prevents DB/on-chain state mismatch if the browser closes mid-refund.
             const depositorProfile = await storage.getProfile(escrow.depositorId);
             if (depositorProfile?.walletAddress) {
               escrowsToRefund.push({ escrowId: escrow.id, depositorWalletAddress: depositorProfile.walletAddress });

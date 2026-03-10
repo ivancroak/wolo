@@ -272,6 +272,11 @@ export default function ServiceDetailPage() {
                               for (const esc of data.escrowsToRefund) {
                                 try {
                                   await sellerCancel(esc.depositorWalletAddress, esc.escrowId);
+                                  // Sync on-chain phase to DB after successful refund
+                                  await fetch(`/api/escrow/${esc.escrowId}/sync`, {
+                                    method: "POST",
+                                    credentials: "include",
+                                  });
                                   toast({ title: "Payment Refunded", description: `On-chain refund completed for order payment #${esc.escrowId}` });
                                 } catch (txErr: any) {
                                   toast({ title: "On-chain refund failed", description: txErr.message, variant: "destructive" });

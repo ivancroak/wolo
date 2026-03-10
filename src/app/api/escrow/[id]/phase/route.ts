@@ -6,26 +6,40 @@ import { z } from "zod";
 import type { EscrowPhase } from "@shared/schema";
 import { notify } from "@/server/notifications";
 import { checkRateLimit, getClientIp } from "@/server/with-rate-limit";
+import { readOnChainEscrowPhase } from "@/lib/solana/verify-on-chain";
+
+// Phases that require on-chain verification before DB update.
+// These transitions involve fund movement or critical state changes.
+const ON_CHAIN_VERIFIED_PHASES: EscrowPhase[] = [
+  "funded",
+  "released",
+  "refunded",
+  "disputed",
+];
 
 const VALID_TRANSITIONS: Record<string, { phases: EscrowPhase[]; by: "depositor" | "receiver" | "both" }[]> = {
   awaiting_deposit: [{ phases: ["funded"], by: "depositor" }],
   funded: [
     { phases: ["in_progress"], by: "receiver" },
     { phases: ["disputed"], by: "depositor" },
+    { phases: ["refunded"], by: "receiver" },  // seller cancel (on-chain verified)
   ],
   in_progress: [
     { phases: ["under_review"], by: "receiver" },
     { phases: ["milestone_check"], by: "both" },
     { phases: ["disputed"], by: "depositor" },
+    { phases: ["refunded"], by: "receiver" },  // seller cancel (on-chain verified)
   ],
   under_review: [
     { phases: ["released"], by: "depositor" },
     { phases: ["disputed"], by: "depositor" },
+    { phases: ["refunded"], by: "receiver" },  // seller cancel (on-chain verified)
   ],
   milestone_check: [
     { phases: ["in_progress"], by: "both" },
     { phases: ["released"], by: "depositor" },
     { phases: ["disputed"], by: "depositor" },
+    { phases: ["refunded"], by: "receiver" },  // seller cancel (on-chain verified)
   ],
   disputed: [
     // Admin/arbiter resolves via /api/admin/disputes/[id]/resolve and /api/escrow/[id]/dispute-resolve.
@@ -79,6 +93,34 @@ export async function PATCH(
     }
     if (matchingRule.by === "receiver" && !isReceiver) {
       return NextResponse.json({ message: "Only the receiver can perform this transition" }, { status: 403 });
+    }
+
+    // For critical phase transitions, verify on-chain state matches before updating DB.
+    // This prevents fake/spoofed phase updates where the caller claims a transition
+    // happened but the on-chain escrow PDA tells a different story.
+    if (ON_CHAIN_VERIFIED_PHASES.includes(input.phase)) {
+      const depositorProfile = await storage.getProfile(escrow.depositorId);
+      if (!depositorProfile?.walletAddress) {
+        return NextResponse.json({ message: "Depositor has no wallet address configured" }, { status: 400 });
+      }
+      try {
+        const onChainPhase = await readOnChainEscrowPhase(depositorProfile.walletAddress, escrow.id);
+        if (onChainPhase === null) {
+          return NextResponse.json({
+            message: "On-chain escrow account not found. Transaction may not have been confirmed yet.",
+          }, { status: 400 });
+        }
+        if (onChainPhase !== input.phase) {
+          return NextResponse.json({
+            message: `On-chain escrow is in '${onChainPhase}' phase, not '${input.phase}'. DB update rejected.`,
+          }, { status: 409 });
+        }
+      } catch (err: any) {
+        console.error("On-chain verification failed:", err?.message);
+        return NextResponse.json({
+          message: "Failed to verify on-chain escrow state. Please retry.",
+        }, { status: 502 });
+      }
     }
 
     const updated = await storage.updateEscrowPhase(escrow.id, input.phase, input.txHash);
