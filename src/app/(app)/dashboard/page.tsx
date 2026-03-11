@@ -13,7 +13,8 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications, useMarkRead } from "@/hooks/use-notifications";
 import { useMyConversations, type Conversation } from "@/hooks/use-conversations";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,7 +39,9 @@ export default function DashboardPage() {
   const { data: conversations, isLoading: convsLoading } = useMyConversations();
   const { data: notifications } = useNotifications();
   const { mutate: markRead } = useMarkRead();
+  const queryClient = useQueryClient();
   const [openChat, setOpenChat] = useState<number | null>(null);
+  const [cancellingService, setCancellingService] = useState<number | null>(null);
 
   // Filter out cancelled orders and inactive listings
   const activeOrders = useMemo(() => (orders as EnrichedOrder[] | null)?.filter((o) => o.status !== "cancelled") ?? [], [orders]);
@@ -86,6 +89,25 @@ export default function DashboardPage() {
       }
     });
   };
+
+  const handleCancelService = useCallback(async (serviceId: number) => {
+    setCancellingService(serviceId);
+    try {
+      const res = await fetch(`/api/services/${serviceId}/cancel`, { method: "POST", credentials: "include" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || err.message || "Failed to cancel listing");
+      }
+      toast({ title: "Listing Cancelled", description: "The listing and its active orders have been cancelled." });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-sales"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to cancel listing.", variant: "destructive" });
+    } finally {
+      setCancellingService(null);
+    }
+  }, [toast, queryClient]);
 
   const StatusBadge = ({ status }: { status: string }) => {
     const variant = status === "completed" ? "default" : status === "cancelled" ? "destructive" : "secondary";
@@ -338,8 +360,18 @@ export default function DashboardPage() {
                               {service.createdAt ? ` &middot; ${format(new Date(service.createdAt), "MMM d")}` : ""}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="h-2 w-2 rounded-full bg-green-500" />
+                          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-full text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                              disabled={cancellingService === service.id}
+                              onClick={(e) => { e.preventDefault(); handleCancelService(service.id); }}
+                              data-testid={`button-cancel-listing-${service.id}`}
+                            >
+                              {cancellingService === service.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <XCircle className="mr-1 h-3 w-3" />}
+                              Cancel
+                            </Button>
                             <Badge variant="secondary" className="text-[10px]">Active</Badge>
                           </div>
                         </CardContent>
