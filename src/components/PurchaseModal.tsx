@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Shield, Lock, Clock, ShieldCheck, Repeat } from "lucide-react";
+import { Loader2, Shield, MessageSquare, Clock, ShieldCheck, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -328,11 +328,11 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
                 </div>
               </div>
               <div className="flex items-start gap-3 p-3 rounded-md bg-muted text-sm">
-                <Lock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
                 <div>
-                  <p className="font-medium text-foreground">Encrypted Communication</p>
+                  <p className="font-medium text-foreground">Direct Messaging</p>
                   <p className="text-muted-foreground text-xs mt-0.5">
-                    All messages between parties are end-to-end encrypted.
+                    Send messages directly to your counterparty within the order.
                   </p>
                 </div>
               </div>

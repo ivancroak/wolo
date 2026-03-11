@@ -78,7 +78,7 @@ export async function POST(
       recipientId,
       "message_received",
       "New Message",
-      "You have a new encrypted message",
+      "You have a new message",
       `/orders/${check.order.id}`,
       recipientProfile?.email ?? undefined,
       recipientProfile?.emailVerified && recipientProfile?.emailNotifications,

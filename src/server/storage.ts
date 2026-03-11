@@ -67,8 +67,6 @@ export interface IStorage {
   getReputation(userId: string): Promise<Reputation>;
   addRating(rating: InsertRating & { raterId: string }): Promise<OrderRating>;
   getRatings(userId: string): Promise<OrderRating[]>;
-  setChannelPublicKey(userId: string, publicKey: string): Promise<void>;
-  getChannelPublicKey(userId: string): Promise<string | null>;
   getNotifications(userId: string): Promise<any[]>;
   markNotificationsRead(userId: string, ids?: number[]): Promise<void>;
   hasActiveOrder(serviceId: number, buyerId: string): Promise<boolean>;
@@ -881,9 +879,9 @@ class SupabaseStorage implements IStorage {
         order_id: msg.orderId,
         sender_id: msg.senderId,
         recipient_id: msg.recipientId,
-        ciphertext: msg.ciphertext,
-        ephemeral_pub: msg.ephemeralPub,
-        nonce: msg.nonce,
+        ciphertext: msg.content,
+        ephemeral_pub: "PLAINTEXT",
+        nonce: "PLAINTEXT",
       })
       .select()
       .single();
@@ -981,21 +979,6 @@ class SupabaseStorage implements IStorage {
     return (data ?? []).map(toRating);
   }
 
-  async setChannelPublicKey(userId: string, publicKey: string): Promise<void> {
-    const { error } = await supabaseAdmin
-      .from("channel_keys")
-      .upsert({ user_id: userId, public_key: publicKey, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-    if (error) throw new Error(error.message);
-  }
-
-  async getChannelPublicKey(userId: string): Promise<string | null> {
-    const { data } = await supabaseAdmin
-      .from("channel_keys")
-      .select("public_key")
-      .eq("user_id", userId)
-      .single();
-    return data?.public_key ?? null;
-  }
 
   // --- Notifications ---
 

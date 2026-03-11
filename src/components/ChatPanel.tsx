@@ -3,17 +3,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useSecureMessages, useSendSecureMessage } from "@/hooks/use-secure-messages";
 import { useDealProposals } from "@/hooks/use-deal-proposals";
-import { useChannelKeys } from "@/hooks/use-channel-keys";
 import { useAuth } from "@/hooks/use-auth";
-import { sealMessage, openMessage } from "@/lib/channel-cipher";
 import { DealProposalCard } from "@/components/DealProposalCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock, Send, KeyRound, Loader2, ShieldOff, Maximize2, Minimize2 } from "lucide-react";
+import { Send, Loader2, MessageSquare, Maximize2, Minimize2 } from "lucide-react";
 import type { Service, Order, DealProposal, EscrowPhase } from "@shared/schema";
-
-const PLAINTEXT_NONCE = "PLAINTEXT";
 
 interface ChatPanelProps {
   orderId: number;
@@ -29,12 +25,10 @@ type TimelineItem =
 
 export function ChatPanel({ orderId, recipientId, service, order, escrowPhase }: ChatPanelProps) {
   const { user } = useAuth();
-  const { channelKeys, deriveKeys, hasKeys, isLoading: keysLoading } = useChannelKeys();
   const { data: messages, isLoading: msgsLoading } = useSecureMessages(orderId);
   const { data: proposals } = useDealProposals(orderId);
   const { mutate: sendMessage, isPending: sending } = useSendSecureMessage();
   const [text, setText] = useState("");
-  const [recipientPubKey, setRecipientPubKey] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -42,42 +36,16 @@ export function ChatPanel({ orderId, recipientId, service, order, escrowPhase }:
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [messages, proposals]);
 
-  useEffect(() => {
-    if (!hasKeys || !recipientId) return;
-    fetch(`/api/channel-keys/${recipientId}`, { credentials: "include" })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data?.publicKey) setRecipientPubKey(data.publicKey); })
-      .catch(() => {});
-  }, [hasKeys, recipientId]);
-
-  const decryptedMessages = useMemo(() => {
+  const displayMessages = useMemo(() => {
     return (messages || []).map((msg: any) => {
-      if (msg.nonce === PLAINTEXT_NONCE) {
-        try {
-          const plaintext = decodeURIComponent(escape(atob(msg.ciphertext)));
-          return { ...msg, plaintext };
-        } catch {
-          return { ...msg, plaintext: msg.ciphertext };
-        }
-      }
-      if (!channelKeys) return { ...msg, plaintext: null };
-      let plaintext = openMessage(
-        { ciphertext: msg.ciphertext, ephemeralPub: msg.ephemeralPub, nonce: msg.nonce },
-        channelKeys.secretKey
-      );
-      if (plaintext === null && recipientPubKey && msg.senderId === user?.id) {
-        plaintext = openMessage(
-          { ciphertext: msg.ciphertext, ephemeralPub: recipientPubKey, nonce: msg.nonce },
-          channelKeys.secretKey
-        );
-      }
-      return { ...msg, plaintext };
+      // Plain text stored directly in ciphertext column
+      return { ...msg, plaintext: msg.ciphertext };
     });
-  }, [messages, channelKeys, recipientPubKey, user?.id]);
+  }, [messages]);
 
   const timeline: TimelineItem[] = useMemo(() => {
     const items: TimelineItem[] = [];
-    for (const msg of decryptedMessages) {
+    for (const msg of displayMessages) {
       items.push({
         kind: "message",
         id: `msg-${msg.id}`,
@@ -95,47 +63,14 @@ export function ChatPanel({ orderId, recipientId, service, order, escrowPhase }:
     }
     items.sort((a, b) => a.ts - b.ts);
     return items;
-  }, [decryptedMessages, proposals]);
-
-  if (!hasKeys) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center space-y-3">
-          <Lock className="mx-auto h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Messages are end-to-end encrypted.</p>
-          <Button onClick={deriveKeys} disabled={keysLoading} size="sm" className="rounded-full">
-            {keysLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <KeyRound className="mr-2 h-3 w-3" />}
-            Unlock Messages
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  }, [displayMessages, proposals]);
 
   const handleSend = () => {
-    if (!text.trim() || !channelKeys || !user) return;
-
-    if (recipientPubKey) {
-      // Fully encrypted message
-      const envelope = sealMessage(text, recipientPubKey, channelKeys.secretKey);
-      sendMessage({
-        orderId,
-        recipientId,
-        ciphertext: envelope.ciphertext,
-        ephemeralPub: envelope.ephemeralPub,
-        nonce: envelope.nonce,
-      }, { onSuccess: () => setText("") });
-    } else {
-      // Recipient hasn't unlocked yet — send as plaintext
-      // The recipient will see this once they open the chat
-      sendMessage({
-        orderId,
-        recipientId,
-        ciphertext: btoa(unescape(encodeURIComponent(text))),
-        ephemeralPub: PLAINTEXT_NONCE,
-        nonce: PLAINTEXT_NONCE,
-      }, { onSuccess: () => setText("") });
-    }
+    if (!text.trim() || !user) return;
+    sendMessage({
+      orderId,
+      content: text.trim(),
+    }, { onSuccess: () => setText("") });
   };
 
   return (
@@ -144,7 +79,7 @@ export function ChatPanel({ orderId, recipientId, service, order, escrowPhase }:
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Lock className="h-3.5 w-3.5" /> Messages
+              <MessageSquare className="h-3.5 w-3.5" /> Messages
             </CardTitle>
             <Button
               size="icon"
@@ -179,18 +114,12 @@ export function ChatPanel({ orderId, recipientId, service, order, escrowPhase }:
                 if (item.kind === "message") {
                   const msg = item.data;
                   const isMine = msg.senderId === user?.id;
-                  const isPlaintext = msg.nonce === PLAINTEXT_NONCE;
                   return (
                     <div key={item.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[75%] px-3 py-1.5 rounded-lg text-sm ${
                         isMine ? "bg-foreground text-background" : "bg-muted"
                       }`}>
-                        {msg.plaintext ?? <span className="italic text-muted-foreground text-xs">Unable to decrypt</span>}
-                        {isPlaintext && (
-                          <span className={`block text-[10px] mt-0.5 ${isMine ? "text-background/50" : "text-muted-foreground"}`}>
-                            unencrypted
-                          </span>
-                        )}
+                        {msg.plaintext}
                       </div>
                     </div>
                   );
@@ -199,12 +128,6 @@ export function ChatPanel({ orderId, recipientId, service, order, escrowPhase }:
               })
             )}
           </div>
-          {!recipientPubKey && (
-            <p className="text-xs text-amber-500 text-center flex items-center justify-center gap-1">
-              <ShieldOff className="h-3 w-3" />
-              Other party hasn&apos;t unlocked encryption yet — messages are sent unencrypted
-            </p>
-          )}
           <div className="flex gap-2">
             <Input
               value={text}

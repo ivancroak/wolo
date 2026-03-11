@@ -291,7 +291,7 @@ export const api = {
     send: {
       method: 'POST' as const,
       path: '/api/orders/:orderId/messages' as const,
-      input: insertSecureMessageSchema.omit({ orderId: true }),
+      input: insertSecureMessageSchema.omit({ orderId: true, recipientId: true }),
       responses: {
         201: z.custom<SecureMessage>(),
         401: errorSchemas.unauthorized,

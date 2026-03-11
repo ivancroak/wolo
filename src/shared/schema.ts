@@ -250,9 +250,7 @@ export const insertMilestoneSchema = z.object({
 export const insertSecureMessageSchema = z.object({
   orderId: z.number(),
   recipientId: z.string(),
-  ciphertext: z.string(),
-  ephemeralPub: z.string(),
-  nonce: z.string(),
+  content: z.string().min(1, "Message cannot be empty").max(5000, "Message too long"),
 });
 
 export const insertRatingSchema = z.object({

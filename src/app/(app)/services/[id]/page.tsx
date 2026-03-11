@@ -1,14 +1,17 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useService } from "@/hooks/use-services";
+import { useService, useUpdateService } from "@/hooks/use-services";
 import { useAuth } from "@/hooks/use-auth";
 import { PurchaseModal } from "@/components/PurchaseModal";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, ArrowLeft, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight, Image, Trash2, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Loader2, ArrowLeft, Briefcase, CalendarClock, ShieldCheck, Clock, ArrowUpRight, Image, Trash2, AlertTriangle, Pencil } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +29,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   content: <Image className="h-4 w-4" />,
@@ -49,9 +58,11 @@ export default function ServiceDetailPage() {
   const { data: service, isLoading } = useService(id);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const { toast } = useToast();
   const { sellerCancel } = useSolanaEscrow();
   const queryClient = useQueryClient();
+  const { mutateAsync: updateService, isPending: isUpdating } = useUpdateService();
 
   if (isLoading) {
     return (
@@ -238,68 +249,74 @@ export default function ServiceDetailPage() {
 
             <div className="pt-4 border-t flex justify-end gap-3">
               {isOwn && service.active ? (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm" className="rounded-full" disabled={isCancelling}>
-                      {isCancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                      Cancel Listing
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                        Cancel this listing?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will deactivate the listing and cancel all active orders.
-                        {service.listingType === "offer"
-                          ? " Any locked payments will be refunded to the buyers (no platform fee)."
-                          : " This is only possible if no payments have been locked yet."}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Keep Listing</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        onClick={async () => {
-                          setIsCancelling(true);
-                          try {
-                            const res = await apiRequest("POST", `/api/services/${id}/cancel`);
-                            const data = await res.json();
-                            // Process on-chain refunds for funded escrows
-                            if (data.escrowsToRefund?.length > 0) {
-                              for (const esc of data.escrowsToRefund) {
-                                try {
-                                  await sellerCancel(esc.depositorWalletAddress, esc.escrowId);
-                                  // Sync on-chain phase to DB after successful refund
-                                  await fetch(`/api/escrow/${esc.escrowId}/sync`, {
-                                    method: "POST",
-                                    credentials: "include",
-                                  });
-                                  toast({ title: "Payment Refunded", description: `On-chain refund completed for order payment #${esc.escrowId}` });
-                                } catch (txErr: any) {
-                                  toast({ title: "On-chain refund failed", description: txErr.message, variant: "destructive" });
+                <>
+                  <Button variant="outline" size="sm" className="rounded-full" onClick={() => setEditOpen(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Listing
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="rounded-full" disabled={isCancelling}>
+                        {isCancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                        Cancel Listing
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-destructive" />
+                          Cancel this listing?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will deactivate the listing and cancel all active orders.
+                          {service.listingType === "offer"
+                            ? " Any locked payments will be refunded to the buyers (no platform fee)."
+                            : " This is only possible if no payments have been locked yet."}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Listing</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={async () => {
+                            setIsCancelling(true);
+                            try {
+                              const res = await apiRequest("POST", `/api/services/${id}/cancel`);
+                              const data = await res.json();
+                              // Process on-chain refunds for funded escrows
+                              if (data.escrowsToRefund?.length > 0) {
+                                for (const esc of data.escrowsToRefund) {
+                                  try {
+                                    await sellerCancel(esc.depositorWalletAddress, esc.escrowId);
+                                    // Sync on-chain phase to DB after successful refund
+                                    await fetch(`/api/escrow/${esc.escrowId}/sync`, {
+                                      method: "POST",
+                                      credentials: "include",
+                                    });
+                                    toast({ title: "Payment Refunded", description: `On-chain refund completed for order payment #${esc.escrowId}` });
+                                  } catch (txErr: any) {
+                                    toast({ title: "On-chain refund failed", description: txErr.message, variant: "destructive" });
+                                  }
                                 }
                               }
+                              toast({ title: "Listing Cancelled", description: `${data.ordersAffected} order(s) cancelled.` });
+                              queryClient.invalidateQueries({ queryKey: [`/api/services/${id}`] });
+                              queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+                              router.push("/dashboard");
+                            } catch (err: any) {
+                              const msg = await err?.response?.json?.().catch(() => null);
+                              toast({ title: "Cancel failed", description: msg?.message || err.message, variant: "destructive" });
+                            } finally {
+                              setIsCancelling(false);
                             }
-                            toast({ title: "Listing Cancelled", description: `${data.ordersAffected} order(s) cancelled.` });
-                            queryClient.invalidateQueries({ queryKey: [`/api/services/${id}`] });
-                            queryClient.invalidateQueries({ queryKey: ["/api/services"] });
-                            router.push("/dashboard");
-                          } catch (err: any) {
-                            const msg = await err?.response?.json?.().catch(() => null);
-                            toast({ title: "Cancel failed", description: msg?.message || err.message, variant: "destructive" });
-                          } finally {
-                            setIsCancelling(false);
-                          }
-                        }}
-                      >
-                        Cancel Listing
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                          }}
+                        >
+                          Cancel Listing
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
               ) : isOwn && !service.active ? (
                 <Badge variant="destructive" className="text-sm px-4 py-1.5">Listing Cancelled</Badge>
               ) : (
@@ -320,6 +337,117 @@ export default function ServiceDetailPage() {
       </motion.div>
 
       <PurchaseModal service={service} open={purchaseOpen} onOpenChange={setPurchaseOpen} />
+
+      {/* Edit Listing Modal */}
+      {isOwn && service.active && (
+        <EditServiceModal
+          service={service}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSave={async (updates) => {
+            await updateService({ id: service.id, ...updates });
+            queryClient.invalidateQueries({ queryKey: [`/api/services/${service.id}`] });
+            queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+            toast({ title: "Listing Updated", description: "Your changes have been saved." });
+            setEditOpen(false);
+          }}
+          isSaving={isUpdating}
+        />
+      )}
     </div>
+  );
+}
+
+/* ── Edit Service Modal ─────────────────────────────────────────── */
+
+interface EditServiceModalProps {
+  service: NonNullable<ReturnType<typeof useService>["data"]>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (updates: Record<string, any>) => Promise<void>;
+  isSaving: boolean;
+}
+
+function EditServiceModal({ service, open, onOpenChange, onSave, isSaving }: EditServiceModalProps) {
+  const [title, setTitle] = useState(service.title);
+  const [description, setDescription] = useState(service.description);
+  const [price, setPrice] = useState(service.price);
+  const [requiredKeyword, setRequiredKeyword] = useState(service.requiredKeyword ?? "");
+  const [minPostCount, setMinPostCount] = useState(service.minPostCount ?? "");
+  const [deadlineDays, setDeadlineDays] = useState(service.deadlineDays ?? "");
+  const [imageUrl, setImageUrl] = useState(service.imageUrl ?? "");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const updates: Record<string, any> = {
+      title: title.trim(),
+      description: description.trim(),
+      price,
+    };
+    if (requiredKeyword.trim()) updates.requiredKeyword = requiredKeyword.trim();
+    else updates.requiredKeyword = null;
+    if (minPostCount) updates.minPostCount = Number(minPostCount);
+    else updates.minPostCount = null;
+    if (deadlineDays) updates.deadlineDays = Number(deadlineDays);
+    else updates.deadlineDays = null;
+    if (imageUrl.trim()) updates.imageUrl = imageUrl.trim();
+    else updates.imageUrl = null;
+
+    await onSave(updates);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Listing</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-title">Title</Label>
+            <Input id="edit-title" value={title} onChange={(e) => setTitle(e.target.value)} minLength={3} maxLength={120} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-description">Description</Label>
+            <Textarea id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} minLength={10} maxLength={2000} rows={4} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-price">Price (SOL)</Label>
+            <Input id="edit-price" type="number" step="any" min="0.001" value={price} onChange={(e) => setPrice(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-keyword">Required Keyword</Label>
+            <Input id="edit-keyword" value={requiredKeyword} onChange={(e) => setRequiredKeyword(e.target.value)} placeholder="Optional" maxLength={100} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-posts">Min Posts</Label>
+              <Input id="edit-posts" type="number" min="1" value={minPostCount} onChange={(e) => setMinPostCount(e.target.value)} placeholder="Optional" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-deadline">Deadline (days)</Label>
+              <Input id="edit-deadline" type="number" min="1" max="365" value={deadlineDays} onChange={(e) => setDeadlineDays(e.target.value)} placeholder="Optional" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-url">Reference URL</Label>
+            <Input id="edit-url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://x.com/..." />
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded-md p-2">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+            <span>Listing type ({service.listingType}) and category ({service.category}) cannot be changed.</span>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
