@@ -310,7 +310,7 @@ export default function ServiceDetailPage() {
                   }
                   setPurchaseOpen(true);
                 }} className="rounded-full px-8">
-                  {service.listingType === "request" ? "Fulfill Request" : "Accept Offer"}
+                  {service.listingType === "request" ? "Fulfill Request" : "Buy"}
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Button>
               )}

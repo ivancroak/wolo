@@ -164,7 +164,7 @@ export function ServiceCard({ service, onPurchase, isWatched = false, onToggleWa
           >
             {isOwnService
               ? "View"
-              : service.listingType === "request" ? "Fulfill" : "Accept Offer"}
+              : service.listingType === "request" ? "Fulfill" : "Buy"}
             <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         </CardFooter>

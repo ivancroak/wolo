@@ -21,7 +21,7 @@ Only content creation is supported: posts and threads on X.
 No likes, follows, retweets, or engagement services.
 
 HOW LISTINGS WORK:
-- OFFER (seller listing): seller posts their service → buyer clicks "Accept Offer" → escrow created immediately → work begins.
+- OFFER (seller listing): seller posts their service → buyer clicks "Buy" → escrow created immediately → work begins.
 - REQUEST (buyer listing): buyer posts what they need → sellers apply ("Fulfill Request") → buyer reviews applicants and accepts one → escrow created on acceptance, other applicants auto-cancelled.
 
 TAB HINT:

@@ -61,7 +61,7 @@ export function AgentServiceCard({ service, onPurchase, isOwnService = false }: 
           className="w-full h-7 text-xs rounded-full mt-0.5"
           onClick={() => onPurchase(service)}
         >
-          {service.listingType === "request" ? "Fulfill Request" : "Accept Offer"}
+          {service.listingType === "request" ? "Fulfill Request" : "Buy"}
           <ArrowUpRight className="ml-1 h-3 w-3" />
         </Button>
       )}

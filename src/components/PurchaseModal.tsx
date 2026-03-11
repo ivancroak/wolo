@@ -351,7 +351,7 @@ export function PurchaseModal({ service, open, onOpenChange }: PurchaseModalProp
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} data-testid="button-cancel-purchase">Cancel</Button>
               <Button type="submit" disabled={isSubmitting || orderPending} data-testid="button-confirm-purchase">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isRequest ? "Submit Application" : "Accept Offer & Lock Payment"}
+                {isRequest ? "Submit Application" : "Buy & Lock Payment"}
               </Button>
             </div>
           </form>
