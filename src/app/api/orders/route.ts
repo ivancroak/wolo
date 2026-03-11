@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     console.error("Route error:", err);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    const errMsg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ message: errMsg || "Internal server error" }, { status: 500 });
   }
 }
