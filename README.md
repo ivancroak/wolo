@@ -26,60 +26,6 @@ Wolo connects brands and individuals who need X content with creators who produc
 | Verification | twitterapi.io (X handle oracle) |
 | Email | Resend |
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- Solana CLI + Anchor 0.32.1 (for program deployment)
-- Supabase project
-- Phantom or Solflare wallet
-
-### Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# Solana
-NEXT_PUBLIC_SOLANA_NETWORK=devnet
-NEXT_PUBLIC_SOLANA_RPC_URL=
-NEXT_PUBLIC_ESCROW_PROGRAM_ID=
-NEXT_PUBLIC_REPUTATION_PROGRAM_ID=
-NEXT_PUBLIC_FEE_VAULT=
-SOLANA_DEPLOY_WALLET_PRIVATE_KEY=
-SOLANA_DEPLOY_WALLET_ADDRESS=
-
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# Auth
-SESSION_SECRET=           # min 32 chars
-ADMIN_WALLET_ADDRESS=
-
-# Twitter verification
-TWITTER_API_KEY=
-TWITTER_VERIFY_SECRET=    # min 32 chars
-
-# Services
-GROQ_API_KEY=
-RESEND_API_KEY=
-```
-
-### Run Locally
-
-```bash
-npm install
-npm run dev
-```
-
-### Deploy Programs (devnet)
-
-```bash
-cd programs/woland_escrow && anchor build && anchor deploy
-cd programs/woland_reputation && anchor build && anchor deploy
-```
 
 ## Project Structure
 
