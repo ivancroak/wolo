@@ -2,17 +2,17 @@
 
 import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAuth } from "./use-auth";
 
 // Module-level singleton — only one "pending sign in" flag across all hook instances.
-// Set when user clicks Sign In while wallet is disconnected (connect first, then sign).
 let pendingSignIn = false;
 
 export function useWallet() {
   const { publicKey, connected, connecting, disconnect: solanaDisconnect, signMessage } = useSolanaWallet();
-  const { setVisible } = useWalletModal();
+  const { visible, setVisible } = useWalletModal();
   const { user, isLoading: authLoading, login, isLoggingIn, logout } = useAuth();
+  const wasModalOpen = useRef(false);
 
   const address = publicKey?.toBase58() ?? null;
   const shortAddress = address
@@ -20,13 +20,26 @@ export function useWallet() {
     : null;
 
   // Chain: user clicked Sign In → wallet just connected → now fire login().
-  // Module-level pendingSignIn ensures only the first hook instance to see it fires.
   useEffect(() => {
     if (pendingSignIn && connected && address && signMessage && !user && !authLoading && !isLoggingIn) {
       pendingSignIn = false;
       login({ walletAddress: address, signMessage });
     }
   }, [connected, address, signMessage, user, authLoading, isLoggingIn, login]);
+
+  // When modal closes while wallet is already connected (user re-selected same wallet),
+  // fire login if we were waiting.
+  useEffect(() => {
+    if (visible) {
+      wasModalOpen.current = true;
+    } else if (wasModalOpen.current) {
+      wasModalOpen.current = false;
+      if (pendingSignIn && connected && address && signMessage && !user && !authLoading && !isLoggingIn) {
+        pendingSignIn = false;
+        login({ walletAddress: address, signMessage });
+      }
+    }
+  }, [visible, connected, address, signMessage, user, authLoading, isLoggingIn, login]);
 
   // Reset if wallet disconnects before sign-in completes
   useEffect(() => {
@@ -35,17 +48,12 @@ export function useWallet() {
     }
   }, [connected]);
 
-  // Single sign-in function: handles both "already connected" and "need to connect first"
+  // Always show wallet chooser so the user can pick/switch wallets.
   const signIn = useCallback(() => {
-    if (connected && address && signMessage && !user && !isLoggingIn) {
-      // Wallet already connected → sign in directly
-      login({ walletAddress: address, signMessage });
-    } else if (!connected) {
-      // Wallet not connected → open chooser, sign in after connect
-      pendingSignIn = true;
-      setVisible(true);
-    }
-  }, [connected, address, signMessage, user, isLoggingIn, login, setVisible]);
+    if (isLoggingIn) return;
+    pendingSignIn = true;
+    setVisible(true);
+  }, [isLoggingIn, setVisible]);
 
   const disconnect = useCallback(() => {
     solanaDisconnect();
