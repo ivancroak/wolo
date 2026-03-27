@@ -1,6 +1,7 @@
 # Wolo
 
 Decentralized marketplace for X (Twitter) content creation services, powered by Solana escrow and on-chain reputation.
+https://x.com/wolo_xyz
 
 ## What It Does
 
