@@ -413,3 +413,165 @@ pub enum WolandRepError {
     #[msg("Cannot set to zero address")]
     InvalidAddress,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Helper: build a zeroed ReputationAccount for use in unit tests.
+    // The #[account] macro does not add extra fields in the struct layout;
+    // all public fields are available directly.
+    fn blank_rep() -> ReputationAccount {
+        ReputationAccount {
+            user: Pubkey::default(),
+            orders_completed: 0,
+            orders_disputed: 0,
+            total_earned: 0,
+            total_spent: 0,
+            rating_sum: 0,
+            rating_count: 0,
+            badge_flags: 0,
+            created_at: 0,
+            bump: 0,
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // update_badges tests
+    // -----------------------------------------------------------------------
+
+    /// Completely fresh account: no badges at all.
+    #[test]
+    fn test_badges_fresh_account_no_flags() {
+        let mut rep = blank_rep();
+        update_badges(&mut rep);
+        assert_eq!(rep.badge_flags, 0b0000_0000);
+    }
+
+    /// First order completed sets bit 0 only.
+    #[test]
+    fn test_badges_first_completion() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 1;
+        update_badges(&mut rep);
+        // bit 0 set
+        assert!(rep.badge_flags & (1 << 0) != 0);
+        // bit 1 NOT set (need 5)
+        assert!(rep.badge_flags & (1 << 1) == 0);
+    }
+
+    /// 5 completions → bits 0 and 1 set.
+    #[test]
+    fn test_badges_five_completions() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 5;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 0) != 0, "bit0 (>=1)");
+        assert!(rep.badge_flags & (1 << 1) != 0, "bit1 (>=5)");
+        assert!(rep.badge_flags & (1 << 2) == 0, "bit2 not yet (needs 25)");
+    }
+
+    /// 25+ completions → bits 0, 1, and 2 set.
+    #[test]
+    fn test_badges_twenty_five_completions() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 25;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 0) != 0, "bit0");
+        assert!(rep.badge_flags & (1 << 1) != 0, "bit1");
+        assert!(rep.badge_flags & (1 << 2) != 0, "bit2");
+    }
+
+    /// Bit 3: requires orders_completed >= 10 AND avg*10 >= 45.
+    /// 10 orders, rating_sum=45, rating_count=10 → avg*10 = 45 → qualifies.
+    #[test]
+    fn test_badges_bit3_high_avg_ten_orders() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 10;
+        rep.rating_sum = 45;
+        rep.rating_count = 10;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 3) != 0, "bit3 (>=10 orders + avg>=4.5)");
+    }
+
+    /// Bit 3 NOT set when avg is too low (avg*10 = 44 < 45).
+    #[test]
+    fn test_badges_bit3_low_avg_not_set() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 10;
+        rep.rating_sum = 44; // avg = 4.4, avg*10 = 44 < 45
+        rep.rating_count = 10;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 3) == 0, "bit3 should not be set with avg 4.4");
+    }
+
+    /// Bit 4: rating_count >= 3 AND avg*10 >= 45.
+    /// 3 ratings, all 5 → avg=5 → avg*10=50 >= 45 → bit4 set.
+    #[test]
+    fn test_badges_bit4_high_avg_three_ratings() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 2; // below 5 so bit1 not set; only bit0 and bit4
+        rep.rating_sum = 15; // 3 * 5
+        rep.rating_count = 3;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 4) != 0, "bit4 (>=3 ratings + avg>=4.5)");
+        assert!(rep.badge_flags & (1 << 3) == 0, "bit3 needs 10 orders");
+    }
+
+    /// Bit 5: total_earned >= 100_000_000.
+    #[test]
+    fn test_badges_bit5_high_earner() {
+        let mut rep = blank_rep();
+        rep.total_earned = 100_000_000;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 5) != 0, "bit5 (high earner)");
+    }
+
+    /// Bit 5 NOT set just below threshold.
+    #[test]
+    fn test_badges_bit5_just_below_threshold() {
+        let mut rep = blank_rep();
+        rep.total_earned = 99_999_999;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 5) == 0, "bit5 should not be set below threshold");
+    }
+
+    /// Bit 6: orders_completed >= 10 AND orders_disputed == 0.
+    #[test]
+    fn test_badges_bit6_clean_record() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 10;
+        rep.orders_disputed = 0;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 6) != 0, "bit6 (clean record)");
+    }
+
+    /// Bit 6 NOT set if any disputes exist.
+    #[test]
+    fn test_badges_bit6_with_dispute_not_set() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 20;
+        rep.orders_disputed = 1;
+        update_badges(&mut rep);
+        assert!(rep.badge_flags & (1 << 6) == 0, "bit6 should not be set with disputes");
+    }
+
+    /// rating_count == 0 must not panic (guarded by checked_div in the function).
+    /// With 0 ratings the avg path is skipped entirely → bits 3 and 4 never fire.
+    #[test]
+    fn test_badges_zero_rating_count_no_panic() {
+        let mut rep = blank_rep();
+        rep.orders_completed = 50;
+        rep.rating_sum = 1_000; // large sum, but count = 0
+        rep.rating_count = 0;
+        update_badges(&mut rep); // must not panic
+        // bit3 requires rating_count > 0 → not set
+        assert!(rep.badge_flags & (1 << 3) == 0, "bit3 needs rating_count > 0");
+        // bit4 requires rating_count >= 3 → not set
+        assert!(rep.badge_flags & (1 << 4) == 0, "bit4 needs rating_count >= 3");
+        // bits 0, 1, 2 should be set (50 completions)
+        assert!(rep.badge_flags & (1 << 0) != 0);
+        assert!(rep.badge_flags & (1 << 1) != 0);
+        assert!(rep.badge_flags & (1 << 2) != 0);
+    }
+}

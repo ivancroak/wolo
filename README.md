@@ -9,7 +9,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-14%20App%20Router-000000?logo=nextdotjs)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?logo=postgresql)
-![CI](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=githubactions)
+[![CI](https://github.com/ivancroak/wolo/actions/workflows/ci.yml/badge.svg)](https://github.com/ivancroak/wolo/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-Proprietary-lightgrey)
 
 Wolo connects brands and individuals who need X content with the creators who produce it. Every order is backed by a **fully trustless, native SOL escrow on Solana** — funds are locked by an on-chain program with no platform custody, and are released only by the program's rules (delivery, milestone approval, scheduled payroll, or dispute resolution). Identity is anchored to a **cryptographically verified X handle**, trust is tracked by an **on-chain reputation program**, conversations run over **end-to-end-encrypted real-time chat**, and discovery is driven by an **LLM marketplace assistant**.

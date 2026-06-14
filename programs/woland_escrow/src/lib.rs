@@ -1093,3 +1093,80 @@ pub enum WolandError {
     #[msg("Expiry too far in the future (max 1 year)")]
     ExpiryTooFar,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -----------------------------------------------------------------------
+    // calculate_fee tests
+    // -----------------------------------------------------------------------
+
+    /// 250 bps (2.5%) of 1_000_000 lamports.
+    /// Formula: ceil(amount * fee_bps / 10_000) using: (amount*bps + 9_999) / 10_000
+    /// (1_000_000 * 250 + 9_999) / 10_000 = 250_009_999 / 10_000 = 25_000
+    #[test]
+    fn test_fee_normal_250_bps() {
+        let fee = calculate_fee(1_000_000, 250).unwrap();
+        assert_eq!(fee, 25_000);
+    }
+
+    /// Zero fee_bps must always return 0, regardless of amount.
+    #[test]
+    fn test_fee_zero_bps_returns_zero() {
+        assert_eq!(calculate_fee(0, 0).unwrap(), 0);
+        assert_eq!(calculate_fee(1_000_000, 0).unwrap(), 0);
+        assert_eq!(calculate_fee(u64::MAX / 2, 0).unwrap(), 0);
+    }
+
+    /// Small amount (1 lamport) with 250 bps: true fee would be 0.025 lamports,
+    /// ceiling division must round up to 1.
+    /// (1 * 250 + 9_999) / 10_000 = 10_249 / 10_000 = 1
+    #[test]
+    fn test_fee_small_amount_rounds_up() {
+        let fee = calculate_fee(1, 250).unwrap();
+        assert_eq!(fee, 1);
+    }
+
+    /// MAX_FEE_BPS = 1000 (10%) of 1_000_000.
+    /// (1_000_000 * 1_000 + 9_999) / 10_000 = 1_000_009_999 / 10_000 = 100_000
+    #[test]
+    fn test_fee_max_bps_boundary() {
+        assert_eq!(MAX_FEE_BPS, 1000);
+        let fee = calculate_fee(1_000_000, MAX_FEE_BPS).unwrap();
+        assert_eq!(fee, 100_000);
+    }
+
+    /// Exact division: 10_000 lamports at 100 bps = exactly 100.
+    /// (10_000 * 100 + 9_999) / 10_000 = 1_009_999 / 10_000 = 100
+    #[test]
+    fn test_fee_exact_divisible() {
+        let fee = calculate_fee(10_000, 100).unwrap();
+        assert_eq!(fee, 100);
+    }
+
+    /// Ceiling behavior: 9_999 lamports at 1 bps.
+    /// True fee = 0.9999 lamports → ceil = 1.
+    /// (9_999 * 1 + 9_999) / 10_000 = 19_998 / 10_000 = 1
+    #[test]
+    fn test_fee_ceiling_sub_unit() {
+        let fee = calculate_fee(9_999, 1).unwrap();
+        assert_eq!(fee, 1);
+    }
+
+    /// Transition from 1 to 2 at 1 bps: 10_001 lamports.
+    /// (10_001 * 1 + 9_999) / 10_000 = 20_000 / 10_000 = 2
+    #[test]
+    fn test_fee_ceiling_crosses_next_unit() {
+        let fee = calculate_fee(10_001, 1).unwrap();
+        assert_eq!(fee, 2);
+    }
+
+    /// MIN_ESCROW_AMOUNT and MAX_MILESTONES constant sanity checks.
+    #[test]
+    fn test_constants() {
+        assert_eq!(MIN_ESCROW_AMOUNT, 10_000);
+        assert_eq!(MAX_MILESTONES, 10);
+        assert_eq!(MAX_FEE_BPS, 1000);
+    }
+}
