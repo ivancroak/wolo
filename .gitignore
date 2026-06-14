@@ -58,3 +58,23 @@ EVMtoSVM_CompleteGuide.md
 CLAUDE.md
 BACKEND_AUDIT.md
 AnchorDocs.md
+
+# AI assistant / agent tooling (local dev — never commit)
+.agents/
+_agents/
+.claude/
+.factory/
+.gemini/
+.codex/
+.cursor/
+.cursorrules
+.windsurfrules
+.github/copilot-instructions.md
+.mcp.json
+AGENTS.md
+GEMINI.md
+skills-lock.json
+.Rhistory
+SolanaCookbook.md
+SolanaDeveloperResources.md
+FullStackSolanaDev.md
